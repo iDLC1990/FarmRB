@@ -2,194 +2,197 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L2 Raid Tracker - Interlude Map</title>
+    <title>L2 Raid Tracker Pro</title>
     <style>
-        body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; overflow: auto; }
+        :root { --gold: #ffd700; --bg: #121212; --panel: #1e1e1e; }
+        body { background: var(--bg); color: #eee; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; }
         
-        /* Контейнер карты */
+        /* Боковая панель */
+        .sidebar { width: 350px; height: 100vh; background: var(--panel); border-right: 1px solid #333; overflow-y: auto; position: fixed; z-index: 1000; }
+        .search-box { padding: 15px; position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid #333; }
+        .search-box input { width: 90%; padding: 8px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; }
+        
+        /* Карта */
+        .map-wrapper { margin-left: 350px; position: relative; overflow: auto; cursor: crosshair; }
         .worldmap { position: relative; width: 2500px; height: 3500px; background: url('https://linedia.ru/img/map.jpg') no-repeat; }
+
+        /* Метки и таймеры */
+        .boss-item { padding: 10px 15px; border-bottom: 1px solid #2a2a2a; transition: 0.2s; }
+        .boss-item:hover { background: #252525; }
+        .boss-name { font-weight: bold; font-size: 14px; display: block; margin-bottom: 5px; }
         
-        /* Флаги РБ */
-        .raidcontainer { position: absolute; cursor: pointer; z-index: 10; }
-        .raidflag { width: 32px; height: 32px; transition: transform 0.2s; }
-        .raidflag:hover { transform: scale(1.2); }
+        .timer-val { font-family: monospace; color: #00ff88; font-size: 16px; }
+        .timer-val.dead { color: #ff4444; }
+        
+        .btn-kill { background: #b32d2d; border: none; color: white; padding: 4px 8px; border-radius: 3px; cursor: pointer; float: right; }
+        
+        /* Маркеры на карте */
+        .marker { position: absolute; width: 24px; height: 24px; transform: translate(-50%, -50%); z-index: 50; }
+        .marker img { width: 100%; filter: drop-shadow(0 0 5px black); }
+        .marker.alive { filter: drop-shadow(0 0 8px #00ff88) hue-rotate(90deg); animation: pulse 2s infinite; }
 
-        /* Всплывающее окно с инфой */
-        .raidcontainerinner {
-            display: none; /* По умолчанию скрыто */
-            position: absolute;
-            background: rgba(20, 20, 20, 0.95);
-            border: 2px solid #555;
-            padding: 15px;
-            width: 350px;
-            z-index: 100;
-            border-radius: 8px;
-            color: #fff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            margin-top: 10px;
-        }
-
-        .raidname a { color: #ffd700; font-weight: bold; text-decoration: none; font-size: 1.1rem; }
-        .raidnamelvl { color: #aaa; font-size: 0.9rem; }
-        .raidinfotext { font-size: 0.85rem; color: #bbb; margin-top: 10px; line-height: 1.4; }
-        .raidhr { border: 0; border-top: 1px solid #444; margin: 10px 0; }
-        .raidimg { float: left; margin-right: 10px; border: 1px solid #444; width: 80px; }
-
-        /* Таймерный блок */
-        .timer-section {
-            margin-top: 15px;
-            padding: 10px;
-            background: #2a2a2a;
-            border: 1px solid #ffd700;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .time-left { font-size: 20px; font-weight: bold; color: #00ff88; display: block; margin-bottom: 8px; }
-        .kill-btn { 
-            background: #b32d2d; color: white; border: none; padding: 6px 15px; 
-            cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%;
-        }
-        .kill-btn:hover { background: #ff4444; }
-
-        /* Подсветка живого РБ на карте */
-        .is-alive .raidflag {
-            filter: drop-shadow(0 0 8px #00ff88);
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        /* Кнопка закрытия окна */
-        .close-popup { position: absolute; right: 8px; top: 5px; color: #888; cursor: pointer; font-size: 18px; }
+        @keyframes pulse { 0% {transform: translate(-50%, -50%) scale(1);} 50% {transform: translate(-50%, -50%) scale(1.3);} 100% {transform: translate(-50%, -50%) scale(1);} }
     </style>
 </head>
 <body>
 
-<div class="worldmap" id="worldmap">
-    <div class="raidcontainer" data-name="Кутус Серый Коготь" style="top:2018px;left:378px;">
-        <img class="raidflag" src="https://linedia.ru/img/flag.png">
-        <div class="raidcontainerinner">
-            <span class="close-popup">×</span>
-            <img class="raidimg" src="https://linedia.ru/npcs/25001.jpg">
-            <div class="wmraidinfo">
-                <span class="raidnamelvl">Рейд-Босс (Lvl: 23)</span><br>
-                <div class="raidname"><a href="#">Кутус Серый Коготь</a></div>
-                <div class="raidinfotext">Солдат из Осужденных Наемников...</div>
-            </div>
-        </div>
+<div class="sidebar">
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Поиск босса..." onkeyup="filterBosses()">
     </div>
+    <div id="bossList"></div>
+</div>
 
-    <div class="raidcontainer" data-name="Капитан Наемников Турек" style="top:1786px;left:178px;">
-        <img class="raidflag" src="https://linedia.ru/img/flag.png">
-        <div class="raidcontainerinner">
-            <span class="close-popup">×</span>
-            <img class="raidimg" src="https://linedia.ru/npcs/25004.jpg">
-            <div class="wmraidinfo">
-                <span class="raidnamelvl">Рейд-Босс (Lvl: 30)</span><br>
-                <div class="raidname"><a href="#">Капитан Наемников Турек</a></div>
-            </div>
+<div class="map-wrapper" id="mapWrapper">
+    <div class="worldmap" id="map">
         </div>
-    </div>
-
-    <div class="raidcontainer" data-name="Паук Клету" style="top:1662px;left:1270px;">
-        <img class="raidflag" src="https://linedia.ru/img/flag.png">
-        <div class="raidcontainerinner">
-            <span class="close-popup">×</span>
-            <img class="raidimg" src="https://linedia.ru/npcs/25007.jpg">
-            <div class="wmraidinfo">
-                <span class="raidnamelvl">Рейд-Босс (Lvl: 42)</span><br>
-                <div class="raidname"><a href="#">Паук Клету</a></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="raidcontainer" data-name="Посланец Шилен Кабрио" style="top:1344px;left:1552px;">
-        <img class="raidflag" src="https://linedia.ru/img/flag.png">
-        <div class="raidcontainerinner">
-            <span class="close-popup">×</span>
-            <img class="raidimg" src="https://linedia.ru/npcs/25035.jpg">
-            <div class="wmraidinfo">
-                <span class="raidnamelvl">Рейд-Босс (Lvl: 70)</span><br>
-                <div class="raidname"><a href="#">Посланец Шилен Кабрио</a></div>
-            </div>
-        </div>
-    </div>
-    
-    </div>
+</div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const containers = document.querySelectorAll('.raidcontainer');
-    let timers = JSON.parse(localStorage.getItem('l2_map_timers')) || {};
+// Список всех твоих боссов
+// Координаты (x, y) пока 0,0. Ты их проставишь с помощью моей подсказки ниже.
+const bossData = [
+    { name: "Flame of Splendor Barakiel", x: 1552, y: 1344, resp: 12 },
+    { name: "Shilen's Messenger Cabrio", x: 1552, y: 1380, resp: 12 },
+    { name: "Death Lord Hallate", x: 1580, y: 1300, resp: 12 },
+    { name: "Kernon", x: 1610, y: 1250, resp: 12 },
+    { name: "Longhorn Golkonda", x: 1650, y: 1200, resp: 12 },
+    // Добавь сюда остальных из списка по шаблону ниже:
+    { name: "Abyss Brukunt", x: 0, y: 0, resp: 12 },
+    { name: "Demon Kurikups", x: 0, y: 0, resp: 12 },
+    { name: "Ghost of the Lidia", x: 0, y: 0, resp: 12 },
+    { name: "Ancient Weird Drake", x: 0, y: 0, resp: 12 },
+    { name: "Roaring Lord Kastor", x: 0, y: 0, resp: 12 },
+    { name: "Gorgolos", x: 0, y: 0, resp: 12 },
+    { name: "Fierce Tiger King Angel", x: 0, y: 0, resp: 12 },
+    { name: "Shilen's Priest Hisilrome", x: 0, y: 0, resp: 12 },
+    { name: "Hekaton Prime", x: 0, y: 0, resp: 12 },
+    { name: "Rahha", x: 0, y: 0, resp: 12 },
+    { name: "Enmity Ghost Ramdal", x: 0, y: 0, resp: 12 },
+    { name: "Gargoyle Lord Tiphon", x: 0, y: 0, resp: 12 },
+    { name: "Demons Agent Falston", x: 0, y: 0, resp: 12 },
+    { name: "Last Titan Utenus", x: 0, y: 0, resp: 12 },
+    { name: "Kernon's Faithful Servant Kelone", x: 0, y: 0, resp: 12 },
+    { name: "Spirit of Andras the Betrayer", x: 0, y: 0, resp: 12 },
+    { name: "Bloody Priest Rudelto", x: 0, y: 0, resp: 12 },
+    { name: "Anakim's Nemesis Zakaron", x: 0, y: 0, resp: 12 },
+    { name: "Korim", x: 0, y: 0, resp: 12 },
+    { name: "Palibati Queen Themis", x: 0, y: 0, resp: 12 },
+    { name: "Immortal Savior Mardil", x: 0, y: 0, resp: 12 },
+    { name: "Doom Blade Tanatos", x: 0, y: 0, resp: 12 },
+    { name: "Water Dragon Seer Sheshark", x: 0, y: 0, resp: 12 },
+    { name: "Icicle Emperor Bumbalump", x: 0, y: 0, resp: 12 },
+    { name: "Beast Lord Behemoth", x: 0, y: 0, resp: 12 },
+    { name: "Meanas Anor", x: 0, y: 0, resp: 12 },
+    { name: "Roaring Skylancer", x: 0, y: 0, resp: 12 },
+    { name: "Eilhalder von Hellmann", x: 0, y: 0, resp: 12 },
+    { name: "Vanor Chief Kandra", x: 0, y: 0, resp: 12 },
+    { name: "Antharas Priest Cloe", x: 0, y: 0, resp: 12 },
+    { name: "Fafurion's Herald Lokness", x: 0, y: 0, resp: 12 },
+    { name: "Krokian Padisha Sobekk", x: 0, y: 0, resp: 12 },
+    { name: "Bloody Empress Decarbia", x: 0, y: 0, resp: 12 },
+    { name: "Death Lord Ipos", x: 0, y: 0, resp: 12 },
+    { name: "Death Lord Shax", x: 0, y: 0, resp: 12 },
+    { name: "Lesser Giant Olkuth", x: 0, y: 0, resp: 12 },
+    { name: "Storm Winged Naga", x: 0, y: 0, resp: 12 },
+    { name: "Palatanos of Horrific Power", x: 0, y: 0, resp: 12 },
+    { name: "Flamestone Giant", x: 0, y: 0, resp: 12 },
+    { name: "Ocean Flame Ashakiel", x: 0, y: 0, resp: 12 },
+    { name: "Hestia, Guardian Deity of the Hot Springs", x: 0, y: 0, resp: 12 },
+    { name: "Last Lesser Giant Glaki", x: 0, y: 0, resp: 12 },
+    { name: "Daimon the White-Eyed", x: 0, y: 0, resp: 12 },
+    { name: "Fire of Wrath Shuriel", x: 0, y: 0, resp: 12 },
+    { name: "Cherub Galaxia", x: 0, y: 0, resp: 12 },
+    { name: "Ketra's Hero Hekaton", x: 0, y: 0, resp: 12 },
+    { name: "Varka's Hero Shadith", x: 0, y: 0, resp: 12 },
+    { name: "Queen Shyeed", x: 0, y: 0, resp: 12 },
+    { name: "Ketra's Commander Tayr", x: 0, y: 0, resp: 12 },
+    { name: "Varka's Commander Mos", x: 0, y: 0, resp: 12 },
+    { name: "Ember", x: 0, y: 0, resp: 12 },
+    { name: "Uruka", x: 0, y: 0, resp: 12 },
+    { name: "Ketra's Chief Brakki", x: 0, y: 0, resp: 12 },
+    { name: "Knight of Destruction Gordon", x: 0, y: 0, resp: 12 },
+    { name: "Soul of Water Ashutar", x: 0, y: 0, resp: 12 },
+    { name: "Soul of Fire Nastron", x: 0, y: 0, resp: 12 },
+    { name: "Varka's Chief Horus", x: 0, y: 0, resp: 12 },
+    { name: "Sealed Evil Power Sailren", x: 0, y: 0, resp: 12 },
+    { name: "Lord of Splendor Anays", x: 0, y: 0, resp: 12 },
+    { name: "Andreas van Halter", x: 0, y: 0, resp: 12 },
+    { name: "Plague Golem", x: 0, y: 0, resp: 12 }
+];
 
-    containers.forEach(container => {
-        const name = container.getAttribute('data-name');
-        const inner = container.querySelector('.raidcontainerinner');
-        const flag = container.querySelector('.raidflag');
-        const closeBtn = container.querySelector('.close-popup');
+let timers = JSON.parse(localStorage.getItem('l2_pro_timers')) || {};
 
-        // 1. Логика открытия/закрытия окон
-        flag.onclick = (e) => {
-            // Закрыть другие окна
-            document.querySelectorAll('.raidcontainerinner').forEach(el => el.style.display = 'none');
-            inner.style.display = 'block';
-        };
-        
-        if(closeBtn) {
-            closeBtn.onclick = (e) => {
-                e.stopPropagation();
-                inner.style.display = 'none';
-            };
-        }
+function render() {
+    const list = document.getElementById('bossList');
+    const map = document.getElementById('map');
+    list.innerHTML = '';
+    
+    // Очищаем только маркеры, не карту
+    document.querySelectorAll('.marker').forEach(m => m.remove());
 
-        // 2. Инъекция таймера
-        const timerSection = document.createElement('div');
-        timerSection.className = 'timer-section';
-        timerSection.innerHTML = `
-            <span class="time-left" id="time-${name}">ЖИВОЙ</span>
-            <button class="kill-btn" id="btn-${name}">УБИТ (12ч)</button>
-        `;
-        inner.querySelector('.wmraidinfo').appendChild(timerSection);
-
-        const killBtn = timerSection.querySelector('.kill-btn');
-        killBtn.onclick = () => {
-            const respawnTime = Date.now() + (12 * 60 * 60 * 1000); // Респ 12 часов
-            timers[name] = respawnTime;
-            localStorage.setItem('l2_map_timers', JSON.stringify(timers));
-        };
-    });
-
-    // 3. Обновление счетчиков каждую секунду
-    setInterval(() => {
+    bossData.forEach(boss => {
         const now = Date.now();
-        containers.forEach(container => {
-            const name = container.getAttribute('data-name');
-            const display = document.getElementById(`time-${name}`);
-            
-            if (timers[name]) {
-                const diff = timers[name] - now;
-                if (diff > 0) {
-                    const h = Math.floor(diff / 3600000);
-                    const m = Math.floor((diff % 3600000) / 60000);
-                    const s = Math.floor((diff % 60000) / 1000);
-                    display.innerText = `${h}ч ${m}м ${s}с`;
-                    display.style.color = "#ff4444";
-                    container.classList.remove('is-alive');
-                } else {
-                    display.innerText = "ЖИВОЙ / ОКНО";
-                    display.style.color = "#00ff88";
-                    container.classList.add('is-alive');
-                }
-            } else {
-                container.classList.add('is-alive');
-            }
-        });
-    }, 1000);
-});
+        const killTime = timers[boss.name] || 0;
+        const diff = killTime - now;
+        const isDead = diff > 0;
+
+        // Рендер в список
+        const item = document.createElement('div');
+        item.className = 'boss-item';
+        item.innerHTML = `
+            <button class="btn-kill" onclick="kill('${boss.name}', ${boss.resp})">УБИТ</button>
+            <span class="boss-name">${boss.name}</span>
+            <span class="timer-val ${isDead ? 'dead' : ''}" id="val-${boss.name.replace(/\s/g, '')}">
+                ${isDead ? format(diff) : 'ЖИВОЙ / ОКНО'}
+            </span>
+        `;
+        list.appendChild(item);
+
+        // Рендер на карту (если есть координаты)
+        if (boss.x > 0 && boss.y > 0) {
+            const marker = document.createElement('div');
+            marker.className = `marker ${isDead ? '' : 'alive'}`;
+            marker.style.left = boss.x + 'px';
+            marker.style.top = boss.y + 'px';
+            marker.innerHTML = `<img src="https://linedia.ru/img/flag.png" title="${boss.name}">`;
+            marker.onclick = () => alert(boss.name + (isDead ? " будет через " + format(diff) : " ЖИВ!"));
+            map.appendChild(marker);
+        }
+    });
+}
+
+function kill(name, hours) {
+    timers[name] = Date.now() + (hours * 60 * 60 * 1000);
+    localStorage.setItem('l2_pro_timers', JSON.stringify(timers));
+    render();
+}
+
+function format(ms) {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${h}ч ${m}м ${s}с`;
+}
+
+// ХЕЛПЕР ДЛЯ КООРДИНАТ: Кликни на карту и посмотри в консоль (F12)
+document.getElementById('map').onclick = function(e) {
+    const rect = this.getBoundingClientRect();
+    const x = Math.round(e.pageX + document.getElementById('mapWrapper').scrollLeft - 350);
+    const y = Math.round(e.pageY + document.getElementById('mapWrapper').scrollTop);
+    console.log(`Для босса: x: ${x}, y: ${y}`);
+};
+
+function filterBosses() {
+    let input = document.getElementById('searchInput').value.toLowerCase();
+    let items = document.getElementsByClassName('boss-item');
+    for (let i = 0; i < items.length; i++) {
+        items[i].style.display = items[i].innerText.toLowerCase().includes(input) ? "block" : "none";
+    }
+}
+
+setInterval(render, 1000);
+render();
 </script>
 
 </body>
