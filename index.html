@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>L2 Raid Boss Tracker</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #e0e0e0; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #ffd700; text-shadow: 2px 2px 4px #000; }
+        
+        .add-boss { background: #252525; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; border: 1px solid #444; }
+        input, button { padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: white; }
+        button { cursor: pointer; background: #4a90e2; border: none; font-weight: bold; }
+        button:hover { background: #357abd; }
+
+        .boss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .boss-card { background: #252525; padding: 15px; border-radius: 8px; border-left: 5px solid #ff4444; position: relative; }
+        .boss-card.up { border-left-color: #00ff88; }
+        
+        .name { font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 5px; }
+        .timer { font-size: 1.5rem; font-family: monospace; color: #00ff88; margin: 10px 0; }
+        .controls { display: flex; gap: 5px; }
+        .delete-btn { position: absolute; top: 5px; right: 5px; background: none; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>RB Timers (Interlude)</h1>
+    
+    <div class="add-boss">
+        <input type="text" id="bossName" placeholder="Имя РБ (напр. Баракиэль)">
+        <input type="number" id="respawnTime" placeholder="Респ (часов)" style="width: 100px;">
+        <button onclick="addBoss()">Добавить</button>
+    </div>
+
+    <div id="bossGrid" class="boss-grid"></div>
+</div>
+
+<script>
+    let bosses = JSON.parse(localStorage.getItem('l2timers')) || [];
+
+    function addBoss() {
+        const name = document.getElementById('bossName').value;
+        const hours = document.getElementById('respawnTime').value;
+        if (!name || !hours) return;
+
+        const newBoss = {
+            id: Date.now(),
+            name: name,
+            respawnHours: parseFloat(hours),
+            nextRespawn: 0 // Таймер не запущен
+        };
+
+        bosses.push(newBoss);
+        save();
+        render();
+        document.getElementById('bossName').value = '';
+    }
+
+    function killBoss(id) {
+        const boss = bosses.find(b => b.id === id);
+        // Устанавливаем время следующего респауна: сейчас + N часов
+        boss.nextRespawn = Date.now() + (boss.respawnHours * 60 * 60 * 1000);
+        save();
+        render();
+    }
+
+    function deleteBoss(id) {
+        bosses = bosses.filter(b => b.id !== id);
+        save();
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('l2timers', JSON.stringify(bosses));
+    }
+
+    function render() {
+        const grid = document.getElementById('bossGrid');
+        grid.innerHTML = '';
+
+        bosses.forEach(boss => {
+            const timeLeft = boss.nextRespawn - Date.now();
+            const isUp = timeLeft <= 0;
+            
+            const card = document.createElement('div');
+            card.className = `boss-card ${isUp ? 'up' : ''}`;
+            
+            let timeString = isUp ? "ЖИВОЙ / ОКНО" : formatTime(timeLeft);
+
+            card.innerHTML = `
+                <button class="delete-btn" onclick="deleteBoss(${boss.id})">✖</button>
+                <div class="name">${boss.name}</div>
+                <div style="font-size: 0.8rem; color: #888;">Респ: ${boss.respawnHours}ч</div>
+                <div class="timer" id="timer-${boss.id}">${timeString}</div>
+                <div class="controls">
+                    <button onclick="killBoss(${boss.id})" style="background: #ff4444;">УБИТ</button>
+                    <button onclick="resetTimer(${boss.id})" style="background: #555;">Сброс</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function resetTimer(id) {
+        const boss = bosses.find(b => b.id === id);
+        boss.nextRespawn = 0;
+        save();
+        render();
+    }
+
+    function formatTime(ms) {
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        return `${h}ч ${m}м ${s}с`;
+    }
+
+    // Обновление таймеров каждую секунду
+    setInterval(() => {
+        bosses.forEach(boss => {
+            if (boss.nextRespawn > 0) {
+                const display = document.getElementById(`timer-${boss.id}`);
+                const timeLeft = boss.nextRespawn - Date.now();
+                if (display) {
+                    display.innerText = timeLeft <= 0 ? "ЖИВОЙ / ОКНО" : formatTime(timeLeft);
+                    if (timeLeft <= 0) display.parentElement.classList.add('up');
+                }
+            }
+        });
+    }, 1000);
+
+    render();
+</script>
+
+</body>
+</html>
