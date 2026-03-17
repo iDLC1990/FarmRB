@@ -2,136 +2,194 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 Raid Boss Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L2 Raid Tracker - Interlude Map</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #e0e0e0; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        h1 { text-align: center; color: #ffd700; text-shadow: 2px 2px 4px #000; }
+        body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; overflow: auto; }
         
-        .add-boss { background: #252525; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; border: 1px solid #444; }
-        input, button { padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: white; }
-        button { cursor: pointer; background: #4a90e2; border: none; font-weight: bold; }
-        button:hover { background: #357abd; }
+        /* Контейнер карты */
+        .worldmap { position: relative; width: 2500px; height: 3500px; background: url('https://linedia.ru/img/map.jpg') no-repeat; }
+        
+        /* Флаги РБ */
+        .raidcontainer { position: absolute; cursor: pointer; z-index: 10; }
+        .raidflag { width: 32px; height: 32px; transition: transform 0.2s; }
+        .raidflag:hover { transform: scale(1.2); }
 
-        .boss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-        .boss-card { background: #252525; padding: 15px; border-radius: 8px; border-left: 5px solid #ff4444; position: relative; }
-        .boss-card.up { border-left-color: #00ff88; }
-        
-        .name { font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 5px; }
-        .timer { font-size: 1.5rem; font-family: monospace; color: #00ff88; margin: 10px 0; }
-        .controls { display: flex; gap: 5px; }
-        .delete-btn { position: absolute; top: 5px; right: 5px; background: none; color: #666; font-size: 12px; }
+        /* Всплывающее окно с инфой */
+        .raidcontainerinner {
+            display: none; /* По умолчанию скрыто */
+            position: absolute;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #555;
+            padding: 15px;
+            width: 350px;
+            z-index: 100;
+            border-radius: 8px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            margin-top: 10px;
+        }
+
+        .raidname a { color: #ffd700; font-weight: bold; text-decoration: none; font-size: 1.1rem; }
+        .raidnamelvl { color: #aaa; font-size: 0.9rem; }
+        .raidinfotext { font-size: 0.85rem; color: #bbb; margin-top: 10px; line-height: 1.4; }
+        .raidhr { border: 0; border-top: 1px solid #444; margin: 10px 0; }
+        .raidimg { float: left; margin-right: 10px; border: 1px solid #444; width: 80px; }
+
+        /* Таймерный блок */
+        .timer-section {
+            margin-top: 15px;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #ffd700;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .time-left { font-size: 20px; font-weight: bold; color: #00ff88; display: block; margin-bottom: 8px; }
+        .kill-btn { 
+            background: #b32d2d; color: white; border: none; padding: 6px 15px; 
+            cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%;
+        }
+        .kill-btn:hover { background: #ff4444; }
+
+        /* Подсветка живого РБ на карте */
+        .is-alive .raidflag {
+            filter: drop-shadow(0 0 8px #00ff88);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* Кнопка закрытия окна */
+        .close-popup { position: absolute; right: 8px; top: 5px; color: #888; cursor: pointer; font-size: 18px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>RB Timers (Interlude)</h1>
-    
-    <div class="add-boss">
-        <input type="text" id="bossName" placeholder="Имя РБ (напр. Баракиэль)">
-        <input type="number" id="respawnTime" placeholder="Респ (часов)" style="width: 100px;">
-        <button onclick="addBoss()">Добавить</button>
+<div class="worldmap" id="worldmap">
+    <div class="raidcontainer" data-name="Кутус Серый Коготь" style="top:2018px;left:378px;">
+        <img class="raidflag" src="https://linedia.ru/img/flag.png">
+        <div class="raidcontainerinner">
+            <span class="close-popup">×</span>
+            <img class="raidimg" src="https://linedia.ru/npcs/25001.jpg">
+            <div class="wmraidinfo">
+                <span class="raidnamelvl">Рейд-Босс (Lvl: 23)</span><br>
+                <div class="raidname"><a href="#">Кутус Серый Коготь</a></div>
+                <div class="raidinfotext">Солдат из Осужденных Наемников...</div>
+            </div>
+        </div>
     </div>
 
-    <div id="bossGrid" class="boss-grid"></div>
-</div>
+    <div class="raidcontainer" data-name="Капитан Наемников Турек" style="top:1786px;left:178px;">
+        <img class="raidflag" src="https://linedia.ru/img/flag.png">
+        <div class="raidcontainerinner">
+            <span class="close-popup">×</span>
+            <img class="raidimg" src="https://linedia.ru/npcs/25004.jpg">
+            <div class="wmraidinfo">
+                <span class="raidnamelvl">Рейд-Босс (Lvl: 30)</span><br>
+                <div class="raidname"><a href="#">Капитан Наемников Турек</a></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="raidcontainer" data-name="Паук Клету" style="top:1662px;left:1270px;">
+        <img class="raidflag" src="https://linedia.ru/img/flag.png">
+        <div class="raidcontainerinner">
+            <span class="close-popup">×</span>
+            <img class="raidimg" src="https://linedia.ru/npcs/25007.jpg">
+            <div class="wmraidinfo">
+                <span class="raidnamelvl">Рейд-Босс (Lvl: 42)</span><br>
+                <div class="raidname"><a href="#">Паук Клету</a></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="raidcontainer" data-name="Посланец Шилен Кабрио" style="top:1344px;left:1552px;">
+        <img class="raidflag" src="https://linedia.ru/img/flag.png">
+        <div class="raidcontainerinner">
+            <span class="close-popup">×</span>
+            <img class="raidimg" src="https://linedia.ru/npcs/25035.jpg">
+            <div class="wmraidinfo">
+                <span class="raidnamelvl">Рейд-Босс (Lvl: 70)</span><br>
+                <div class="raidname"><a href="#">Посланец Шилен Кабрио</a></div>
+            </div>
+        </div>
+    </div>
+    
+    </div>
 
 <script>
-    let bosses = JSON.parse(localStorage.getItem('l2timers')) || [];
+document.addEventListener('DOMContentLoaded', function() {
+    const containers = document.querySelectorAll('.raidcontainer');
+    let timers = JSON.parse(localStorage.getItem('l2_map_timers')) || {};
 
-    function addBoss() {
-        const name = document.getElementById('bossName').value;
-        const hours = document.getElementById('respawnTime').value;
-        if (!name || !hours) return;
+    containers.forEach(container => {
+        const name = container.getAttribute('data-name');
+        const inner = container.querySelector('.raidcontainerinner');
+        const flag = container.querySelector('.raidflag');
+        const closeBtn = container.querySelector('.close-popup');
 
-        const newBoss = {
-            id: Date.now(),
-            name: name,
-            respawnHours: parseFloat(hours),
-            nextRespawn: 0 // Таймер не запущен
+        // 1. Логика открытия/закрытия окон
+        flag.onclick = (e) => {
+            // Закрыть другие окна
+            document.querySelectorAll('.raidcontainerinner').forEach(el => el.style.display = 'none');
+            inner.style.display = 'block';
         };
+        
+        if(closeBtn) {
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                inner.style.display = 'none';
+            };
+        }
 
-        bosses.push(newBoss);
-        save();
-        render();
-        document.getElementById('bossName').value = '';
-    }
+        // 2. Инъекция таймера
+        const timerSection = document.createElement('div');
+        timerSection.className = 'timer-section';
+        timerSection.innerHTML = `
+            <span class="time-left" id="time-${name}">ЖИВОЙ</span>
+            <button class="kill-btn" id="btn-${name}">УБИТ (12ч)</button>
+        `;
+        inner.querySelector('.wmraidinfo').appendChild(timerSection);
 
-    function killBoss(id) {
-        const boss = bosses.find(b => b.id === id);
-        // Устанавливаем время следующего респауна: сейчас + N часов
-        boss.nextRespawn = Date.now() + (boss.respawnHours * 60 * 60 * 1000);
-        save();
-        render();
-    }
+        const killBtn = timerSection.querySelector('.kill-btn');
+        killBtn.onclick = () => {
+            const respawnTime = Date.now() + (12 * 60 * 60 * 1000); // Респ 12 часов
+            timers[name] = respawnTime;
+            localStorage.setItem('l2_map_timers', JSON.stringify(timers));
+        };
+    });
 
-    function deleteBoss(id) {
-        bosses = bosses.filter(b => b.id !== id);
-        save();
-        render();
-    }
-
-    function save() {
-        localStorage.setItem('l2timers', JSON.stringify(bosses));
-    }
-
-    function render() {
-        const grid = document.getElementById('bossGrid');
-        grid.innerHTML = '';
-
-        bosses.forEach(boss => {
-            const timeLeft = boss.nextRespawn - Date.now();
-            const isUp = timeLeft <= 0;
-            
-            const card = document.createElement('div');
-            card.className = `boss-card ${isUp ? 'up' : ''}`;
-            
-            let timeString = isUp ? "ЖИВОЙ / ОКНО" : formatTime(timeLeft);
-
-            card.innerHTML = `
-                <button class="delete-btn" onclick="deleteBoss(${boss.id})">✖</button>
-                <div class="name">${boss.name}</div>
-                <div style="font-size: 0.8rem; color: #888;">Респ: ${boss.respawnHours}ч</div>
-                <div class="timer" id="timer-${boss.id}">${timeString}</div>
-                <div class="controls">
-                    <button onclick="killBoss(${boss.id})" style="background: #ff4444;">УБИТ</button>
-                    <button onclick="resetTimer(${boss.id})" style="background: #555;">Сброс</button>
-                </div>
-            `;
-            grid.appendChild(card);
-        });
-    }
-
-    function resetTimer(id) {
-        const boss = bosses.find(b => b.id === id);
-        boss.nextRespawn = 0;
-        save();
-        render();
-    }
-
-    function formatTime(ms) {
-        const h = Math.floor(ms / 3600000);
-        const m = Math.floor((ms % 3600000) / 60000);
-        const s = Math.floor((ms % 60000) / 1000);
-        return `${h}ч ${m}м ${s}с`;
-    }
-
-    // Обновление таймеров каждую секунду
+    // 3. Обновление счетчиков каждую секунду
     setInterval(() => {
-        bosses.forEach(boss => {
-            if (boss.nextRespawn > 0) {
-                const display = document.getElementById(`timer-${boss.id}`);
-                const timeLeft = boss.nextRespawn - Date.now();
-                if (display) {
-                    display.innerText = timeLeft <= 0 ? "ЖИВОЙ / ОКНО" : formatTime(timeLeft);
-                    if (timeLeft <= 0) display.parentElement.classList.add('up');
+        const now = Date.now();
+        containers.forEach(container => {
+            const name = container.getAttribute('data-name');
+            const display = document.getElementById(`time-${name}`);
+            
+            if (timers[name]) {
+                const diff = timers[name] - now;
+                if (diff > 0) {
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    display.innerText = `${h}ч ${m}м ${s}с`;
+                    display.style.color = "#ff4444";
+                    container.classList.remove('is-alive');
+                } else {
+                    display.innerText = "ЖИВОЙ / ОКНО";
+                    display.style.color = "#00ff88";
+                    container.classList.add('is-alive');
                 }
+            } else {
+                container.classList.add('is-alive');
             }
         });
     }, 1000);
-
-    render();
+});
 </script>
 
 </body>
