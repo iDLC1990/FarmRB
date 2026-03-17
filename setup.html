@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ручная расстановка РБ</title>
+    <style>
+        body { margin: 0; background: #222; color: white; font-family: sans-serif; }
+        #canvas { 
+            position: relative; 
+            width: 3072px; height: 4608px; 
+            background: url('https://linedia.ru/img/map.jpg'); 
+            cursor: crosshair;
+        }
+        #info-panel {
+            position: fixed; top: 10px; left: 10px; 
+            background: rgba(0,0,0,0.9); padding: 15px;
+            border: 2px solid #00ff88; z-index: 1000;
+            max-width: 400px;
+        }
+        .marker {
+            position: absolute; width: 24px; height: 24px;
+            background: url('https://linedia.ru/img/flag.png') no-repeat;
+            background-size: contain; pointer-events: none;
+            margin-top: -22px; margin-left: -10px; /* Коррекция острия */
+        }
+        textarea { width: 100%; height: 100px; margin-top: 10px; background: #111; color: #00ff88; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+
+<div id="info-panel">
+    <b>Инструкция:</b><br>
+    1. Найди место босса на карте и кликни.<br>
+    2. Скопируй строку снизу в свой основной файл.<br>
+    <textarea id="output" readonly placeholder="Тут появится код после клика..."></textarea>
+    <p style="font-size: 12px; color: #aaa;">Кликнул — получил координаты — вставил в список bosses.</p>
+</div>
+
+<div id="canvas" onclick="getCoords(event)"></div>
+
+<script>
+    function getCoords(e) {
+        // Получаем точные координаты клика относительно карты
+        const rect = document.getElementById('canvas').getBoundingClientRect();
+        const x = Math.round(e.pageX + document.documentElement.scrollLeft);
+        const y = Math.round(e.pageY + document.documentElement.scrollTop);
+
+        // Создаем визуальную метку, чтобы видеть, куда попали
+        const marker = document.createElement('div');
+        marker.className = 'marker';
+        marker.style.top = y + 'px';
+        marker.style.left = x + 'px';
+        document.getElementById('canvas').appendChild(marker);
+
+        // Генерируем строку для твоего списка
+        const bossName = prompt("Введите имя босса для этой точки:", "New Boss");
+        if (bossName) {
+            const code = `{ name: "${bossName}", pos: "top:${y}px;left:${x}px;" },`;
+            document.getElementById('output').value += code + "\n";
+            console.log("Добавлено:", code);
+        }
+    }
+</script>
+
+</body>
+</html>
