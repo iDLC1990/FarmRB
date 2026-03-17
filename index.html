@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 RB Map - Final Fix</title>
+    <title>L2 RB Map - Pro Edition</title>
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #0b0e14; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
         
         #viewport {
             width: 100vw;
@@ -12,14 +12,15 @@
             cursor: grab;
             overflow: hidden;
             position: relative;
+            background: radial-gradient(circle, #1a2a3a 0%, #05080a 100%);
         }
 
-        /* Контейнер для калибровки координат */
         #map-wrapper {
             position: absolute;
-            width: 2048px; /* Базовая ширина для координат из вашего файла */
+            width: 2048px; 
             height: 3072px; 
             transform-origin: 0 0;
+            will-change: transform;
         }
 
         #map-image {
@@ -28,6 +29,7 @@
             background-image: url('https://linedia.ru/img/map.jpg');
             background-size: contain;
             background-repeat: no-repeat;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
         .boss-marker {
@@ -38,49 +40,86 @@
             background-size: contain;
             cursor: pointer;
             z-index: 10;
-            /* КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: смещаем флаг так, чтобы острие было в точке координат */
-            margin-left: -10px; /* Половина ширины иголки */
-            margin-top: -30px;  /* Почти вся высота флага */
+            /* Смещение, чтобы острие флага было точно в координате */
+            margin-left: -10px; 
+            margin-top: -30px;  
             filter: drop-shadow(0 0 2px black);
+            transition: transform 0.2s;
         }
 
-        .boss-marker:hover { transform: scale(1.2); z-index: 100; filter: brightness(1.3) drop-shadow(0 0 10px #00ff88); }
-        .boss-marker.active { filter: hue-rotate(260deg) drop-shadow(0 0 10px red); }
+        .boss-marker:hover { 
+            transform: scale(1.3); 
+            z-index: 100; 
+            filter: brightness(1.3) drop-shadow(0 0 10px #00ff88); 
+        }
 
-        /* UI */
+        /* Стиль для босса, который на респе (таймер запущен) */
+        .boss-marker.active { 
+            filter: hue-rotate(260deg) drop-shadow(0 0 8px red); 
+        }
+
+        /* UI Панель */
         #ui {
-            position: fixed; top: 20px; right: 20px; width: 260px;
-            background: rgba(10, 15, 25, 0.96); border: 1px solid #444;
-            border-radius: 12px; padding: 20px; color: white; z-index: 1000; display: none;
+            position: fixed; top: 20px; right: 20px; width: 280px;
+            background: rgba(15, 20, 30, 0.95); 
+            border: 1px solid #34495e;
+            border-radius: 12px; padding: 20px; color: white; 
+            z-index: 1000; display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
         }
-        .timer-display { font-size: 2.5em; text-align: center; color: #ff4d4d; font-family: monospace; margin: 15px 0; }
-        .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        button { cursor: pointer; border: none; padding: 10px; border-radius: 6px; background: #2c3e50; color: white; font-weight: bold; }
+
+        .timer-display { 
+            font-size: 2.2em; text-align: center; color: #00ff88; 
+            font-family: 'Courier New', monospace; margin: 15px 0;
+            text-shadow: 0 0 10px rgba(0,255,136,0.3);
+        }
+
+        .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        button { 
+            cursor: pointer; border: none; padding: 12px; border-radius: 6px; 
+            background: #2c3e50; color: white; font-weight: bold; 
+            transition: background 0.2s;
+        }
+
+        button:hover { background: #34495e; }
+        
         .btn-main { background: #950740; grid-column: span 2; }
+        .btn-main:hover { background: #c3073f; }
+        
+        .btn-reset { background: #444; grid-column: span 2; margin-top: 5px; }
+
+        #coords-info {
+            position: fixed; bottom: 10px; left: 10px; 
+            color: rgba(255,255,255,0.3); font-size: 12px; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
 <div id="viewport">
-    <div id="map-wrapper" id="move-layer">
+    <div id="map-wrapper">
         <div id="map-image"></div>
     </div>
 </div>
 
 <div id="ui">
-    <div id="b-name" style="font-size: 1.2em; font-weight: bold; color: #00ff88;"></div>
+    <div id="b-name" style="font-size: 1.1em; font-weight: bold; color: #00ff88; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px;"></div>
     <div id="b-timer" class="timer-display">ALIVE</div>
     <div class="btns">
         <button onclick="setTimer(12)">12ч</button>
         <button onclick="setTimer(24)">24ч</button>
         <button class="btn-main" onclick="setCustom()">Свой таймер (мин)</button>
-        <button style="grid-column: span 2" onclick="resetTimer()">Жив / Сброс</button>
-        <button style="grid-column: span 2; background: #444;" onclick="closeUI()">Закрыть</button>
+        <button class="btn-reset" onclick="resetTimer()">Жив / Сброс</button>
+        <button class="btn-reset" style="background: #222;" onclick="closeUI()">Закрыть</button>
     </div>
 </div>
 
+<div id="coords-info">Scroll to Zoom | Drag to Move</div>
+
 <script>
-    // Твой отфильтрованный список (координаты напрямую из твоего файла)
+    // Твой проверенный список координат (из конструктора)
     const bossList = [
         { name: "Abyss Brukunt", pos: "top:1346px;left:1352px" },
         { name: "Demon Kurikups", pos: "top:1330px;left:1370px" },
@@ -152,68 +191,133 @@
 
     const wrapper = document.getElementById('map-wrapper');
     const viewport = document.getElementById('viewport');
-    let scale = 0.6, posX = -400, posY = -600;
+    
+    // Загрузка состояния карты или дефолт
+    let viewState = JSON.parse(localStorage.getItem('map_view_state')) || { scale: 0.8, x: -800, y: -800 };
+    let scale = viewState.scale;
+    let posX = viewState.x;
+    let posY = viewState.y;
+
     let storage = JSON.parse(localStorage.getItem('rb_timers_final_v5')) || {};
     let activeId = null;
 
-    // Отрисовка
-    bossList.forEach((b, i) => {
-        const flag = document.createElement('div');
-        flag.className = 'boss-marker';
-        flag.style.cssText = b.pos;
-        flag.onclick = (e) => { e.stopPropagation(); openUI(i); };
-        wrapper.appendChild(flag);
-    });
+    // Создание меток
+    function createMarkers() {
+        bossList.forEach((b, i) => {
+            const flag = document.createElement('div');
+            flag.className = 'boss-marker';
+            flag.style.cssText = b.pos;
+            flag.title = b.name;
+            flag.onclick = (e) => { e.stopPropagation(); openUI(i); };
+            wrapper.appendChild(flag);
+        });
+    }
 
-    function render() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+    function render() { 
+        wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
+        // Сохраняем положение
+        localStorage.setItem('map_view_state', JSON.stringify({ scale: scale, x: posX, y: posY }));
+    }
 
-    // Управление
+    // Зум
     viewport.onwheel = (e) => {
-        const d = e.deltaY > 0 ? 0.9 : 1.1;
-        scale = Math.min(Math.max(0.1, scale * d), 4);
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = Math.min(Math.max(0.2, scale * delta), 4);
+        
+        // Зум в точку курсора
+        const rect = viewport.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        posX = mouseX - (mouseX - posX) * (newScale / scale);
+        posY = mouseY - (mouseY - posY) * (newScale / scale);
+        
+        scale = newScale;
         render();
     };
 
+    // Перетаскивание
     let isDrag = false, sX, sY;
-    viewport.onmousedown = (e) => { isDrag = true; sX = e.clientX - posX; sY = e.clientY - posY; viewport.style.cursor = 'grabbing'; };
-    window.onmousemove = (e) => { if(!isDrag) return; posX = e.clientX - sX; posY = e.clientY - sY; render(); };
+    viewport.onmousedown = (e) => { 
+        if(e.button !== 0) return;
+        isDrag = true; 
+        sX = e.clientX - posX; 
+        sY = e.clientY - posY; 
+        viewport.style.cursor = 'grabbing'; 
+    };
+    window.onmousemove = (e) => { 
+        if(!isDrag) return; 
+        posX = e.clientX - sX; 
+        posY = e.clientY - sY; 
+        render(); 
+    };
     window.onmouseup = () => { isDrag = false; viewport.style.cursor = 'grab'; };
 
-    // Таймер
+    // Логика Таймеров
     function openUI(id) {
         activeId = id;
         document.getElementById('ui').style.display = 'block';
         document.getElementById('b-name').innerText = bossList[id].name;
         updateUI();
     }
+    
     function closeUI() { document.getElementById('ui').style.display = 'none'; activeId = null; }
-    function setTimer(h) { storage[activeId] = Date.now() + (h * 3600000); save(); }
-    function setCustom() { let m = prompt("Минут до появления:"); if(m) { storage[activeId] = Date.now() + (m * 60000); save(); } }
+    
+    function setTimer(h) { 
+        storage[activeId] = Date.now() + (h * 3600000); 
+        save(); 
+    }
+    
+    function setCustom() { 
+        let m = prompt("Через сколько минут появится босс?"); 
+        if(m && !isNaN(m)) { 
+            storage[activeId] = Date.now() + (m * 60000); 
+            save(); 
+        } 
+    }
+    
     function resetTimer() { delete storage[activeId]; save(); }
-    function save() { localStorage.setItem('rb_timers_final_v5', JSON.stringify(storage)); }
+    
+    function save() { 
+        localStorage.setItem('rb_timers_final_v5', JSON.stringify(storage)); 
+        updateUI();
+    }
 
     function updateUI() {
         if (activeId === null) return;
         const el = document.getElementById('b-timer');
-        if (!storage[activeId]) { el.innerText = "ALIVE"; el.style.color = "#00ff88"; return; }
+        if (!storage[activeId]) { 
+            el.innerText = "ALIVE"; el.style.color = "#00ff88"; return; 
+        }
+        
         const diff = storage[activeId] - Date.now();
-        if (diff <= 0) { el.innerText = "READY"; el.style.color = "#00ff88"; }
-        else {
-            const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+        if (diff <= 0) { 
+            el.innerText = "READY"; el.style.color = "#00ff88"; 
+        } else {
+            const h = Math.floor(diff/3600000);
+            const m = Math.floor((diff%3600000)/60000);
+            const s = Math.floor((diff%60000)/1000);
             el.innerText = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-            el.style.color = "#f44";
+            el.style.color = "#ff4d4d";
         }
     }
 
+    // Цикл обновления карты и таймеров
     setInterval(() => {
         updateUI();
+        const markers = document.getElementsByClassName('boss-marker');
         bossList.forEach((_, i) => {
-            const m = wrapper.getElementsByClassName('boss-marker')[i];
-            if (storage[i] && storage[i] > Date.now()) m.classList.add('active');
-            else m.classList.remove('active');
+            if (storage[i] && storage[i] > Date.now()) {
+                markers[i].classList.add('active');
+            } else {
+                markers[i].classList.remove('active');
+            }
         });
     }, 1000);
 
+    // Старт
+    createMarkers();
     render();
 </script>
 
