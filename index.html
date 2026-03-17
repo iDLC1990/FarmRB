@@ -2,80 +2,80 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 RB Map - Fixed Coordinates</title>
+    <title>L2 RB Map - Perfect Sync</title>
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: white; }
+        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; }
         
-        /* Главный экран */
+        /* Окно просмотра */
         #viewport {
             width: 100vw;
             height: 100vh;
             cursor: grab;
             overflow: hidden;
             position: relative;
+            background: #050505;
         }
 
-        /* Контейнер всей карты */
-        #map-wrapper {
+        /* Контейнер карты - размеры строго как на Linedia */
+        #map-container {
             position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: 0 0;
-            width: 3072px; /* Фиксированная ширина как на источнике */
+            width: 3072px; 
             height: 4608px;
-        }
-
-        /* Сама картинка карты */
-        #map-image {
-            width: 100%;
-            height: 100%;
+            transform-origin: 0 0;
             background-image: url('https://linedia.ru/img/map.jpg');
             background-repeat: no-repeat;
-            position: absolute;
         }
 
+        /* Точная метка */
         .boss-marker {
             position: absolute;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             background: url('https://linedia.ru/img/flag.png') no-repeat center;
             background-size: contain;
             cursor: pointer;
             z-index: 10;
-            /* Центрируем иконку по координате */
-            transform: translate(-50%, -100%); 
+            /* Смещение, чтобы кончик флага был ровно в точке координат */
+            margin-top: -24px; 
+            margin-left: -10px;
+            filter: drop-shadow(0 0 2px #000);
+            transition: transform 0.1s;
         }
 
-        .boss-marker:hover { filter: brightness(1.5) drop-shadow(0 0 5px #00ff88); }
-        .boss-marker.active { filter: hue-rotate(280deg) drop-shadow(0 0 8px red); }
+        .boss-marker:hover { transform: scale(1.3); z-index: 100; filter: brightness(1.2) drop-shadow(0 0 8px #00ff88); }
+        .boss-marker.active { filter: hue-rotate(280deg) drop-shadow(0 0 10px red); }
 
-        /* Панель управления */
-        #ui-panel {
+        /* UI Панель */
+        #ui {
             position: fixed;
             top: 20px;
             right: 20px;
-            width: 280px;
-            background: rgba(10, 15, 25, 0.9);
-            border: 1px solid #333;
-            border-radius: 10px;
+            width: 260px;
+            background: rgba(13, 17, 23, 0.95);
+            border: 1px solid #30363d;
+            border-radius: 12px;
             padding: 15px;
-            z-index: 2000;
+            color: white;
+            z-index: 1000;
             display: none;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
         }
 
-        .timer-val { font-size: 2.5rem; text-align: center; color: #ff4d4d; font-family: monospace; margin: 10px 0; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-        button { cursor: pointer; padding: 8px; border: none; border-radius: 4px; background: #2c3e50; color: white; font-weight: bold; }
-        button.start { background: #c0392b; grid-column: span 2; padding: 12px; margin-top: 5px; }
-
-        #hint {
+        .t-val { font-size: 2.2em; text-align: center; margin: 10px 0; color: #ff4d4d; font-family: monospace; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button { cursor: pointer; border: none; padding: 10px; border-radius: 6px; font-weight: bold; background: #21262d; color: #c9d1d9; }
+        button:hover { background: #30363d; }
+        .btn-main { background: #950740; color: white; grid-column: span 2; }
+        
+        #controls-hint {
             position: fixed;
             bottom: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.6);
-            padding: 10px;
-            border-radius: 5px;
+            color: #8b949e;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
             pointer-events: none;
         }
     </style>
@@ -83,186 +83,162 @@
 <body>
 
 <div id="viewport">
-    <div id="map-wrapper">
-        <div id="map-image"></div>
+    <div id="map-container">
         </div>
 </div>
 
-<div id="ui-panel">
-    <div id="ui-name" style="font-weight: bold; color: #00ff88;"></div>
-    <div id="ui-timer" class="timer-val">READY</div>
-    <div class="controls">
-        <button onclick="startRB(12)">12ч</button>
-        <button onclick="startRB(24)">24ч</button>
-        <button class="start" onclick="manualStart()">Указать время</button>
-        <button style="grid-column: span 2; margin-top: 5px;" onclick="resetRB()">Сбросить</button>
-        <button style="grid-column: span 2; background: #444;" onclick="closeUI()">Закрыть</button>
+<div id="ui">
+    <div id="b-name" style="font-size: 1.1em; font-weight: bold; color: #58a6ff; margin-bottom: 10px;"></div>
+    <div id="b-timer" class="t-val">ALIVE</div>
+    <div class="btn-grid">
+        <button onclick="setT(12)">12 Часов</button>
+        <button onclick="setT(24)">24 Часа</button>
+        <button class="btn-main" onclick="setCustom()">Свой таймер (мин)</button>
+        <button style="grid-column: span 2" onclick="resetT()">Сброс (Жив)</button>
+        <button style="grid-column: span 2; opacity: 0.6" onclick="closeUI()">Закрыть</button>
     </div>
 </div>
 
-<div id="hint">Колесико: зум | Зажать мышь: двигать карту</div>
+<div id="controls-hint">Мышь: двигать | Колесико: зум</div>
 
 <script>
-    // Список твоих боссов
-    const bosses = [
-        { name: "Abyss Brukunt", lvl: 59, pos: "top:1346px;left:1352px;" },
-        { name: "Demon Kurikups", lvl: 59, pos: "top:1330px;left:1370px;" },
-        { name: "Ghost of the Lidia", lvl: 60, pos: "top:1094px;left:1366px;" },
-        { name: "Ancient Weird Drake", lvl: 60, pos: "top:1186px;left:1596px;" },
-        { name: "Roaring Lord Kastor", lvl: 62, pos: "top:1198px;left:1612px;" },
-        { name: "Gorgolos", lvl: 64, pos: "top:1134px;left:1646px;" },
-        { name: "Fierce Tiger King Angel", lvl: 65, pos: "top:1104px;left:1662px;" },
-        { name: "Shilen's Priest Hisilrome", lvl: 65, pos: "top:1114px;left:1336px;" },
-        { name: "Hekaton Prime", lvl: 65, pos: "top:1004px;left:1610px;" },
-        { name: "Rahha", lvl: 65, pos: "top:1334px;left:1176px;" },
-        { name: "Enmity Ghost Ramdal", lvl: 65, pos: "top:1154px;left:1356px;" },
-        { name: "Gargoyle Lord Tiphon", lvl: 65, pos: "top:1164px;left:1382px;" },
-        { name: "Demons Agent Falston", lvl: 66, pos: "top:1124px;left:1388px;" },
-        { name: "Last Titan Utenus", lvl: 66, pos: "top:1134px;left:1612px;" },
-        { name: "Kernon's Faithful Servant Kelone", lvl: 67, pos: "top:1124px;left:1360px;" },
-        { name: "Spirit of Andras the Betrayer", lvl: 69, pos: "top:1198px;left:1442px;" },
-        { name: "Bloody Priest Rudelto", lvl: 69, pos: "top:1164px;left:1426px;" },
-        { name: "Anakim's Nemesis Zakaron", lvl: 70, pos: "top:1164px;left:1468px;" },
-        { name: "Flame of Splendor Barakiel", lvl: 70, pos: "top:1124px;left:1488px;" },
-        { name: "Korim", lvl: 70, pos: "top:1546px;left:1282px;" },
-        { name: "Palibati Queen Themis", lvl: 70, pos: "top:1284px;left:1546px;" },
-        { name: "Shilen's Messenger Cabrio", lvl: 70, pos: "top:1344px;left:1552px;" },
-        { name: "Immortal Savior Mardil", lvl: 71, pos: "top:1320px;left:1582px;" },
-        { name: "Doom Blade Tanatos", lvl: 72, pos: "top:1134px;left:1568px;" },
-        { name: "Water Dragon Seer Sheshark", lvl: 72, pos: "top:2160px;left:1285px;" },
-        { name: "Death Lord Hallate", lvl: 73, pos: "top:1344px;left:1496px;" },
-        { name: "Icicle Emperor Bumbalump", lvl: 74, pos: "top:580px;left:1380px;" },
-        { name: "Beast Lord Behemoth", lvl: 70, pos: "top:2114px;left:1312px;" },
-        { name: "Meanas Anor", lvl: 70, pos: "top:1186px;left:1532px;" },
-        { name: "Roaring Skylancer", lvl: 70, pos: "top:1186px;left:1552px;" },
-        { name: "Eilhalder von Hellmann", lvl: 71, pos: "top:1094px;left:1406px;" },
-        { name: "Vanor Chief Kandra", lvl: 72, pos: "top:1334px;left:1212px;" },
-        { name: "Antharas Priest Cloe", lvl: 74, pos: "top:1734px;left:1682px;" },
-        { name: "Fafurion's Herald Lokness", lvl: 70, pos: "top:2114px;left:1272px;" },
-        { name: "Krokian Padisha Sobekk", lvl: 74, pos: "top:2173px;left:1235px;" },
-        { name: "Bloody Empress Decarbia", lvl: 75, pos: "top:1320px;left:1532px;" },
-        { name: "Death Lord Ipos", lvl: 75, pos: "top:1234px;left:1568px;" },
-        { name: "Death Lord Shax", lvl: 75, pos: "top:1234px;left:1582px;" },
-        { name: "Kernon", lvl: 75, pos: "top:1364px;left:1496px;" },
-        { name: "Lesser Giant Olkuth", lvl: 75, pos: "top:1894px;left:1612px;" },
-        { name: "Storm Winged Naga", lvl: 75, pos: "top:1794px;left:1612px;" },
-        { name: "Palatanos of Horrific Power", lvl: 75, pos: "top:1186px;left:1662px;" },
-        { name: "Flamestone Giant", lvl: 76, pos: "top:1376px;left:1342px;" },
-        { name: "Ocean Flame Ashakiel", lvl: 76, pos: "top:1734px;left:1612px;" },
-        { name: "Hestia", lvl: 78, pos: "top:624px;left:1396px;" },
-        { name: "Last Lesser Giant Glaki", lvl: 78, pos: "top:1914px;left:1646px;" },
-        { name: "Daimon the White-Eyed", lvl: 78, pos: "top:1234px;left:1356px;" },
-        { name: "Fire of Wrath Shuriel", lvl: 78, pos: "top:1364px;left:1396px;" },
-        { name: "Longhorn Golkonda", lvl: 79, pos: "top:1364px;left:1532px;" },
-        { name: "Cherub Galaxia", lvl: 79, pos: "top:1364px;left:1552px;" },
-        { name: "Ketra's Hero Hekaton", lvl: 80, pos: "top:764px;left:1112px;" },
-        { name: "Varka's Hero Shadith", lvl: 80, pos: "top:894px;left:1134px;" },
-        { name: "Queen Shyeed", lvl: 80, pos: "top:624px;left:1062px;" },
-        { name: "Ketra's Commander Tayr", lvl: 80, pos: "top:724px;left:1085px;" },
-        { name: "Varka's Commander Mos", lvl: 80, pos: "top:924px;left:1062px;" },
-        { name: "Ember", lvl: 80, pos: "top:1364px;left:1312px;" },
-        { name: "Uruka", lvl: 80, pos: "top:1894px;left:1085px;" },
-        { name: "Ketra's Chief Brakki", lvl: 80, pos: "top:764px;left:1044px;" },
-        { name: "Gordon", lvl: 80, pos: "top:1034px;left:1282px;" },
-        { name: "Soul of Water Ashutar", lvl: 80, pos: "top:724px;left:1134px;" },
-        { name: "Soul of Fire Nastron", lvl: 80, pos: "top:894px;left:1044px;" },
-        { name: "Varka's Chief Horus", lvl: 80, pos: "top:924px;left:1112px;" },
-        { name: "Sailren", lvl: 80, pos: "top:1934px;left:1044px;" },
-        { name: "Anays", lvl: 80, pos: "top:1114px;left:1456px;" },
-        { name: "Andreas van Halter", lvl: 80, pos: "top:1186px;left:1488px;" },
-        { name: "Plague Golem", lvl: 80, pos: "top:1224px;left:1396px;" }
+    // Данные из твоего списка, сопоставленные с координатами из файла
+    const bossData = [
+        { name: "Abyss Brukunt", pos: "top:1346px;left:1352px;" },
+        { name: "Demon Kurikups", pos: "top:1330px;left:1370px;" },
+        { name: "Ghost of the Lidia", pos: "top:1094px;left:1366px;" },
+        { name: "Ancient Weird Drake", pos: "top:1186px;left:1596px;" },
+        { name: "Roaring Lord Kastor", pos: "top:1198px;left:1612px;" },
+        { name: "Gorgolos", pos: "top:1134px;left:1646px;" },
+        { name: "Fierce Tiger King Angel", pos: "top:1104px;left:1662px;" },
+        { name: "Shilen's Priest Hisilrome", pos: "top:1114px;left:1336px;" },
+        { name: "Hekaton Prime", pos: "top:1004px;left:1610px;" },
+        { name: "Rahha", pos: "top:1334px;left:1176px;" },
+        { name: "Enmity Ghost Ramdal", pos: "top:1154px;left:1356px;" },
+        { name: "Gargoyle Lord Tiphon", pos: "top:1164px;left:1382px;" },
+        { name: "Demons Agent Falston", pos: "top:1124px;left:1388px;" },
+        { name: "Last Titan Utenus", pos: "top:1134px;left:1612px;" },
+        { name: "Kelone", pos: "top:1124px;left:1360px;" },
+        { name: "Andras the Betrayer", pos: "top:1198px;left:1442px;" },
+        { name: "Bloody Priest Rudelto", pos: "top:1164px;left:1426px;" },
+        { name: "Zakaron", pos: "top:1164px;left:1468px;" },
+        { name: "Flame of Splendor Barakiel", pos: "top:1124px;left:1488px;" },
+        { name: "Korim", pos: "top:1546px;left:1282px;" },
+        { name: "Palibati Queen Themis", pos: "top:1284px;left:1546px;" },
+        { name: "Shilen's Messenger Cabrio", pos: "top:1344px;left:1552px;" },
+        { name: "Immortal Savior Mardil", pos: "top:1320px;left:1582px;" },
+        { name: "Doom Blade Tanatos", pos: "top:1134px;left:1568px;" },
+        { name: "Water Dragon Seer Sheshark", pos: "top:2160px;left:1285px;" },
+        { name: "Death Lord Hallate", pos: "top:1344px;left:1496px;" },
+        { name: "Icicle Emperor Bumbalump", pos: "top:580px;left:1380px;" },
+        { name: "Beast Lord Behemoth", pos: "top:2114px;left:1312px;" },
+        { name: "Meanas Anor", pos: "top:1186px;left:1532px;" },
+        { name: "Roaring Skylancer", pos: "top:1186px;left:1552px;" },
+        { name: "Eilhalder von Hellmann", pos: "top:1094px;left:1406px;" },
+        { name: "Vanor Chief Kandra", pos: "top:1334px;left:1212px;" },
+        { name: "Antharas Priest Cloe", pos: "top:1734px;left:1682px;" },
+        { name: "Fafurion's Herald Lokness", pos: "top:2114px;left:1272px;" },
+        { name: "Krokian Padisha Sobekk", pos: "top:2173px;left:1235px;" },
+        { name: "Bloody Empress Decarbia", pos: "top:1320px;left:1532px;" },
+        { name: "Death Lord Ipos", pos: "top:1234px;left:1568px;" },
+        { name: "Death Lord Shax", pos: "top:1234px;left:1582px;" },
+        { name: "Kernon", pos: "top:1364px;left:1496px;" },
+        { name: "Lesser Giant Olkuth", pos: "top:1894px;left:1612px;" },
+        { name: "Storm Winged Naga", pos: "top:1794px;left:1612px;" },
+        { name: "Palatanos", pos: "top:1186px;left:1662px;" },
+        { name: "Flamestone Giant", pos: "top:1376px;left:1342px;" },
+        { name: "Ocean Flame Ashakiel", pos: "top:1734px;left:1612px;" },
+        { name: "Hestia", pos: "top:624px;left:1396px;" },
+        { name: "Last Lesser Giant Glaki", pos: "top:1914px;left:1646px;" },
+        { name: "Daimon the White-Eyed", pos: "top:1234px;left:1356px;" },
+        { name: "Fire of Wrath Shuriel", pos: "top:1364px;left:1396px;" },
+        { name: "Longhorn Golkonda", pos: "top:1364px;left:1532px;" },
+        { name: "Cherub Galaxia", pos: "top:1364px;left:1552px;" },
+        { name: "Ketra's Hero Hekaton", pos: "top:764px;left:1112px;" },
+        { name: "Varka's Hero Shadith", pos: "top:894px;left:1134px;" },
+        { name: "Queen Shyeed", pos: "top:624px;left:1062px;" },
+        { name: "Ketra's Commander Tayr", pos: "top:724px;left:1085px;" },
+        { name: "Varka's Commander Mos", pos: "top:924px;left:1062px;" },
+        { name: "Ember", pos: "top:1364px;left:1312px;" },
+        { name: "Uruka", pos: "top:1894px;left:1085px;" },
+        { name: "Ketra's Chief Brakki", pos: "top:764px;left:1044px;" },
+        { name: "Gordon", pos: "top:1034px;left:1282px;" },
+        { name: "Soul of Water Ashutar", pos: "top:724px;left:1134px;" },
+        { name: "Soul of Fire Nastron", pos: "top:894px;left:1044px;" },
+        { name: "Varka's Chief Horus", pos: "top:924px;left:1112px;" },
+        { name: "Sailren", pos: "top:1934px;left:1044px;" },
+        { name: "Anays", pos: "top:1114px;left:1456px;" },
+        { name: "Andreas van Halter", pos: "top:1186px;left:1488px;" },
+        { name: "Plague Golem", pos: "top:1224px;left:1396px;" }
     ];
 
-    const wrapper = document.getElementById('map-wrapper');
+    const container = document.getElementById('map-container');
     const viewport = document.getElementById('viewport');
-    let scale = 0.5; // Начальный зум (50%)
-    let posX = -500, posY = -800; // Начальная позиция
-    let states = JSON.parse(localStorage.getItem('rb_map_final')) || {};
-    let currentId = null;
+    let scale = 0.5, posX = -500, posY = -1000;
+    let timers = JSON.parse(localStorage.getItem('l2_timers_final')) || {};
+    let curId = null;
 
-    // Инициализация меток
-    bosses.forEach((boss, i) => {
-        const m = document.createElement('div');
-        m.className = 'boss-marker';
-        m.id = `m-${i}`;
-        m.style.cssText = boss.pos;
-        m.onclick = (e) => { e.stopPropagation(); showUI(i); };
-        wrapper.appendChild(m);
+    // Создание меток
+    bossData.forEach((b, i) => {
+        const div = document.createElement('div');
+        div.className = 'boss-marker';
+        div.style.cssText = b.pos;
+        div.title = b.name;
+        div.onclick = (e) => { e.stopPropagation(); openUI(i); };
+        container.appendChild(div);
     });
 
-    // Управление зумом и движением
-    function updateTransform() {
-        wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-    }
+    function update() { container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
+    // Зум и Перетаскивание
     viewport.onwheel = (e) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        scale = Math.min(Math.max(0.2, scale * delta), 2);
-        updateTransform();
+        const d = e.deltaY > 0 ? 0.9 : 1.1;
+        scale = Math.min(Math.max(0.1, scale * d), 3);
+        update();
     };
 
-    let isDragging = false, startX, startY;
-    viewport.onmousedown = (e) => {
-        isDragging = true;
-        startX = e.clientX - posX;
-        startY = e.clientY - posY;
-        viewport.style.cursor = 'grabbing';
-    };
-    window.onmousemove = (e) => {
-        if (!isDragging) return;
-        posX = e.clientX - startX;
-        posY = e.clientY - startY;
-        updateTransform();
-    };
-    window.onmouseup = () => {
-        isDragging = false;
-        viewport.style.cursor = 'grab';
-    };
+    let drag = false, startX, startY;
+    viewport.onmousedown = (e) => { drag = true; startX = e.clientX - posX; startY = e.clientY - posY; viewport.style.cursor = 'grabbing'; };
+    window.onmousemove = (e) => { if (!drag) return; posX = e.clientX - startX; posY = e.clientY - startY; update(); };
+    window.onmouseup = () => { drag = false; viewport.style.cursor = 'grab'; };
 
-    // Логика таймеров
-    function showUI(id) {
-        currentId = id;
-        document.getElementById('ui-panel').style.display = 'block';
-        document.getElementById('ui-name').innerText = bosses[id].name;
-        updateUI();
+    // Таймеры
+    function openUI(id) {
+        curId = id;
+        document.getElementById('ui').style.display = 'block';
+        document.getElementById('b-name').innerText = bossData[id].name;
+        refreshUI();
     }
+    function closeUI() { document.getElementById('ui').style.display = 'none'; curId = null; }
+    function setT(h) { timers[curId] = Date.now() + (h * 3600000); save(); }
+    function setCustom() { let m = prompt("Через сколько минут респ?"); if(m) { timers[curId] = Date.now() + (m * 60000); save(); } }
+    function resetT() { delete timers[curId]; save(); }
+    function save() { localStorage.setItem('l2_timers_final', JSON.stringify(timers)); }
 
-    function closeUI() { document.getElementById('ui-panel').style.display = 'none'; currentId = null; }
-
-    function startRB(h) { states[currentId] = Date.now() + (h * 3600 * 1000); save(); }
-    function manualStart() { 
-        let m = prompt("Через сколько минут респ?");
-        if (m) { states[currentId] = Date.now() + (m * 60 * 1000); save(); }
-    }
-    function resetRB() { delete states[currentId]; save(); }
-    function save() { localStorage.setItem('rb_map_final', JSON.stringify(states)); }
-
-    function updateUI() {
-        if (currentId === null) return;
-        const el = document.getElementById('ui-timer');
-        if (!states[currentId]) { el.innerText = "ALIVE"; el.style.color = "#00ff88"; return; }
-        const diff = states[currentId] - Date.now();
-        if (diff <= 0) { el.innerText = "READY"; el.style.color = "#00ff88"; }
+    function refreshUI() {
+        if (curId === null) return;
+        const el = document.getElementById('b-timer');
+        if (!timers[curId]) { el.innerText = "ALIVE"; el.style.color = "#3fb950"; return; }
+        const diff = timers[curId] - Date.now();
+        if (diff <= 0) { el.innerText = "READY"; el.style.color = "#3fb950"; }
         else {
-            const h = Math.floor(diff/3600000);
-            const m = Math.floor((diff%3600000)/60000);
-            const s = Math.floor((diff%60000)/1000);
+            const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
             el.innerText = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-            el.style.color = "#ff4d4d";
+            el.style.color = "#f85149";
         }
     }
 
     setInterval(() => {
-        updateUI();
-        bosses.forEach((_, i) => {
-            const m = document.getElementById(`m-${i}`);
-            if (states[i] && states[i] > Date.now()) m.classList.add('active');
+        refreshUI();
+        bossData.forEach((_, i) => {
+            const m = container.children[i];
+            if (timers[i] && timers[i] > Date.now()) m.classList.add('active');
             else m.classList.remove('active');
         });
     }, 1000);
 
-    updateTransform();
+    update();
 </script>
 
 </body>
