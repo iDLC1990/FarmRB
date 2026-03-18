@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 Map Constructor - Single Canvas</title>
+    <title>L2 Map Constructor - FIXED</title>
     <style>
         body { margin: 0; padding: 0; background: #111; color: #eee; font-family: sans-serif; overflow: hidden; }
         
@@ -14,18 +14,20 @@
 
         #map-wrapper {
             position: absolute;
-            width: 3072px; /* Реальная ширина картинки */
-            height: 4608px; /* Реальная высота картинки */
+            /* Размеры для карты la2.one (2560x1707) */
+            width: 2560px; 
+            height: 1707px; 
             transform-origin: 0 0;
-            background: url('https://linedia.ru/img/map.jpg') no-repeat;
-            background-size: 3072px 4608px;
+            /* Прямая ссылка на карту через фотохостинг, который не блокирует доступ */
+            background: url('https://i.imgur.com/uN8G9G0.jpg') no-repeat;
+            background-size: 2560px 1707px;
         }
 
         .temp-marker {
             position: absolute; width: 20px; height: 20px;
             background: #ff0000; border: 2px solid white;
             border-radius: 50%; transform: translate(-50%, -50%);
-            pointer-events: none;
+            pointer-events: none; box-shadow: 0 0 10px red;
         }
 
         #panel {
@@ -42,23 +44,24 @@
 
         .hint { font-size: 12px; color: #aaa; margin-bottom: 8px; }
         b { color: #00ff88; }
+        button { cursor: pointer; background: #333; color: white; border: 1px solid #555; padding: 5px; margin-top: 5px; }
     </style>
 </head>
 <body>
 
 <div id="panel">
-    <b>Конструктор РБ</b>
+    <b>Конструктор РБ (FIXED)</b>
     <div class="hint">
         1. <b>Колесико</b> — Зум<br>
         2. <b>Зажать ПКМ</b> — Двигать карту<br>
         3. <b>ЛКМ</b> — Поставить метку
     </div>
-    <textarea id="output" readonly placeholder="Тут будет готовый код..."></textarea>
-    <button onclick="clearOutput()" style="margin-top:5px; cursor:pointer;">Очистить список</button>
+    <textarea id="output" readonly placeholder="Тут появится код..."></textarea>
+    <button onclick="clearOutput()">Очистить всё</button>
 </div>
 
 <div id="viewport">
-    <div id="map-wrapper" id="map"></div>
+    <div id="map-wrapper"></div>
 </div>
 
 <script>
@@ -66,72 +69,61 @@
     const viewport = document.getElementById('viewport');
     const output = document.getElementById('output');
 
-    let scale = 0.25; // Начальный масштаб, чтобы видеть почти всю карту
-    let posX = 50;
-    let posY = 50;
+    let scale = 0.5; 
+    let posX = 0;
+    let posY = 0;
 
-    // Рендер положения
     function render() {
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
     }
     render();
 
-    // Логика клика (постановка метки)
+    // Логика клика
     viewport.addEventListener('click', (e) => {
-        if (isDragging) return; // Если просто двигали карту, не ставим метку
+        if (isDragging) return; 
 
-        // Вычисляем реальные координаты внутри картинки 3072x4608
         const rect = wrapper.getBoundingClientRect();
         const realX = Math.round((e.clientX - rect.left) / scale);
         const realY = Math.round((e.clientY - rect.top) / scale);
 
-        // Ставим визуальную точку
+        // Ставим точку
         const dot = document.createElement('div');
         dot.className = 'temp-marker';
         dot.style.left = realX + 'px';
         dot.style.top = realY + 'px';
         wrapper.appendChild(dot);
 
-        // Запрашиваем имя
-        const name = prompt(`Координаты: X:${realX}, Y:${realY}\nВведите имя босса:`, "New Boss");
+        const name = prompt(`X:${realX}, Y:${realY}\nИмя босса:`, "Boss");
         if (name) {
             const line = `{ name: "${name}", pos: "top:${realY}px;left:${realX}px;" },`;
             output.value += line + "\n";
-            output.scrollTop = output.scrollHeight;
         } else {
-            dot.remove(); // Если отмена, удаляем точку
+            dot.remove();
         }
     });
 
-    // Зум (колесико)
+    // Зум
     viewport.onwheel = (e) => {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        const newScale = Math.min(Math.max(0.05, scale * delta), 2);
-        
-        const mX = e.clientX;
-        const mY = e.clientY;
-
-        posX = mX - (mX - posX) * (newScale / scale);
-        posY = mY - (mY - posY) * (newScale / scale);
+        const newScale = Math.min(Math.max(0.1, scale * delta), 3);
+        posX = e.clientX - (e.clientX - posX) * (newScale / scale);
+        posY = e.clientY - (e.clientY - posY) * (newScale / scale);
         scale = newScale;
         render();
     };
 
-    // Перетаскивание (ПКМ - Правая Кнопка Мыши)
+    // Перетаскивание (ПКМ)
     let isDragging = false;
     let lastX, lastY;
-
-    viewport.oncontextmenu = (e) => e.preventDefault(); // Отключаем меню на ПКМ
-
+    viewport.oncontextmenu = (e) => e.preventDefault();
     viewport.onmousedown = (e) => {
-        if (e.button === 2 || e.button === 0 && e.ctrlKey) { // ПКМ или Ctrl+ЛКМ
+        if (e.button === 2) {
             isDragging = true;
             lastX = e.clientX;
             lastY = e.clientY;
         }
     };
-
     window.onmousemove = (e) => {
         if (!isDragging) return;
         posX += (e.clientX - lastX);
@@ -140,14 +132,11 @@
         lastY = e.clientY;
         render();
     };
-
     window.onmouseup = () => { isDragging = false; };
 
     function clearOutput() {
-        if(confirm("Очистить весь накопленный код?")) {
-            output.value = "";
-            document.querySelectorAll('.temp-marker').forEach(m => m.remove());
-        }
+        output.value = "";
+        document.querySelectorAll('.temp-marker').forEach(m => m.remove());
     }
 </script>
 
