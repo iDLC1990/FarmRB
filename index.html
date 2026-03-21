@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Monitor System</title>
+    <title>L2 FarmRB - Monitor Only</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -10,82 +10,76 @@
 
         /* МЕТКИ */
         .rb-marker {
-            position: absolute; width: 22px; height: 22px;
+            position: absolute; width: 26px; height: 26px;
             background: radial-gradient(circle, #ff3300 0%, #880000 100%);
             border: 2px solid #fff; border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 12px rgba(255, 50, 0, 0.8);
-            z-index: 10; cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 50, 0, 0.8);
+            z-index: 10; cursor: pointer; transition: background 0.3s;
         }
         .rb-marker.is-dead { background: #000 !important; border-color: #666 !important; box-shadow: none !important; }
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #00ff88; padding: 2px 8px;
-            border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
+            content: attr(data-name); position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #00ff88; padding: 3px 10px;
+            border-radius: 4px; font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
         /* ТАЙМЕР НА КАРТЕ */
-        .rb-timer {
-            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
+        .rb-timer-map {
+            position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 14px;
+            font-weight: bold; font-family: monospace; font-size: 16px;
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
-        /* ПАНЕЛЬ */
+        /* САЙДБАР БЕЗ СПИСКА */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 320px; bottom: 15px;
-            background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
+            position: fixed; top: 15px; left: 15px; width: 300px;
+            background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 12px;
-            display: flex; flex-direction: column; backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
         }
 
-        /* МОНИТОР ТАЙМЕРОВ */
         #timer-monitor {
-            background: rgba(0, 255, 200, 0.05);
-            border: 1px dashed #00ffcc;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 15px;
-            max-height: 150px;
-            overflow-y: auto;
+            background: rgba(0, 255, 204, 0.05);
+            border: 1px solid #00ffcc33;
+            border-radius: 8px; padding: 12px; margin-top: 15px;
+            max-height: 400px; overflow-y: auto;
         }
         .monitor-item {
-            display: flex; justify-content: space-between;
-            font-size: 12px; color: #00ffcc; margin-bottom: 5px;
-            border-bottom: 1px solid #222; padding-bottom: 3px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 13px; color: #00ffcc; margin-bottom: 8px;
+            border-bottom: 1px solid #222; padding-bottom: 6px;
         }
 
-        #search { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #000; color: #0f8; margin-bottom: 10px; box-sizing: border-box; outline: none; }
-        #rb-list { flex: 1; overflow-y: auto; }
-        
-        .rb-item { 
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 10px; margin-bottom: 5px; background: #1a1a1a; 
-            border-radius: 6px; font-size: 12px; border-left: 4px solid #00ff88;
+        #search-input { 
+            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; 
+            background: #111; color: #fff; box-sizing: border-box; outline: none;
+            font-size: 14px;
         }
-        .rb-item.hidden-node { display: none !important; }
-        .rb-info { flex: 1; cursor: pointer; font-weight: bold; }
-        .btn-rip-action { background: #400; color: #f55; border: 1px solid #600; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; }
+        #search-input::placeholder { color: #555; }
+
+        .hint { font-size: 11px; color: #666; text-align: center; margin-bottom: 8px; }
 
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #444; }
+        ::-webkit-scrollbar-thumb { background: #00ffcc44; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <div style="font-size: 11px; color: #888; margin-bottom: 5px; text-align: center;">Кликни по чёрной метке для запуска таймера</div>
+    <div class="hint">ВВЕДИТЕ ИМЯ, ЧТОБЫ УБИТЬ (RIP)</div>
+    <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
-    <div id="timer-monitor">
-        <div style="font-size: 10px; color: #00ffcc; opacity: 0.6; margin-bottom: 5px; text-transform: uppercase;">Активные таймеры:</div>
-        <div id="monitor-list">
-            <div style="color: #444; font-size: 11px;">Нет запущенных таймеров...</div>
-        </div>
+    <div style="font-size: 12px; color: #00ffcc; margin-top: 15px; text-align: center; font-weight: bold; letter-spacing: 1px;">
+        КЛИКНИ ПО ЧЁРНОЙ МЕТКЕ
     </div>
 
-    <input type="text" id="search" placeholder="Поиск босса..." oninput="filterList()">
-    <div id="rb-list"></div>
+    <div id="timer-monitor">
+        <div id="monitor-list">
+            <div style="color: #444; font-size: 11px; text-align: center;">Нет активных респаунов</div>
+        </div>
+    </div>
 </div>
 
 <div id="viewport">
@@ -161,21 +155,20 @@
     ];
 
     const wrapper = document.getElementById('map-wrapper');
-    const rbList = document.getElementById('rb-list');
     const monitorList = document.getElementById('monitor-list');
     const viewport = document.getElementById('viewport');
+    const searchInput = document.getElementById('search-input');
     let scale = 0.2, posX = 0, posY = 0;
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
-        drawAll();
+        drawMarkers();
         update();
     }
 
-    function drawAll() {
+    function drawMarkers() {
         wrapper.innerHTML = '';
-        rbList.innerHTML = '';
-        bossData.forEach((boss, i) => {
+        bossData.forEach((boss) => {
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
@@ -183,11 +176,8 @@
             
             m.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (m.classList.contains('is-dead')) {
-                    startRespawnTimer(boss); 
-                } else {
-                    focus(boss);
-                }
+                if (m.classList.contains('is-dead')) startTimer(boss); 
+                else focus(boss);
             });
 
             m.addEventListener('dblclick', (e) => {
@@ -197,38 +187,37 @@
 
             wrapper.appendChild(m);
             boss.markerEl = m;
-
-            const item = document.createElement('div');
-            item.className = 'rb-item';
-            item.innerHTML = `<div class="rb-info">${boss.name}</div><button class="btn-rip-action">RIP</button>`;
-            item.querySelector('.rb-info').onclick = () => focus(boss);
-            item.querySelector('.btn-rip-action').onclick = (e) => { e.stopPropagation(); killBoss(boss); };
-            rbList.appendChild(item);
-            boss.el = item;
         });
+    }
+
+    function handleSearch() {
+        const val = searchInput.value.toLowerCase();
+        if (val.length < 2) return;
+
+        const boss = bossData.find(b => b.name.toLowerCase().includes(val));
+        if (boss && !boss.markerEl.classList.contains('is-dead')) {
+            killBoss(boss);
+            searchInput.value = ''; // Очистка после убийства
+        }
     }
 
     function killBoss(boss) {
         boss.markerEl.classList.add('is-dead');
-        boss.el.classList.add('hidden-node');
-        filterList();
+        focus(boss);
     }
 
     function reviveBoss(boss) {
         boss.markerEl.classList.remove('is-dead');
-        boss.el.classList.remove('hidden-node');
         if (boss.timerInterval) { clearInterval(boss.timerInterval); boss.timerInterval = null; }
         if (boss.timerDisplay) boss.timerDisplay.remove();
         updateMonitor();
-        filterList();
     }
 
-    function startRespawnTimer(boss) {
+    function startTimer(boss) {
         if (boss.timerInterval) return;
-
         let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
-        timerDisplay.className = 'rb-timer';
+        timerDisplay.className = 'rb-timer-map';
         boss.markerEl.appendChild(timerDisplay);
         boss.timerDisplay = timerDisplay;
 
@@ -237,15 +226,13 @@
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
-            
             timerDisplay.innerText = timeStr;
-            boss.currentTime = timeStr; // Сохраняем для монитора
-            
+            boss.currentTime = timeStr;
             if (timeLeft <= 0) {
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
-                boss.currentTime = "FINISHED";
+                boss.currentTime = "READY";
             }
             updateMonitor();
         }, 1000);
@@ -255,25 +242,15 @@
     function updateMonitor() {
         const active = bossData.filter(b => b.timerInterval);
         if (active.length === 0) {
-            monitorList.innerHTML = '<div style="color: #444; font-size: 11px;">Нет запущенных таймеров...</div>';
+            monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center;">Нет активных респаунов</div>';
             return;
         }
-        
         monitorList.innerHTML = active.map(b => `
             <div class="monitor-item">
-                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${b.name}</span>
-                <span style="font-family:monospace; font-weight:bold;">${b.currentTime || "15:00"}</span>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; font-weight:bold;">${b.name}</span>
+                <span style="font-family:monospace; background:#00ffcc22; padding:2px 6px; border-radius:4px;">${b.currentTime || "15:00"}</span>
             </div>
         `).join('');
-    }
-
-    function filterList() {
-        const q = document.getElementById('search').value.toLowerCase();
-        bossData.forEach(b => {
-            const matchesSearch = q === "" || b.name.toLowerCase().includes(q);
-            const isAlive = !b.markerEl.classList.contains('is-dead');
-            b.el.style.display = (matchesSearch && isAlive) ? 'flex' : 'none';
-        });
     }
 
     function focus(boss) {
