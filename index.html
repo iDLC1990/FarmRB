@@ -2,65 +2,87 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Timers Edition</title>
+    <title>L2 FarmRB - Death Timer Edition</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
+        
         #map-wrapper {
             position: absolute; transform-origin: 0 0;
             width: 5062px; height: 4210px; 
             background-repeat: no-repeat; background-size: 100% 100%;
-            image-rendering: -webkit-optimize-contrast;
         }
+
+        /* МЕТКИ */
         .rb-marker {
-            position: absolute; width: 20px; height: 20px;
+            position: absolute; width: 22px; height: 22px;
             background: radial-gradient(circle, #ff3300 0%, #880000 100%);
             border: 2px solid #fff; border-radius: 50%;
             transform: translate(-50%, -50%);
             box-shadow: 0 0 12px rgba(255, 50, 0, 0.8);
-            z-index: 10; cursor: pointer;
+            z-index: 10; cursor: pointer; transition: 0.3s;
         }
-        .edit-active .rb-marker { cursor: move; }
 
-        /* Имя босса */
+        /* ЧЕРНАЯ МЕТКА (МЕРТВ) */
+        .rb-marker.is-dead { 
+            background: #000 !important; 
+            border-color: #444 !important; 
+            box-shadow: none !important;
+            z-index: 5;
+        }
+        
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #00ff88; padding: 2px 8px;
             border-radius: 4px; font-size: 12px; white-space: nowrap; border: 1px solid #333;
         }
 
-        /* ТАЙМЕР */
+        /* ТАЙМЕР ЖИЗНИ */
         .rb-timer {
-            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ecff; padding: 2px 10px; border-radius: 4px;
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            background: #111; color: #00ff88; padding: 2px 10px; border-radius: 4px;
             font-weight: bold; font-family: monospace; font-size: 16px;
-            border: 2px solid #00ecff; box-shadow: 0 0 10px #00ecff;
-            z-index: 100; pointer-events: none;
+            border: 2px solid #00ff88; box-shadow: 0 0 10px #008844; z-index: 100;
         }
-        .timer-done { color: #ff0000; border-color: #ff0000; box-shadow: 0 0 10px #ff0000; }
 
+        /* ПАНЕЛЬ */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 300px; bottom: 15px;
-            background: rgba(15, 15, 15, 0.95); border: 1px solid #333;
-            padding: 20px; z-index: 1000; border-radius: 12px;
-            display: flex; flex-direction: column; backdrop-filter: blur(10px);
+            position: fixed; top: 15px; left: 15px; width: 320px; bottom: 15px;
+            background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
+            padding: 15px; z-index: 1000; border-radius: 12px;
+            display: flex; flex-direction: column; backdrop-filter: blur(15px);
         }
+
         .btn-mode {
-            background: #222; color: #aaa; border: 1px solid #444; padding: 12px;
-            border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px;
+            background: #222; color: #aaa; border: 1px solid #444; padding: 10px;
+            border-radius: 6px; cursor: pointer; margin-bottom: 10px; font-weight: bold;
         }
-        .edit-active .btn-mode { background: #882200; color: #fff; border-color: #ff5500; }
+        .edit-active .btn-mode { background: #820; border-color: #f50; color: #fff; }
+
         #search {
-            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444;
-            background: #000; color: #fff; margin-bottom: 10px; box-sizing: border-box;
+            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444;
+            background: #000; color: #00ff88; margin-bottom: 10px; box-sizing: border-box;
+            font-size: 14px; outline: none;
         }
-        #rb-list { flex: 1; overflow-y: auto; padding-right: 5px; }
+
+        #rb-list { flex: 1; overflow-y: auto; }
         .rb-item { 
-            padding: 10px; margin-bottom: 5px; background: #1a1a1a; cursor: pointer; 
-            border-radius: 5px; font-size: 13px; border-left: 3px solid #444;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px; margin-bottom: 5px; background: #1a1a1a; 
+            border-radius: 6px; font-size: 13px; border-left: 4px solid #00ff88;
         }
-        .rb-item:hover { background: #252525; border-left-color: #00ff88; color: #00ff88; }
-        #json-output { display: none; width: 100%; height: 100px; background: #000; color: #00ff88; font-size: 10px; margin-top: 10px; }
+
+        /* СКРЫВАЕМ МЕРТВЫХ ИЗ СПИСКА */
+        .rb-item.dead-status { display: none !important; }
+
+        .rb-info { flex: 1; cursor: pointer; font-weight: bold; }
+        
+        .btn-start {
+            background: #040; color: #0f8; border: 1px solid #060;
+            padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;
+        }
+
+        #json-output { display: none; width: 100%; height: 80px; margin-top: 10px; background: #000; color: #0f8; font-size: 10px; }
         .edit-active #json-output { display: block; }
     </style>
 </head>
@@ -68,7 +90,7 @@
 
 <div id="sidebar">
     <button class="btn-mode" onclick="toggleEditor()">РЕЖИМ: АТЛАС</button>
-    <input type="text" id="search" placeholder="Поиск босса..." oninput="filterList()">
+    <input type="text" id="search" placeholder="Поиск (напр. L)..." oninput="filterList()">
     <div id="rb-list"></div>
     <textarea id="json-output" readonly></textarea>
 </div>
@@ -80,7 +102,6 @@
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
-    // Твои координаты
     let bossData = [
         { "name": "Ember", "pos": "top:1173px;left:4720px;" },
         { "name": "Hestia, Guardian Deity of the Hot Springs", "pos": "top:1152px;left:4191px;" },
@@ -176,76 +197,82 @@
 
             m.onclick = (e) => {
                 e.stopPropagation();
-                startTimer(boss, m); // ЗАПУСК ТАЙМЕРА
                 if (!isEdit) focus(boss);
             };
 
             wrapper.appendChild(m);
+            boss.markerEl = m;
 
             const item = document.createElement('div');
             item.className = 'rb-item';
-            item.innerText = boss.name;
-            item.onclick = () => { focus(boss); startTimer(boss, m); };
+            
+            const info = document.createElement('div');
+            info.className = 'rb-info';
+            info.innerText = boss.name;
+            info.onclick = () => focus(boss);
+
+            const startBtn = document.createElement('button');
+            startBtn.className = 'btn-start';
+            startBtn.innerText = 'START';
+            startBtn.onclick = (e) => { e.stopPropagation(); startLifeTimer(boss); };
+
+            item.appendChild(info);
+            item.appendChild(startBtn);
             rbList.appendChild(item);
             boss.el = item;
-            boss.markerEl = m;
         });
     }
 
-    // ЛОГИКА ТАЙМЕРА
-    function startTimer(boss, markerEl) {
-        if (isEdit) return; // Не запускать таймер в режиме редактирования
-
-        // Удаляем старый таймер, если он был
+    function startLifeTimer(boss) {
         if (boss.timerInterval) clearInterval(boss.timerInterval);
         if (boss.timerDisplay) boss.timerDisplay.remove();
 
-        let timeLeft = 15 * 60; // 15 минут в секундах
+        // Пока таймер идет - босс в списке и красный
+        boss.el.classList.remove('dead-status');
+        boss.markerEl.classList.remove('is-dead');
 
+        let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer';
-        markerEl.appendChild(timerDisplay);
+        boss.markerEl.appendChild(timerDisplay);
         boss.timerDisplay = timerDisplay;
 
-        const updateTimer = () => {
-            const mins = Math.floor(timeLeft / 60);
-            const secs = timeLeft % 60;
-            timerDisplay.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        const tick = () => {
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
 
             if (timeLeft <= 0) {
                 clearInterval(boss.timerInterval);
-                timerDisplay.innerText = "RESPAWN!";
-                timerDisplay.classList.add('timer-done');
+                // ВРЕМЯ ВЫШЛО -> БОСС УМЕР
+                boss.markerEl.classList.add('is-dead');
+                boss.el.classList.add('dead-status');
+                timerDisplay.remove();
+                filterList(); // Обновляем список, чтобы скрыть мертвого
             }
             timeLeft--;
         };
-
-        updateTimer();
-        boss.timerInterval = setInterval(updateTimer, 1000);
+        tick();
+        boss.timerInterval = setInterval(tick, 1000);
     }
 
-    window.onmousemove = (e) => {
-        if (draggedMarker) {
-            const r = wrapper.getBoundingClientRect();
-            const x = Math.round((e.clientX - r.left) / scale);
-            const y = Math.round((e.clientY - r.top) / scale);
-            draggedMarker.element.style.left = x + 'px';
-            draggedMarker.element.style.top = y + 'px';
-            bossData[draggedMarker.index].pos = `top:${y}px;left:${x}px;`;
-            return;
-        }
-        if (isDrag) {
-            posX += e.clientX - lx;
-            posY += e.clientY - ly;
-            lx = e.clientX; ly = e.clientY;
-            update();
-        }
-    };
+    function filterList() {
+        const q = document.getElementById('search').value.toLowerCase();
+        bossData.forEach(b => {
+            const matchesSearch = q === "" || b.name.toLowerCase().startsWith(q);
+            const isAlive = !b.el.classList.contains('dead-status');
+            b.el.style.setProperty('display', (matchesSearch && isAlive) ? 'flex' : 'none', 'important');
+        });
+    }
 
-    window.onmouseup = () => {
-        if (draggedMarker) { draggedMarker = null; save(); }
-        isDrag = false;
-    };
+    function toggleEditor() {
+        isEdit = !isEdit;
+        document.body.classList.toggle('edit-active');
+        document.querySelector('.btn-mode').innerText = isEdit ? 'РЕЖИМ: РЕДАКТОР' : 'РЕЖИМ: АТЛАС';
+        save();
+    }
+
+    function save() { document.getElementById('json-output').value = JSON.stringify(bossData.map(b=>({name:b.name, pos:b.pos})), null, 2); }
 
     function focus(boss) {
         const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
@@ -256,18 +283,7 @@
         update();
     }
 
-    function update() {
-        wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-    }
-
-    function toggleEditor() {
-        isEdit = !isEdit;
-        document.body.classList.toggle('edit-active');
-        document.querySelector('.btn-mode').innerText = isEdit ? 'РЕЖИМ: РЕДАКТОР' : 'РЕЖИМ: АТЛАС';
-        viewport.style.cursor = isEdit ? 'crosshair' : 'grab';
-    }
-
-    function save() { document.getElementById('json-output').value = JSON.stringify(bossData.map(b=>({name:b.name, pos:b.pos})), null, 2); }
+    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     viewport.onwheel = e => {
         e.preventDefault();
@@ -279,9 +295,20 @@
     };
 
     let isDrag = false, lx, ly;
-    viewport.onmousedown = e => { 
-        if(e.button === (isEdit ? 2 : 0)) { isDrag = true; lx = e.clientX; ly = e.clientY; } 
+    viewport.onmousedown = e => { if(e.button === (isEdit ? 2 : 0)) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onmousemove = e => {
+        if (draggedMarker) {
+            const r = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - r.left) / scale);
+            const y = Math.round((e.clientY - r.top) / scale);
+            draggedMarker.element.style.left = x + 'px';
+            draggedMarker.element.style.top = y + 'px';
+            bossData[draggedMarker.index].pos = `top:${y}px;left:${x}px;`;
+            return;
+        }
+        if (isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }
     };
+    window.onmouseup = () => { draggedMarker = null; isDrag = false; save(); };
     viewport.oncontextmenu = e => e.preventDefault();
     init();
 </script>
