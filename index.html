@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Death Timer Edition</title>
+    <title>L2 FarmRB - RIP Timer</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -45,7 +45,6 @@
             border: 2px solid #00ff88; box-shadow: 0 0 10px #008844; z-index: 100;
         }
 
-        /* ПАНЕЛЬ */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 320px; bottom: 15px;
             background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
@@ -72,15 +71,15 @@
             border-radius: 6px; font-size: 13px; border-left: 4px solid #00ff88;
         }
 
-        /* СКРЫВАЕМ МЕРТВЫХ ИЗ СПИСКА */
         .rb-item.dead-status { display: none !important; }
 
-        .rb-info { flex: 1; cursor: pointer; font-weight: bold; }
+        .rb-info { flex: 1; cursor: pointer; font-weight: bold; margin-right: 10px; }
         
-        .btn-start {
-            background: #040; color: #0f8; border: 1px solid #060;
+        .btn-rip-action {
+            background: #400; color: #f55; border: 1px solid #600;
             padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;
         }
+        .btn-rip-action:hover { background: #600; color: #fff; }
 
         #json-output { display: none; width: 100%; height: 80px; margin-top: 10px; background: #000; color: #0f8; font-size: 10px; }
         .edit-active #json-output { display: block; }
@@ -197,7 +196,9 @@
 
             m.onclick = (e) => {
                 e.stopPropagation();
-                if (!isEdit) focus(boss);
+                if (isEdit) return;
+                focus(boss);
+                startLifeTimer(boss); // Теперь клик по метке запускает таймер
             };
 
             wrapper.appendChild(m);
@@ -211,13 +212,13 @@
             info.innerText = boss.name;
             info.onclick = () => focus(boss);
 
-            const startBtn = document.createElement('button');
-            startBtn.className = 'btn-start';
-            startBtn.innerText = 'START';
-            startBtn.onclick = (e) => { e.stopPropagation(); startLifeTimer(boss); };
+            const ripBtn = document.createElement('button');
+            ripBtn.className = 'btn-rip-action';
+            ripBtn.innerText = 'RIP';
+            ripBtn.onclick = (e) => { e.stopPropagation(); startLifeTimer(boss); };
 
             item.appendChild(info);
-            item.appendChild(startBtn);
+            item.appendChild(ripBtn);
             rbList.appendChild(item);
             boss.el = item;
         });
@@ -248,7 +249,7 @@
                 boss.markerEl.classList.add('is-dead');
                 boss.el.classList.add('dead-status');
                 timerDisplay.remove();
-                filterList(); // Обновляем список, чтобы скрыть мертвого
+                filterList(); 
             }
             timeLeft--;
         };
