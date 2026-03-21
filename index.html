@@ -2,21 +2,26 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Click & Start</title>
+    <title>L2 FarmRB - Black Start</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; }
 
+        /* МЕТКИ */
         .rb-marker {
             position: absolute; width: 26px; height: 26px;
-            background: radial-gradient(circle, #ff3300 0%, #880000 100%);
-            border: 2px solid #fff; border-radius: 50%;
+            background: #000; /* Изначально черные */
+            border: 2px solid #666; border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 15px rgba(255, 50, 0, 0.8);
             z-index: 10; cursor: pointer;
         }
-        .rb-marker.is-dead { background: #000 !important; border-color: #666 !important; box-shadow: none !important; }
+        /* Состояние живого босса */
+        .rb-marker.is-alive { 
+            background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
+            border-color: #fff !important; 
+            box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
+        }
         
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -31,6 +36,7 @@
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
+        /* САЙДБАР */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 300px;
             background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
@@ -49,6 +55,7 @@
         }
 
         #search-input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; box-sizing: border-box; outline: none; }
+        .hint { font-size: 11px; color: #666; text-align: center; margin-bottom: 5px; }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #00ffcc44; }
@@ -60,12 +67,13 @@
     <input type="text" id="search-input" placeholder="Найти босса на карте..." oninput="handleSearch()">
     
     <div style="font-size: 12px; color: #00ffcc; margin-top: 15px; text-align: center; font-weight: bold;">
-        КЛИКНИ ПО МЕТКЕ ДЛЯ ЗАПУСКА ТАЙМЕРА
+        КЛИКНИ ПО ЧЕРНОЙ МЕТКЕ ДЛЯ ТАЙМЕРА
     </div>
+    <div class="hint">(Double-click чтобы сделать КРАСНЫМ)</div>
 
     <div id="timer-monitor">
         <div id="monitor-list">
-            <div style="color: #444; font-size: 11px; text-align: center;">Нет активных таймеров</div>
+            <div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>
         </div>
     </div>
 </div>
@@ -161,18 +169,20 @@
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
             
-            // КЛИК СРАЗУ ЗАПУСКАЕТ ТАЙМЕР
+            // ОДИН КЛИК: Запуск таймера (если он еще не запущен)
             m.onclick = (e) => {
                 e.stopPropagation();
-                if (!m.classList.contains('is-dead')) {
+                if (!boss.timerInterval) {
                     startTimer(boss);
+                } else {
+                    focus(boss);
                 }
             };
 
-            // ДВОЙНОЙ КЛИК ВОСКРЕШАЕТ (делает снова красным)
+            // ДВОЙНОЙ КЛИК: Сделать босса живым (КРАСНЫМ)
             m.ondblclick = (e) => {
                 e.stopPropagation();
-                if (m.classList.contains('is-dead')) reviveBoss(boss);
+                toggleAlive(boss);
             };
 
             wrapper.appendChild(m);
@@ -183,8 +193,8 @@
     function startTimer(boss) {
         if (boss.timerInterval) return;
         
-        // Помечаем босса мертвым
-        boss.markerEl.classList.add('is-dead');
+        // Оставляем черным и убираем статус "живого", если он был
+        boss.markerEl.classList.remove('is-alive');
 
         let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
@@ -205,28 +215,31 @@
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
-                boss.currentTime = "RESPAWN!";
+                boss.currentTime = "READY!";
             }
             updateMonitor();
         }, 1000);
         updateMonitor();
     }
 
-    function reviveBoss(boss) {
-        boss.markerEl.classList.remove('is-dead');
+    function toggleAlive(boss) {
+        // Останавливаем таймер если был
         if (boss.timerInterval) {
             clearInterval(boss.timerInterval);
             boss.timerInterval = null;
         }
         if (boss.timerDisplay) boss.timerDisplay.remove();
         boss.currentTime = null;
+
+        // Переключаем на КРАСНЫЙ
+        boss.markerEl.classList.toggle('is-alive');
         updateMonitor();
     }
 
     function updateMonitor() {
-        const active = bossData.filter(b => b.timerInterval || b.currentTime === "RESPAWN!");
+        const active = bossData.filter(b => b.timerInterval || b.currentTime === "READY!");
         if (active.length === 0) {
-            monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center;">Нет активных таймеров</div>';
+            monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>';
             return;
         }
         monitorList.innerHTML = active.map(b => `
@@ -255,7 +268,6 @@
 
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
-    // Камера
     viewport.onwheel = e => { e.preventDefault(); const d = e.deltaY > 0 ? 0.8 : 1.2; const ns = Math.min(Math.max(0.05, scale * d), 4); posX = e.clientX - (e.clientX - posX) * (ns / scale); posY = e.clientY - (e.clientY - posY) * (ns / scale); scale = ns; update(); };
     let isDrag = false, lx, ly;
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
