@@ -2,16 +2,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - RIP Timer</title>
+    <title>L2 FarmRB - Pro Logic</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
-        
-        #map-wrapper {
-            position: absolute; transform-origin: 0 0;
-            width: 5062px; height: 4210px; 
-            background-repeat: no-repeat; background-size: 100% 100%;
-        }
+        #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; }
 
         /* МЕТКИ */
         .rb-marker {
@@ -22,76 +17,61 @@
             box-shadow: 0 0 12px rgba(255, 50, 0, 0.8);
             z-index: 10; cursor: pointer; transition: 0.3s;
         }
-
-        /* ЧЕРНАЯ МЕТКА (МЕРТВ) */
+        /* МЕРТВАЯ МЕТКА */
         .rb-marker.is-dead { 
             background: #000 !important; 
-            border-color: #444 !important; 
-            box-shadow: none !important;
-            z-index: 5;
+            border-color: #666 !important; 
+            box-shadow: none !important; 
         }
         
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #00ff88; padding: 2px 8px;
-            border-radius: 4px; font-size: 12px; white-space: nowrap; border: 1px solid #333;
+            border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
         }
 
-        /* ТАЙМЕР ЖИЗНИ */
+        /* ТАЙМЕР */
         .rb-timer {
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            background: #111; color: #00ff88; padding: 2px 10px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 16px;
-            border: 2px solid #00ff88; box-shadow: 0 0 10px #008844; z-index: 100;
+            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
+            font-weight: bold; font-family: monospace; font-size: 14px;
+            border: 1px solid #00ffcc; z-index: 100;
         }
 
+        /* ПАНЕЛЬ */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 320px; bottom: 15px;
+            position: fixed; top: 15px; left: 15px; width: 300px; bottom: 15px;
             background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
             padding: 15px; z-index: 1000; border-radius: 12px;
-            display: flex; flex-direction: column; backdrop-filter: blur(15px);
+            display: flex; flex-direction: column; backdrop-filter: blur(10px);
         }
-
-        .btn-mode {
-            background: #222; color: #aaa; border: 1px solid #444; padding: 10px;
-            border-radius: 6px; cursor: pointer; margin-bottom: 10px; font-weight: bold;
-        }
-        .edit-active .btn-mode { background: #820; border-color: #f50; color: #fff; }
-
-        #search {
-            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444;
-            background: #000; color: #00ff88; margin-bottom: 10px; box-sizing: border-box;
-            font-size: 14px; outline: none;
-        }
-
+        #search { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #000; color: #0f8; margin-bottom: 10px; box-sizing: border-box; outline: none; }
         #rb-list { flex: 1; overflow-y: auto; }
+        
         .rb-item { 
             display: flex; align-items: center; justify-content: space-between;
-            padding: 10px; margin-bottom: 5px; background: #1a1a1a; 
+            padding: 8px 10px; margin-bottom: 5px; background: #1a1a1a; 
             border-radius: 6px; font-size: 13px; border-left: 4px solid #00ff88;
         }
+        /* ИСЧЕЗНОВЕНИЕ ИЗ СПИСКА */
+        .rb-item.hidden-node { display: none !important; }
 
-        .rb-item.dead-status { display: none !important; }
-
-        .rb-info { flex: 1; cursor: pointer; font-weight: bold; margin-right: 10px; }
-        
-        .btn-rip-action {
-            background: #400; color: #f55; border: 1px solid #600;
-            padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;
+        .rb-info { flex: 1; cursor: pointer; font-weight: bold; }
+        .btn-rip-action { 
+            background: #400; color: #f55; border: 1px solid #600; 
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; 
         }
-        .btn-rip-action:hover { background: #600; color: #fff; }
 
-        #json-output { display: none; width: 100%; height: 80px; margin-top: 10px; background: #000; color: #0f8; font-size: 10px; }
-        .edit-active #json-output { display: block; }
+        .btn-mode { background: #222; color: #aaa; border: 1px solid #444; padding: 5px; margin-bottom: 10px; cursor: pointer; font-size: 10px; }
+        .edit-active .btn-mode { background: #820; color: #fff; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <button class="btn-mode" onclick="toggleEditor()">РЕЖИМ: АТЛАС</button>
-    <input type="text" id="search" placeholder="Поиск (напр. L)..." oninput="filterList()">
+    <button class="btn-mode" onclick="toggleEditor()">РЕДАКТОР ПОЗ</button>
+    <input type="text" id="search" placeholder="Поиск..." oninput="filterList()">
     <div id="rb-list"></div>
-    <textarea id="json-output" readonly></textarea>
 </div>
 
 <div id="viewport">
@@ -100,77 +80,21 @@
 
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
-    
     let bossData = [
         { "name": "Ember", "pos": "top:1173px;left:4720px;" },
-        { "name": "Hestia, Guardian Deity of the Hot Springs", "pos": "top:1152px;left:4191px;" },
-        { "name": "Ketra's Chief Brakki", "pos": "top:1385px;left:4289px;" },
-        { "name": "Ketra's Commander Tayr", "pos": "top:1421px;left:4298px;" },
+        { "name": "Hestia", "pos": "top:1152px;left:4191px;" },
         { "name": "Ketra's Hero Hekaton", "pos": "top:1477px;left:4316px;" },
         { "name": "Varka's Hero Shadith", "pos": "top:1750px;left:4017px;" },
-        { "name": "Varka's Commander Mos", "pos": "top:1770px;left:3960px;" },
-        { "name": "Varka's Chief Horus", "pos": "top:1721px;left:3923px;" },
-        { "name": "Vanor Chief Kandra", "pos": "top:1565px;left:4027px;" },
-        { "name": "Queen Shyeed", "pos": "top:1714px;left:3813px;" },
-        { "name": "Uruka", "pos": "top:1990px;left:3002px;" },
-        { "name": "Plague Golem", "pos": "top:1584px;left:4509px;" },
-        { "name": "Andreas van Halter", "pos": "top:1640px;left:3222px;" },
-        { "name": "Lord of Splendor Anays", "pos": "top:1402px;left:4036px;" },
-        { "name": "Sealed Evil Power Sailren", "pos": "top:1956px;left:3236px;" },
-        { "name": "Soul of Fire Nastron", "pos": "top:1411px;left:4266px;" },
-        { "name": "Soul of Water Ashutar", "pos": "top:1765px;left:3911px;" },
-        { "name": "Daimon the White-Eyed", "pos": "top:1717px;left:4660px;" },
-        { "name": "Last Lesser Giant Glaki", "pos": "top:2492px;left:4526px;" },
-        { "name": "Ocean Flame Ashakiel", "pos": "top:3264px;left:4100px;" },
-        { "name": "Flamestone Giant", "pos": "top:2014px;left:4287px;" },
-        { "name": "Palatanos of Horrific Power", "pos": "top:1906px;left:4305px;" },
-        { "name": "Storm Winged Naga", "pos": "top:1894px;left:4227px;" },
-        { "name": "Lesser Giant Olkuth", "pos": "top:2405px;left:4679px;" },
-        { "name": "Death Lord Shax", "pos": "top:1997px;left:4512px;" },
-        { "name": "Death Lord Ipos", "pos": "top:1949px;left:4379px;" },
-        { "name": "Bloody Empress Decarbia", "pos": "top:2161px;left:4690px;" },
-        { "name": "Krokian Padisha Sobekk", "pos": "top:3291px;left:4064px;" },
-        { "name": "Fafurion's Herald Lokness", "pos": "top:3295px;left:3910px;" },
-        { "name": "Eilhalder von Hellmann", "pos": "top:1729px;left:3504px;" },
-        { "name": "Roaring Skylancer", "pos": "top:2527px;left:4165px;" },
-        { "name": "Meanas Anor", "pos": "top:1992px;left:4402px;" },
-        { "name": "Beast Lord Behemoth", "pos": "top:1870px;left:4098px;" },
-        { "name": "Icicle Emperor Bumbalump", "pos": "top:1103px;left:4403px;" },
-        { "name": "Water Dragon Seer Sheshark", "pos": "top:3295px;left:3959px;" },
-        { "name": "Doom Blade Tanatos", "pos": "top:1953px;left:4150px;" },
-        { "name": "Shilen's Messenger Cabrio", "pos": "top:2145px;left:4614px;" },
-        { "name": "Palibati Queen Themis", "pos": "top:2226px;left:4712px;" },
         { "name": "Flame of Splendor Barakiel", "pos": "top:1376px;left:3793px;" },
-        { "name": "Anakim's Nemesis Zakaron", "pos": "top:2750px;left:4256px;" },
-        { "name": "Spirit of Andras the Betrayer", "pos": "top:1851px;left:4661px;" },
-        { "name": "Kernon's Faithful Servant Kelone", "pos": "top:1838px;left:4284px;" },
-        { "name": "Last Titan Utenus", "pos": "top:2579px;left:4672px;" },
-        { "name": "Demons Agent Falston", "pos": "top:1460px;left:3819px;" },
-        { "name": "Gargoyle Lord Tiphon", "pos": "top:1853px;left:4509px;" },
-        { "name": "Rahha", "pos": "top:1981px;left:4047px;" },
-        { "name": "Hekaton Prime", "pos": "top:2606px;left:4688px;" },
-        { "name": "Shilen's Priest Hisilrome", "pos": "top:2279px;left:4503px;" },
-        { "name": "Fierce Tiger King Angel", "pos": "top:2713px;left:4517px;" },
-        { "name": "Gorgolos", "pos": "top:2542px;left:4659px;" },
-        { "name": "Roaring Lord Kastor", "pos": "top:2035px;left:3921px;" },
-        { "name": "Abyss Brukunt", "pos": "top:2721px;left:4385px;" },
-        { "name": "Demon Kurikups", "pos": "top:3725px;left:3430px;" },
-        { "name": "Ghost of the Lidia", "pos": "top:1906px;left:4528px;" },
-        { "name": "Enmity Ghost Ramdal", "pos": "top:2128px;left:3955px;" },
-        { "name": "Immortal Savior Mardil", "pos": "top:2216px;left:3954px;" },
-        { "name": "Death Lord Hallate", "pos": "top:2175px;left:3959px;" },
-        { "name": "Korim", "pos": "top:2259px;left:3958px;" },
-        { "name": "Kernon", "pos": "top:2129px;left:4074px;" },
-        { "name": "Fire of Wrath Shuriel", "pos": "top:2174px;left:4076px;" },
+        { "name": "Shilen's Messenger Cabrio", "pos": "top:2145px;left:4614px;" },
         { "name": "Longhorn Golkonda", "pos": "top:2216px;left:4078px;" },
-        { "name": "Cherub Galaxia", "pos": "top:2261px;left:4084px;" },
-        { "name": "MILENU", "pos": "top:3972px;left:3737px;" }
+        { "name": "Death Lord Hallate", "pos": "top:2175px;left:3959px;" },
+        { "name": "Kernon", "pos": "top:2129px;left:4074px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
     const rbList = document.getElementById('rb-list');
     const viewport = document.getElementById('viewport');
-    
     let scale = 0.2, posX = 0, posY = 0, isEdit = false, draggedMarker = null;
 
     function init() {
@@ -183,97 +107,87 @@
         wrapper.innerHTML = '';
         rbList.innerHTML = '';
         bossData.forEach((boss, i) => {
+            // Метка на карте
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
             
-            m.onmousedown = (e) => {
-                if (e.button !== 0 || !isEdit) return;
-                e.stopPropagation();
-                draggedMarker = { index: i, element: m };
-            };
-
             m.onclick = (e) => {
                 e.stopPropagation();
                 if (isEdit) return;
-                focus(boss);
-                startLifeTimer(boss); // Теперь клик по метке запускает таймер
+                
+                // Нажатие на метку запускает таймер ТОЛЬКО если босс мертв (черный)
+                if (m.classList.contains('is-dead')) {
+                    startRespawnTimer(boss);
+                } else {
+                    focus(boss);
+                }
             };
-
+            
+            m.onmousedown = (e) => { if (isEdit && e.button === 0) { e.stopPropagation(); draggedMarker = { index: i, element: m }; } };
             wrapper.appendChild(m);
             boss.markerEl = m;
 
+            // Строка в списке
             const item = document.createElement('div');
             item.className = 'rb-item';
+            item.innerHTML = `<div class="rb-info">${boss.name}</div><button class="btn-rip-action">RIP</button>`;
+            item.querySelector('.rb-info').onclick = () => focus(boss);
             
-            const info = document.createElement('div');
-            info.className = 'rb-info';
-            info.innerText = boss.name;
-            info.onclick = () => focus(boss);
+            // Кнопка RIP - убивает босса
+            item.querySelector('.btn-rip-action').onclick = (e) => {
+                e.stopPropagation();
+                killBoss(boss);
+            };
 
-            const ripBtn = document.createElement('button');
-            ripBtn.className = 'btn-rip-action';
-            ripBtn.innerText = 'RIP';
-            ripBtn.onclick = (e) => { e.stopPropagation(); startLifeTimer(boss); };
-
-            item.appendChild(info);
-            item.appendChild(ripBtn);
             rbList.appendChild(item);
             boss.el = item;
         });
     }
 
-    function startLifeTimer(boss) {
-        if (boss.timerInterval) clearInterval(boss.timerInterval);
-        if (boss.timerDisplay) boss.timerDisplay.remove();
+    // ЛОГИКА: УМЕР (RIP)
+    function killBoss(boss) {
+        boss.markerEl.classList.add('is-dead'); // Стал черным
+        boss.el.classList.add('hidden-node');   // Исчез из списка
+        filterList();
+    }
 
-        // Пока таймер идет - босс в списке и красный
-        boss.el.classList.remove('dead-status');
-        boss.markerEl.classList.remove('is-dead');
+    // ЛОГИКА: ТАЙМЕР (Клик по черной метке)
+    function startRespawnTimer(boss) {
+        if (boss.timerInterval) return; // Чтобы не запускать дважды
 
         let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer';
         boss.markerEl.appendChild(timerDisplay);
-        boss.timerDisplay = timerDisplay;
 
-        const tick = () => {
+        boss.timerInterval = setInterval(() => {
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-
+            
             if (timeLeft <= 0) {
                 clearInterval(boss.timerInterval);
-                // ВРЕМЯ ВЫШЛО -> БОСС УМЕР
-                boss.markerEl.classList.add('is-dead');
-                boss.el.classList.add('dead-status');
+                boss.timerInterval = null;
                 timerDisplay.remove();
-                filterList(); 
+                
+                // По окончанию респауна - "он сразу мертв"
+                // То есть он остается черным и не возвращается в список.
+                console.log(boss.name + " зареспаунился и сразу мертв.");
             }
             timeLeft--;
-        };
-        tick();
-        boss.timerInterval = setInterval(tick, 1000);
+        }, 1000);
     }
 
     function filterList() {
         const q = document.getElementById('search').value.toLowerCase();
         bossData.forEach(b => {
-            const matchesSearch = q === "" || b.name.toLowerCase().startsWith(q);
-            const isAlive = !b.el.classList.contains('dead-status');
-            b.el.style.setProperty('display', (matchesSearch && isAlive) ? 'flex' : 'none', 'important');
+            const matchesSearch = q === "" || b.name.toLowerCase().includes(q);
+            const isAlive = !b.markerEl.classList.contains('is-dead');
+            b.el.style.display = (matchesSearch && isAlive) ? 'flex' : 'none';
         });
     }
-
-    function toggleEditor() {
-        isEdit = !isEdit;
-        document.body.classList.toggle('edit-active');
-        document.querySelector('.btn-mode').innerText = isEdit ? 'РЕЖИМ: РЕДАКТОР' : 'РЕЖИМ: АТЛАС';
-        save();
-    }
-
-    function save() { document.getElementById('json-output').value = JSON.stringify(bossData.map(b=>({name:b.name, pos:b.pos})), null, 2); }
 
     function focus(boss) {
         const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
@@ -285,16 +199,9 @@
     }
 
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+    function toggleEditor() { isEdit = !isEdit; document.body.classList.toggle('edit-active'); }
 
-    viewport.onwheel = e => {
-        e.preventDefault();
-        const d = e.deltaY > 0 ? 0.85 : 1.15;
-        const ns = Math.min(Math.max(0.05, scale * d), 4);
-        posX = e.clientX - (e.clientX - posX) * (ns / scale);
-        posY = e.clientY - (e.clientY - posY) * (ns / scale);
-        scale = ns; update();
-    };
-
+    viewport.onwheel = e => { e.preventDefault(); const d = e.deltaY > 0 ? 0.8 : 1.2; const ns = Math.min(Math.max(0.05, scale * d), 4); posX = e.clientX - (e.clientX - posX) * (ns / scale); posY = e.clientY - (e.clientY - posY) * (ns / scale); scale = ns; update(); };
     let isDrag = false, lx, ly;
     viewport.onmousedown = e => { if(e.button === (isEdit ? 2 : 0)) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onmousemove = e => {
@@ -305,11 +212,9 @@
             draggedMarker.element.style.left = x + 'px';
             draggedMarker.element.style.top = y + 'px';
             bossData[draggedMarker.index].pos = `top:${y}px;left:${x}px;`;
-            return;
-        }
-        if (isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }
+        } else if (isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }
     };
-    window.onmouseup = () => { draggedMarker = null; isDrag = false; save(); };
+    window.onmouseup = () => { draggedMarker = null; isDrag = false; };
     viewport.oncontextmenu = e => e.preventDefault();
     init();
 </script>
