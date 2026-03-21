@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Pro Logic</title>
+    <title>L2 FarmRB - Full List & Pro Logic</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -17,12 +17,7 @@
             box-shadow: 0 0 12px rgba(255, 50, 0, 0.8);
             z-index: 10; cursor: pointer; transition: 0.3s;
         }
-        /* МЕРТВАЯ МЕТКА */
-        .rb-marker.is-dead { 
-            background: #000 !important; 
-            border-color: #666 !important; 
-            box-shadow: none !important; 
-        }
+        .rb-marker.is-dead { background: #000 !important; border-color: #666 !important; box-shadow: none !important; }
         
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
@@ -30,7 +25,6 @@
             border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
         }
 
-        /* ТАЙМЕР */
         .rb-timer {
             position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
@@ -53,23 +47,21 @@
             padding: 8px 10px; margin-bottom: 5px; background: #1a1a1a; 
             border-radius: 6px; font-size: 13px; border-left: 4px solid #00ff88;
         }
-        /* ИСЧЕЗНОВЕНИЕ ИЗ СПИСКА */
         .rb-item.hidden-node { display: none !important; }
-
         .rb-info { flex: 1; cursor: pointer; font-weight: bold; }
-        .btn-rip-action { 
-            background: #400; color: #f55; border: 1px solid #600; 
-            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; 
-        }
+        .btn-rip-action { background: #400; color: #f55; border: 1px solid #600; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        .btn-mode { background: #222; color: #aaa; border: 1px solid #444; padding: 5px; margin-bottom: 10px; cursor: pointer; font-size: 10px; }
+        .btn-mode { background: #222; color: #aaa; border: 1px solid #444; padding: 5px; margin-bottom: 10px; cursor: pointer; font-size: 10px; border-radius: 4px; }
         .edit-active .btn-mode { background: #820; color: #fff; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #444; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <button class="btn-mode" onclick="toggleEditor()">РЕДАКТОР ПОЗ</button>
+    <button class="btn-mode" onclick="toggleEditor()">РЕДАКТОР ПОЗ (ЛКМ перенос / ПКМ двигать карту)</button>
     <input type="text" id="search" placeholder="Поиск..." oninput="filterList()">
     <div id="rb-list"></div>
 </div>
@@ -82,14 +74,57 @@
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     let bossData = [
         { "name": "Ember", "pos": "top:1173px;left:4720px;" },
-        { "name": "Hestia", "pos": "top:1152px;left:4191px;" },
+        { "name": "Hestia, Guardian Deity of the Hot Springs", "pos": "top:1152px;left:4191px;" },
+        { "name": "Ketra's Chief Brakki", "pos": "top:1385px;left:4289px;" },
+        { "name": "Ketra's Commander Tayr", "pos": "top:1421px;left:4298px;" },
         { "name": "Ketra's Hero Hekaton", "pos": "top:1477px;left:4316px;" },
         { "name": "Varka's Hero Shadith", "pos": "top:1750px;left:4017px;" },
-        { "name": "Flame of Splendor Barakiel", "pos": "top:1376px;left:3793px;" },
+        { "name": "Varka's Commander Mos", "pos": "top:1770px;left:3960px;" },
+        { "name": "Varka's Chief Horus", "pos": "top:1721px;left:3923px;" },
+        { "name": "Vanor Chief Kandra", "pos": "top:1565px;left:4027px;" },
+        { "name": "Queen Shyeed", "pos": "top:1714px;left:3813px;" },
+        { "name": "Uruka", "pos": "top:1990px;left:3002px;" },
+        { "name": "Plague Golem", "pos": "top:1584px;left:4509px;" },
+        { "name": "Andreas van Halter", "pos": "top:1640px;left:3222px;" },
+        { "name": "Lord of Splendor Anays", "pos": "top:1402px;left:4036px;" },
+        { "name": "Sealed Evil Power Sailren", "pos": "top:1956px;left:3236px;" },
+        { "name": "Soul of Fire Nastron", "pos": "top:1411px;left:4266px;" },
+        { "name": "Soul of Water Ashutar", "pos": "top:1765px;left:3911px;" },
+        { "name": "Daimon the White-Eyed", "pos": "top:1717px;left:4660px;" },
+        { "name": "Last Lesser Giant Glaki", "pos": "top:2492px;left:4526px;" },
+        { "name": "Ocean Flame Ashakiel", "pos": "top:3264px;left:4100px;" },
+        { "name": "Flamestone Giant", "pos": "top:2014px;left:4287px;" },
+        { "name": "Palatanos of Horrific Power", "pos": "top:1906px;left:4305px;" },
+        { "name": "Storm Winged Naga", "pos": "top:1894px;left:4227px;" },
+        { "name": "Lesser Giant Olkuth", "pos": "top:2405px;left:4679px;" },
+        { "name": "Death Lord Shax", "pos": "top:1997px;left:4512px;" },
+        { "name": "Death Lord Ipos", "pos": "top:1949px;left:4379px;" },
+        { "name": "Bloody Empress Decarbia", "pos": "top:2161px;left:4690px;" },
+        { "name": "Krokian Padisha Sobekk", "pos": "top:3291px;left:4064px;" },
+        { "name": "Fafurion's Herald Lokness", "pos": "top:3295px;left:3910px;" },
+        { "name": "Eilhalder von Hellmann", "pos": "top:1729px;left:3504px;" },
+        { "name": "Roaring Skylancer", "pos": "top:2527px;left:4165px;" },
+        { "name": "Meanas Anor", "pos": "top:1992px;left:4402px;" },
+        { "name": "Beast Lord Behemoth", "pos": "top:1870px;left:4098px;" },
+        { "name": "Icicle Emperor Bumbalump", "pos": "top:1103px;left:4403px;" },
+        { "name": "Water Dragon Seer Sheshark", "pos": "top:3295px;left:3959px;" },
+        { "name": "Doom Blade Tanatos", "pos": "top:1953px;left:4150px;" },
         { "name": "Shilen's Messenger Cabrio", "pos": "top:2145px;left:4614px;" },
-        { "name": "Longhorn Golkonda", "pos": "top:2216px;left:4078px;" },
+        { "name": "Palibati Queen Themis", "pos": "top:2226px;left:4712px;" },
+        { "name": "Flame of Splendor Barakiel", "pos": "top:1376px;left:3793px;" },
+        { "name": "Anakim's Nemesis Zakaron", "pos": "top:2750px;left:4256px;" },
+        { "name": "Spirit of Andras the Betrayer", "pos": "top:1851px;left:4661px;" },
+        { "name": "Kernon's Faithful Servant Kelone", "pos": "top:1838px;left:4284px;" },
+        { "name": "Last Titan Utenus", "pos": "top:2579px;left:4672px;" },
+        { "name": "Demons Agent Falston", "pos": "top:1460px;left:3819px;" },
+        { "name": "Gorgolos", "pos": "top:2542px;left:4659px;" },
+        { "name": "Ghost of the Lidia", "pos": "top:1906px;left:4528px;" },
         { "name": "Death Lord Hallate", "pos": "top:2175px;left:3959px;" },
-        { "name": "Kernon", "pos": "top:2129px;left:4074px;" }
+        { "name": "Korim", "pos": "top:2259px;left:3958px;" },
+        { "name": "Kernon", "pos": "top:2129px;left:4074px;" },
+        { "name": "Longhorn Golkonda", "pos": "top:2216px;left:4078px;" },
+        { "name": "Cherub Galaxia", "pos": "top:2261px;left:4084px;" },
+        { "name": "MILENU", "pos": "top:3972px;left:3737px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
@@ -107,7 +142,6 @@
         wrapper.innerHTML = '';
         rbList.innerHTML = '';
         bossData.forEach((boss, i) => {
-            // Метка на карте
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
@@ -116,8 +150,6 @@
             m.onclick = (e) => {
                 e.stopPropagation();
                 if (isEdit) return;
-                
-                // Нажатие на метку запускает таймер ТОЛЬКО если босс мертв (черный)
                 if (m.classList.contains('is-dead')) {
                     startRespawnTimer(boss);
                 } else {
@@ -125,56 +157,59 @@
                 }
             };
             
+            // Добавил двойной клик для воскрешения (красный статус)
+            m.ondblclick = (e) => {
+                e.stopPropagation();
+                if (m.classList.contains('is-dead')) reviveBoss(boss);
+            }
+
             m.onmousedown = (e) => { if (isEdit && e.button === 0) { e.stopPropagation(); draggedMarker = { index: i, element: m }; } };
             wrapper.appendChild(m);
             boss.markerEl = m;
 
-            // Строка в списке
             const item = document.createElement('div');
             item.className = 'rb-item';
             item.innerHTML = `<div class="rb-info">${boss.name}</div><button class="btn-rip-action">RIP</button>`;
             item.querySelector('.rb-info').onclick = () => focus(boss);
-            
-            // Кнопка RIP - убивает босса
-            item.querySelector('.btn-rip-action').onclick = (e) => {
-                e.stopPropagation();
-                killBoss(boss);
-            };
-
+            item.querySelector('.btn-rip-action').onclick = (e) => { e.stopPropagation(); killBoss(boss); };
             rbList.appendChild(item);
             boss.el = item;
         });
     }
 
-    // ЛОГИКА: УМЕР (RIP)
     function killBoss(boss) {
-        boss.markerEl.classList.add('is-dead'); // Стал черным
-        boss.el.classList.add('hidden-node');   // Исчез из списка
+        boss.markerEl.classList.add('is-dead');
+        boss.el.classList.add('hidden-node');
         filterList();
     }
 
-    // ЛОГИКА: ТАЙМЕР (Клик по черной метке)
-    function startRespawnTimer(boss) {
-        if (boss.timerInterval) return; // Чтобы не запускать дважды
+    function reviveBoss(boss) {
+        boss.markerEl.classList.remove('is-dead');
+        boss.el.classList.remove('hidden-node');
+        if (boss.timerInterval) {
+            clearInterval(boss.timerInterval);
+            boss.timerInterval = null;
+        }
+        if (boss.timerDisplay) boss.timerDisplay.remove();
+        filterList();
+    }
 
+    function startRespawnTimer(boss) {
+        if (boss.timerInterval) return;
         let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer';
         boss.markerEl.appendChild(timerDisplay);
+        boss.timerDisplay = timerDisplay;
 
         boss.timerInterval = setInterval(() => {
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-            
             if (timeLeft <= 0) {
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
-                
-                // По окончанию респауна - "он сразу мертв"
-                // То есть он остается черным и не возвращается в список.
-                console.log(boss.name + " зареспаунился и сразу мертв.");
             }
             timeLeft--;
         }, 1000);
