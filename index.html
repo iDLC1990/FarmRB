@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Full Boss List</title>
+    <title>L2 Respawn Tracker - Clean</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -10,57 +10,47 @@
 
         /* МЕТКИ */
         .rb-marker {
-            position: absolute; width: 22px; height: 22px;
-            background: radial-gradient(circle, #ff3300 0%, #880000 100%);
-            border: 2px solid #fff; border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 12px rgba(255, 50, 0, 0.8);
-            z-index: 10; cursor: pointer;
+            position: absolute; width: 24px; height: 24px;
+            border-radius: 50%; transform: translate(-50%, -50%);
+            border: 2px solid #fff; z-index: 10; cursor: pointer;
+            transition: all 0.3s ease;
+            background: #000; border-color: #555;
         }
-        .rb-marker.is-dead { background: #000 !important; border-color: #666 !important; box-shadow: none !important; }
+
+        /* ЖИВОЙ БОСС (ПОСЛЕ ТАЙМЕРА) */
+        .rb-marker.is-alive {
+            background: radial-gradient(circle, #ff3300 0%, #880000 100%);
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255, 50, 0, 0.9);
+            cursor: default; /* Больше не кликабельна */
+        }
         
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #00ff88; padding: 2px 8px;
-            border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
+            content: attr(data-name); position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #0f8; padding: 2px 8px;
+            border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
+        /* ТАЙМЕР */
         .rb-timer {
-            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
+            position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 3px 8px; border-radius: 4px;
             font-weight: bold; font-family: monospace; font-size: 14px;
-            border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
+            border: 1px solid #00ffcc; z-index: 110; pointer-events: none;
+            box-shadow: 0 0 10px rgba(0, 255, 200, 0.3);
         }
 
-        /* ПАНЕЛЬ */
-        #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 310px; bottom: 15px;
-            background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
-            padding: 15px; z-index: 1000; border-radius: 12px;
-            display: flex; flex-direction: column; backdrop-filter: blur(10px);
+        #hint {
+            position: fixed; top: 15px; left: 15px; 
+            background: rgba(0,0,0,0.8); padding: 10px 15px; 
+            border-radius: 8px; border: 1px solid #0f8; z-index: 1000;
+            font-size: 13px; pointer-events: none;
         }
-        #search { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #000; color: #0f8; margin-bottom: 10px; box-sizing: border-box; outline: none; }
-        #rb-list { flex: 1; overflow-y: auto; }
-        
-        .rb-item { 
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 10px; margin-bottom: 5px; background: #1a1a1a; 
-            border-radius: 6px; font-size: 12px; border-left: 4px solid #00ff88;
-        }
-        .rb-item.hidden-node { display: none !important; }
-        .rb-info { flex: 1; cursor: pointer; font-weight: bold; padding-right: 5px; }
-        .btn-rip-action { background: #400; color: #f55; border: 1px solid #600; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; }
-
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #444; }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <input type="text" id="search" placeholder="Поиск по названию..." oninput="filterList()">
-    <div id="rb-list"></div>
-</div>
+<div id="hint">Кликни по <b>чёрной метке</b>, чтобы запустить таймер респауна.</div>
 
 <div id="viewport">
     <div id="map-wrapper"></div>
@@ -135,21 +125,12 @@
     ];
 
     const wrapper = document.getElementById('map-wrapper');
-    const rbList = document.getElementById('rb-list');
     const viewport = document.getElementById('viewport');
     let scale = 0.2, posX = 0, posY = 0;
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
-        drawAll();
-        update();
-    }
-
-    function drawAll() {
-        wrapper.innerHTML = '';
-        rbList.innerHTML = '';
-        bossData.forEach((boss, i) => {
-            // Маркер на карте
+        bossData.forEach((boss) => {
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
@@ -157,62 +138,23 @@
             
             m.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (m.classList.contains('is-dead')) {
-                    startRespawnTimer(boss); // Таймер запускается кликом по черной метке
-                } else {
-                    focus(boss);
+                // Запускаем только если босс не "жив" и таймер не идет
+                if (!m.classList.contains('is-alive') && !boss.timerInterval) {
+                    startRespawn(boss);
                 }
-            });
-
-            m.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                if (m.classList.contains('is-dead')) reviveBoss(boss);
             });
 
             wrapper.appendChild(m);
             boss.markerEl = m;
-
-            // Строка в сайдбаре
-            const item = document.createElement('div');
-            item.className = 'rb-item';
-            item.innerHTML = `<div class="rb-info">${boss.name}</div><button class="btn-rip-action">RIP</button>`;
-            
-            item.querySelector('.rb-info').onclick = () => focus(boss);
-            item.querySelector('.btn-rip-action').onclick = (e) => {
-                e.stopPropagation();
-                killBoss(boss);
-            };
-
-            rbList.appendChild(item);
-            boss.el = item;
         });
+        update();
     }
 
-    function killBoss(boss) {
-        boss.markerEl.classList.add('is-dead');
-        boss.el.classList.add('hidden-node');
-        filterList();
-    }
-
-    function reviveBoss(boss) {
-        boss.markerEl.classList.remove('is-dead');
-        boss.el.classList.remove('hidden-node');
-        if (boss.timerInterval) {
-            clearInterval(boss.timerInterval);
-            boss.timerInterval = null;
-        }
-        if (boss.timerDisplay) boss.timerDisplay.remove();
-        filterList();
-    }
-
-    function startRespawnTimer(boss) {
-        if (boss.timerInterval) return;
-
+    function startRespawn(boss) {
         let timeLeft = 15 * 60; // 15 минут
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer';
         boss.markerEl.appendChild(timerDisplay);
-        boss.timerDisplay = timerDisplay;
 
         boss.timerInterval = setInterval(() => {
             const m = Math.floor(timeLeft / 60);
@@ -223,39 +165,24 @@
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
-                // Босс остается черным по условию "сразу мертв"
+                
+                // РЕСПАУН: становится красным навсегда
+                boss.markerEl.classList.add('is-alive');
             }
             timeLeft--;
         }, 1000);
     }
 
-    function filterList() {
-        const q = document.getElementById('search').value.toLowerCase();
-        bossData.forEach(b => {
-            const matchesSearch = q === "" || b.name.toLowerCase().includes(q);
-            const isAlive = !b.markerEl.classList.contains('is-dead');
-            b.el.style.display = (matchesSearch && isAlive) ? 'flex' : 'none';
-        });
-    }
-
-    function focus(boss) {
-        const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
-        const l = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
-        scale = 0.8;
-        posX = (window.innerWidth/2) - (l * scale);
-        posY = (window.innerHeight/2) - (t * scale);
-        update();
-    }
-
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
-    // Камера
+    // Камера (приближение и перемещение)
     viewport.onwheel = e => { e.preventDefault(); const d = e.deltaY > 0 ? 0.8 : 1.2; const ns = Math.min(Math.max(0.05, scale * d), 4); posX = e.clientX - (e.clientX - posX) * (ns / scale); posY = e.clientY - (e.clientY - posY) * (ns / scale); scale = ns; update(); };
     let isDrag = false, lx, ly;
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onmousemove = e => { if (isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); } };
     window.onmouseup = () => { isDrag = false; };
     viewport.oncontextmenu = e => e.preventDefault();
+    
     init();
 </script>
 </body>
