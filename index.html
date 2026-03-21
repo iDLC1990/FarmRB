@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Final Logic</title>
+    <title>L2 FarmRB - Full Boss List</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -10,7 +10,7 @@
 
         /* МЕТКИ */
         .rb-marker {
-            position: absolute; width: 24px; height: 24px;
+            position: absolute; width: 22px; height: 22px;
             background: radial-gradient(circle, #ff3300 0%, #880000 100%);
             border: 2px solid #fff; border-radius: 50%;
             transform: translate(-50%, -50%);
@@ -20,22 +20,21 @@
         .rb-marker.is-dead { background: #000 !important; border-color: #666 !important; box-shadow: none !important; }
         
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #00ff88; padding: 2px 8px;
             border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
         }
 
-        /* ТАЙМЕР */
         .rb-timer {
-            position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
             font-weight: bold; font-family: monospace; font-size: 14px;
-            border: 1px solid #00ffcc; z-index: 110; pointer-events: none;
+            border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
         /* ПАНЕЛЬ */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 300px; bottom: 15px;
+            position: fixed; top: 15px; left: 15px; width: 310px; bottom: 15px;
             background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
             padding: 15px; z-index: 1000; border-radius: 12px;
             display: flex; flex-direction: column; backdrop-filter: blur(10px);
@@ -46,11 +45,11 @@
         .rb-item { 
             display: flex; align-items: center; justify-content: space-between;
             padding: 8px 10px; margin-bottom: 5px; background: #1a1a1a; 
-            border-radius: 6px; font-size: 13px; border-left: 4px solid #00ff88;
+            border-radius: 6px; font-size: 12px; border-left: 4px solid #00ff88;
         }
         .rb-item.hidden-node { display: none !important; }
-        .rb-info { flex: 1; cursor: pointer; font-weight: bold; }
-        .btn-rip-action { background: #400; color: #f55; border: 1px solid #600; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .rb-info { flex: 1; cursor: pointer; font-weight: bold; padding-right: 5px; }
+        .btn-rip-action { background: #400; color: #f55; border: 1px solid #600; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #444; }
@@ -59,8 +58,7 @@
 <body>
 
 <div id="sidebar">
-    <div style="font-size: 10px; color: #666; margin-bottom: 5px;">Double Click по черной метке - Воскресить</div>
-    <input type="text" id="search" placeholder="Поиск босса..." oninput="filterList()">
+    <input type="text" id="search" placeholder="Поиск по названию..." oninput="filterList()">
     <div id="rb-list"></div>
 </div>
 
@@ -115,11 +113,22 @@
         { "name": "Kernon's Faithful Servant Kelone", "pos": "top:1838px;left:4284px;" },
         { "name": "Last Titan Utenus", "pos": "top:2579px;left:4672px;" },
         { "name": "Demons Agent Falston", "pos": "top:1460px;left:3819px;" },
+        { "name": "Gargoyle Lord Tiphon", "pos": "top:1853px;left:4509px;" },
+        { "name": "Rahha", "pos": "top:1981px;left:4047px;" },
+        { "name": "Hekaton Prime", "pos": "top:2606px;left:4688px;" },
+        { "name": "Shilen's Priest Hisilrome", "pos": "top:2279px;left:4503px;" },
+        { "name": "Fierce Tiger King Angel", "pos": "top:2713px;left:4517px;" },
         { "name": "Gorgolos", "pos": "top:2542px;left:4659px;" },
+        { "name": "Roaring Lord Kastor", "pos": "top:2035px;left:3921px;" },
+        { "name": "Abyss Brukunt", "pos": "top:2721px;left:4385px;" },
+        { "name": "Demon Kurikups", "pos": "top:3725px;left:3430px;" },
         { "name": "Ghost of the Lidia", "pos": "top:1906px;left:4528px;" },
+        { "name": "Enmity Ghost Ramdal", "pos": "top:2128px;left:3955px;" },
+        { "name": "Immortal Savior Mardil", "pos": "top:2216px;left:3954px;" },
         { "name": "Death Lord Hallate", "pos": "top:2175px;left:3959px;" },
         { "name": "Korim", "pos": "top:2259px;left:3958px;" },
         { "name": "Kernon", "pos": "top:2129px;left:4074px;" },
+        { "name": "Fire of Wrath Shuriel", "pos": "top:2174px;left:4076px;" },
         { "name": "Longhorn Golkonda", "pos": "top:2216px;left:4078px;" },
         { "name": "Cherub Galaxia", "pos": "top:2261px;left:4084px;" },
         { "name": "MILENU", "pos": "top:3972px;left:3737px;" }
@@ -140,22 +149,21 @@
         wrapper.innerHTML = '';
         rbList.innerHTML = '';
         bossData.forEach((boss, i) => {
+            // Маркер на карте
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
             
-            // Обработка клика по метке
             m.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (m.classList.contains('is-dead')) {
-                    startRespawnTimer(boss); // Запуск таймера если мертв
+                    startRespawnTimer(boss); // Таймер запускается кликом по черной метке
                 } else {
                     focus(boss);
                 }
             });
 
-            // Воскрешение через двойной клик
             m.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
                 if (m.classList.contains('is-dead')) reviveBoss(boss);
@@ -164,11 +172,17 @@
             wrapper.appendChild(m);
             boss.markerEl = m;
 
+            // Строка в сайдбаре
             const item = document.createElement('div');
             item.className = 'rb-item';
             item.innerHTML = `<div class="rb-info">${boss.name}</div><button class="btn-rip-action">RIP</button>`;
+            
             item.querySelector('.rb-info').onclick = () => focus(boss);
-            item.querySelector('.btn-rip-action').onclick = (e) => { e.stopPropagation(); killBoss(boss); };
+            item.querySelector('.btn-rip-action').onclick = (e) => {
+                e.stopPropagation();
+                killBoss(boss);
+            };
+
             rbList.appendChild(item);
             boss.el = item;
         });
@@ -183,15 +197,18 @@
     function reviveBoss(boss) {
         boss.markerEl.classList.remove('is-dead');
         boss.el.classList.remove('hidden-node');
-        if (boss.timerInterval) { clearInterval(boss.timerInterval); boss.timerInterval = null; }
+        if (boss.timerInterval) {
+            clearInterval(boss.timerInterval);
+            boss.timerInterval = null;
+        }
         if (boss.timerDisplay) boss.timerDisplay.remove();
         filterList();
     }
 
     function startRespawnTimer(boss) {
-        if (boss.timerInterval) return; 
+        if (boss.timerInterval) return;
 
-        let timeLeft = 15 * 60;
+        let timeLeft = 15 * 60; // 15 минут
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer';
         boss.markerEl.appendChild(timerDisplay);
@@ -206,7 +223,7 @@
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
-                // Босс остается черным (мертвым) по условию
+                // Босс остается черным по условию "сразу мертв"
             }
             timeLeft--;
         }, 1000);
@@ -232,7 +249,7 @@
 
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
-    // Управление камерой
+    // Камера
     viewport.onwheel = e => { e.preventDefault(); const d = e.deltaY > 0 ? 0.8 : 1.2; const ns = Math.min(Math.max(0.05, scale * d), 4); posX = e.clientX - (e.clientX - posX) * (ns / scale); posY = e.clientY - (e.clientY - posY) * (ns / scale); scale = ns; update(); };
     let isDrag = false, lx, ly;
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
