@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 Map Constructor - FIXED</title>
+    <title>L2 Map Constructor - Pro Edition</title>
     <style>
-        body { margin: 0; padding: 0; background: #111; color: #eee; font-family: sans-serif; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #111; color: #eee; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
         
         #viewport {
             width: 100vw; height: 100vh;
@@ -14,50 +14,74 @@
 
         #map-wrapper {
             position: absolute;
-            /* Размеры для карты la2.one (2560x1707) */
             width: 2560px; 
             height: 1707px; 
             transform-origin: 0 0;
-            /* Прямая ссылка на карту через фотохостинг, который не блокирует доступ */
             background: url('https://i.imgur.com/uN8G9G0.jpg') no-repeat;
             background-size: 2560px 1707px;
+            image-rendering: high-quality;
         }
 
         .temp-marker {
-            position: absolute; width: 20px; height: 20px;
-            background: #ff0000; border: 2px solid white;
+            position: absolute; width: 14px; height: 14px;
+            background: #ff3333; border: 2px solid white;
             border-radius: 50%; transform: translate(-50%, -50%);
-            pointer-events: none; box-shadow: 0 0 10px red;
+            box-shadow: 0 0 8px rgba(255,0,0,0.8);
+            cursor: pointer;
+            z-index: 10;
+            transition: transform 0.1s;
         }
+        .temp-marker:hover { transform: translate(-50%, -50%) scale(1.5); background: #ffff00; }
 
         #panel {
-            position: fixed; top: 10px; left: 10px; width: 350px;
-            background: rgba(0,0,0,0.9); border: 2px solid #00ff88;
-            padding: 15px; z-index: 1000; border-radius: 8px;
+            position: fixed; top: 15px; left: 15px; width: 320px;
+            background: rgba(20, 20, 20, 0.95); border: 1px solid #444;
+            padding: 20px; z-index: 1000; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        #coords-display {
+            font-family: monospace; font-size: 12px; color: #00ff88; margin-bottom: 10px;
         }
 
         textarea { 
-            width: 100%; height: 200px; margin-top: 10px; 
-            background: #000; color: #00ff88; border: 1px solid #333; 
-            font-family: monospace; font-size: 11px;
+            width: 100%; height: 180px; margin-top: 10px; 
+            background: #0a0a0a; color: #00ff88; border: 1px solid #333; 
+            font-family: 'Consolas', monospace; font-size: 11px;
+            padding: 8px; box-sizing: border-box; resize: none;
         }
 
-        .hint { font-size: 12px; color: #aaa; margin-bottom: 8px; }
+        .hint { font-size: 11px; color: #888; margin-bottom: 15px; line-height: 1.4; }
         b { color: #00ff88; }
-        button { cursor: pointer; background: #333; color: white; border: 1px solid #555; padding: 5px; margin-top: 5px; }
+        
+        .btn-group { display: flex; gap: 5px; margin-top: 10px; }
+        button { 
+            flex: 1; cursor: pointer; background: #333; color: white; 
+            border: none; padding: 8px; border-radius: 4px; font-size: 12px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #444; }
+        button.primary { background: #008855; }
+        button.primary:hover { background: #00aa66; }
     </style>
 </head>
 <body>
 
 <div id="panel">
-    <b>Конструктор РБ (FIXED)</b>
+    <div style="font-weight: bold; font-size: 18px; margin-bottom: 5px;">Map Constructor</div>
+    <div id="coords-display">X: 0, Y: 0</div>
     <div class="hint">
-        1. <b>Колесико</b> — Зум<br>
-        2. <b>Зажать ПКМ</b> — Двигать карту<br>
-        3. <b>ЛКМ</b> — Поставить метку
+        <b>ЛКМ</b> — Поставить метку<br>
+        <b>ПКМ + Тянуть</b> — Перемещение<br>
+        <b>Колесико</b> — Масштаб<br>
+        <b>Клик по метке</b> — Удалить её
     </div>
-    <textarea id="output" readonly placeholder="Тут появится код..."></textarea>
-    <button onclick="clearOutput()">Очистить всё</button>
+    <textarea id="output" readonly placeholder="Здесь будет JSON..."></textarea>
+    <div class="btn-group">
+        <button class="primary" onclick="copyToClipboard()">Копировать код</button>
+        <button onclick="clearOutput()">Очистить всё</button>
+    </div>
 </div>
 
 <div id="viewport">
@@ -68,52 +92,84 @@
     const wrapper = document.getElementById('map-wrapper');
     const viewport = document.getElementById('viewport');
     const output = document.getElementById('output');
+    const coordsDisplay = document.getElementById('coords-display');
 
-    let scale = 0.5; 
-    let posX = 0;
-    let posY = 0;
+    let scale = 0.6; 
+    let posX = 100;
+    let posY = 100;
+    let markers = [];
 
     function render() {
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
     }
     render();
 
-    // Логика клика
+    // Обновление координат в панели
+    viewport.addEventListener('mousemove', (e) => {
+        const rect = wrapper.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left) / scale);
+        const y = Math.round((e.clientY - rect.top) / scale);
+        coordsDisplay.innerText = `X: ${x}, Y: ${y}`;
+    });
+
+    // Логика клика (постановка метки)
     viewport.addEventListener('click', (e) => {
         if (isDragging) return; 
+        if (e.target.classList.contains('temp-marker')) return; // Чтобы не ставить метку поверх при удалении
 
         const rect = wrapper.getBoundingClientRect();
         const realX = Math.round((e.clientX - rect.left) / scale);
         const realY = Math.round((e.clientY - rect.top) / scale);
 
-        // Ставим точку
-        const dot = document.createElement('div');
-        dot.className = 'temp-marker';
-        dot.style.left = realX + 'px';
-        dot.style.top = realY + 'px';
-        wrapper.appendChild(dot);
-
-        const name = prompt(`X:${realX}, Y:${realY}\nИмя босса:`, "Boss");
+        const name = prompt(`Координаты: ${realX}, ${realY}\nВведите имя объекта:`, "Raid Boss");
         if (name) {
-            const line = `{ name: "${name}", pos: "top:${realY}px;left:${realX}px;" },`;
-            output.value += line + "\n";
-        } else {
-            dot.remove();
+            addMarker(realX, realY, name);
         }
     });
+
+    function addMarker(x, y, name) {
+        const id = Date.now();
+        const dot = document.createElement('div');
+        dot.className = 'temp-marker';
+        dot.style.left = x + 'px';
+        dot.style.top = y + 'px';
+        dot.title = name;
+        
+        // Удаление конкретной метки
+        dot.onclick = (e) => {
+            e.stopPropagation();
+            if(confirm(`Удалить метку "${name}"?`)) {
+                dot.remove();
+                markers = markers.filter(m => m.id !== id);
+                updateOutput();
+            }
+        };
+
+        wrapper.appendChild(dot);
+        markers.push({ id, name, x, y });
+        updateOutput();
+    }
+
+    function updateOutput() {
+        const code = markers.map(m => `  { name: "${m.name}", pos: "top:${m.y}px;left:${m.x}px;" }`).join(",\n");
+        output.value = "[\n" + code + "\n]";
+    }
 
     // Зум
     viewport.onwheel = (e) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        const newScale = Math.min(Math.max(0.1, scale * delta), 3);
+        const delta = e.deltaY > 0 ? 0.85 : 1.15;
+        const newScale = Math.min(Math.max(0.1, scale * delta), 4);
+        
+        // Математика зума в точку курсора
         posX = e.clientX - (e.clientX - posX) * (newScale / scale);
         posY = e.clientY - (e.clientY - posY) * (newScale / scale);
+        
         scale = newScale;
         render();
     };
 
-    // Перетаскивание (ПКМ)
+    // Панорамирование
     let isDragging = false;
     let lastX, lastY;
     viewport.oncontextmenu = (e) => e.preventDefault();
@@ -122,6 +178,7 @@
             isDragging = true;
             lastX = e.clientX;
             lastY = e.clientY;
+            viewport.style.cursor = 'grabbing';
         }
     };
     window.onmousemove = (e) => {
@@ -132,11 +189,23 @@
         lastY = e.clientY;
         render();
     };
-    window.onmouseup = () => { isDragging = false; };
+    window.onmouseup = () => { 
+        isDragging = false; 
+        viewport.style.cursor = 'crosshair';
+    };
 
     function clearOutput() {
-        output.value = "";
-        document.querySelectorAll('.temp-marker').forEach(m => m.remove());
+        if(confirm("Точно очистить все метки?")) {
+            output.value = "";
+            markers = [];
+            document.querySelectorAll('.temp-marker').forEach(m => m.remove());
+        }
+    }
+
+    function copyToClipboard() {
+        output.select();
+        document.execCommand('copy');
+        alert("Код скопирован в буфер обмена!");
     }
 </script>
 
