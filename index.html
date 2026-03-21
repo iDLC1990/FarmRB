@@ -2,111 +2,127 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 Aden World - Raid Boss Map</title>
+    <title>L2 FarmRB - World Map</title>
     <style>
-        body { margin: 0; padding: 0; background: #0a0a0a; color: #eee; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
         
-        /* Основной контейнер */
+        /* Виджет карты */
         #viewport {
             width: 100vw; height: 100vh;
             cursor: grab; overflow: hidden; position: relative;
             background: #000;
         }
-        #viewport:active { cursor: grabbing; }
 
         #map-wrapper {
             position: absolute;
             transform-origin: 0 0;
-            background-image: url('https://lineage.pmfun.com/data/maps/world/Aden%20World%20Map%20CT2%20%28relief_KPAK_Edit%29.gif');
+            /* Твои точные размеры */
+            width: 5062px; 
+            height: 4210px; 
             background-repeat: no-repeat;
-            /* Размеры оригинального изображения с pmfun */
-            width: 5062px; height: 4210px; 
-            background-size: contain;
+            background-size: 100% 100%;
+            image-rendering: -webkit-optimize-contrast;
         }
 
         /* Метки РБ */
         .rb-marker {
-            position: absolute; width: 16px; height: 16px;
-            background: radial-gradient(circle, #ff0000 0%, #660000 100%);
+            position: absolute; width: 18px; height: 18px;
+            background: radial-gradient(circle, #ff3300 0%, #880000 100%);
             border: 2px solid #fff; border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(255,0,0,0.7);
+            box-shadow: 0 0 12px rgba(255, 50, 0, 0.8);
             z-index: 10; cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
         }
-        .rb-marker:hover {
-            transform: translate(-50%, -50%) scale(1.5);
-            box-shadow: 0 0 20px #ff0000;
-            z-index: 100;
-        }
-
-        /* Тултип над меткой */
+        .rb-marker:hover { transform: translate(-50%, -50%) scale(1.4); z-index: 100; }
+        
+        /* Название при наведении */
         .rb-marker::after {
             content: attr(data-name);
-            position: absolute; bottom: 20px; left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: #00ff88;
-            padding: 4px 8px; border-radius: 4px; font-size: 12px;
-            white-space: nowrap; pointer-events: none;
-            opacity: 0; transition: opacity 0.2s;
-            border: 1px solid #00ff88;
+            position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #00ff88; padding: 4px 10px;
+            border-radius: 4px; font-size: 13px; white-space: nowrap;
+            opacity: 0; transition: opacity 0.2s; pointer-events: none;
+            border: 1px solid #00ff88; box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .rb-marker:hover::after { opacity: 1; }
 
-        /* Анимация при клике из списка */
-        @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0px red; }
-            50% { transform: translate(-50%, -50%) scale(2.5); box-shadow: 0 0 30px red; }
-            100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 10px red; }
+        /* Эффект подсветки при выборе из списка */
+        @keyframes highlight-pulse {
+            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0px #fff; }
+            50% { transform: translate(-50%, -50%) scale(3); box-shadow: 0 0 30px #fff; }
+            100% { transform: translate(-50%, -50%) scale(1); }
         }
-        .highlight { animation: pulse 1s ease-in-out 3; z-index: 1000 !important; }
+        .active-target { animation: highlight-pulse 0.8s ease-in-out 3; z-index: 1000 !important; border-color: #00ffea; }
 
-        /* Боковая панель */
+        /* Панель управления */
         #sidebar {
-            position: fixed; top: 20px; left: 20px; width: 280px; bottom: 20px;
-            background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
-            padding: 15px; z-index: 1000; border-radius: 12px;
-            display: flex; flex-direction: column;
-            backdrop-filter: blur(10px); box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            position: fixed; top: 15px; left: 15px; width: 300px; bottom: 15px;
+            background: rgba(15, 15, 15, 0.92); border: 1px solid #333;
+            padding: 20px; z-index: 1000; border-radius: 12px;
+            display: flex; flex-direction: column; backdrop-filter: blur(10px);
+            box-shadow: 5px 0 25px rgba(0,0,0,0.7);
         }
+
+        .btn-mode {
+            background: #222; color: #aaa; border: 1px solid #444; padding: 10px;
+            border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px;
+            transition: 0.3s;
+        }
+        .edit-active .btn-mode { background: #882200; color: #fff; border-color: #ff5500; }
 
         #search {
-            width: 100%; padding: 10px; border-radius: 6px;
-            border: 1px solid #444; background: #1a1a1a; color: #fff;
-            margin-bottom: 15px; box-sizing: border-box; outline: none;
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444;
+            background: #000; color: #fff; margin-bottom: 10px; box-sizing: border-box;
         }
-        #search:focus { border-color: #00ff88; }
 
-        #rb-list {
-            flex: 1; overflow-y: auto; padding-right: 5px;
-        }
+        #rb-list { flex: 1; overflow-y: auto; padding-right: 5px; }
         .rb-item {
-            padding: 8px 10px; margin-bottom: 4px; border-radius: 4px;
-            background: #1a1a1a; cursor: pointer; font-size: 13px;
-            transition: background 0.2s, color 0.2s;
-            border-left: 3px solid transparent;
+            padding: 10px; margin-bottom: 5px; background: #1a1a1a; cursor: pointer;
+            border-radius: 5px; font-size: 13px; border-left: 3px solid #444; transition: 0.2s;
         }
-        .rb-item:hover { background: #2a2a2a; color: #00ff88; border-left-color: #00ff88; }
+        .rb-item:hover { background: #252525; border-left-color: #00ff88; color: #00ff88; }
 
-        /* Скроллбар */
-        #rb-list::-webkit-scrollbar { width: 4px; }
+        #rb-list::-webkit-scrollbar { width: 5px; }
         #rb-list::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+
+        /* Окно с кодом в режиме редактора */
+        #json-output {
+            display: none; width: 100%; height: 150px; background: #000;
+            color: #00ff88; font-family: monospace; font-size: 11px; margin-top: 10px;
+            border: 1px solid #333; padding: 5px; box-sizing: border-box; resize: none;
+        }
+        .edit-active #json-output { display: block; }
+        
+        .hint { font-size: 11px; color: #777; margin-top: 5px; line-height: 1.3; display: none; }
+        .edit-active .hint { display: block; }
     </style>
 </head>
-<body>
+<body class="view-mode">
 
 <div id="sidebar">
-    <h3 style="margin: 0 0 15px 0; color: #00ff88; letter-spacing: 1px;">RAID BOSSES</h3>
-    <input type="text" id="search" placeholder="Поиск босса...">
+    <button class="btn-mode" onclick="toggleEditor()">РЕЖИМ: АТЛАС</button>
+    <input type="text" id="search" placeholder="Поиск РБ..." oninput="filterList()">
+    
     <div id="rb-list"></div>
+
+    <div class="hint">
+        <b>ЛКМ:</b> Поставить метку<br>
+        <b>ПКМ:</b> Двигать карту<br>
+        <b>Клик по метке:</b> Удалить
+    </div>
+    <textarea id="json-output" readonly placeholder="Здесь будет JSON"></textarea>
 </div>
 
 <div id="viewport">
-    <div id="map-wrapper" style="width: 5062px; height: 4210px;"></div>
+    <div id="map-wrapper"></div>
 </div>
 
 <script>
-    const bossData = [
+    // Твоя ссылка с GitHub
+    const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
+    
+    let bossData = [
         { name: "Ember", pos: "top:1120px;left:3836px;" },
         { name: "Hestia, Guardian Deity of the Hot Springs", pos: "top:1097px;left:3472px;" },
         { name: "Ketra's Chief Brakki", pos: "top:1326px;left:3549px;" },
@@ -173,96 +189,111 @@
     ];
 
     const wrapper = document.getElementById('map-wrapper');
-    const viewport = document.getElementById('viewport');
     const rbList = document.getElementById('rb-list');
-    const searchInput = document.getElementById('search');
+    const viewport = document.getElementById('viewport');
+    const out = document.getElementById('json-output');
 
-    let scale = 0.3;
-    let posX = 100, posY = 100;
+    let scale = 0.2, posX = 0, posY = 0, isEdit = false;
 
-    // Инициализация сайта
     function init() {
-        bossData.forEach((boss, index) => {
-            // Создаем метку на карте
-            const marker = document.createElement('div');
-            marker.className = 'rb-marker';
-            marker.setAttribute('style', boss.pos);
-            marker.setAttribute('data-name', boss.name);
-            marker.id = `marker-${index}`;
-            wrapper.appendChild(marker);
+        wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
+        drawAll();
+        update();
+    }
 
-            // Создаем пункт в списке
+    function drawAll() {
+        wrapper.innerHTML = '';
+        rbList.innerHTML = '';
+        bossData.forEach((boss, i) => {
+            // Метка
+            const m = document.createElement('div');
+            m.className = 'rb-marker';
+            m.style.cssText = boss.pos;
+            m.setAttribute('data-name', boss.name);
+            m.onclick = (e) => {
+                e.stopPropagation();
+                if(isEdit && confirm("Удалить?")) { bossData.splice(i, 1); drawAll(); save(); }
+                else focus(boss, m);
+            };
+            wrapper.appendChild(m);
+
+            // Пункт списка
             const item = document.createElement('div');
             item.className = 'rb-item';
             item.innerText = boss.name;
-            item.onclick = () => focusOnBoss(boss, marker);
+            item.onclick = () => focus(boss, m);
             rbList.appendChild(item);
-            boss.element = item; // для поиска
+            boss.el = item;
         });
-        render();
     }
 
-    // Фокусировка на боссе при клике из списка
-    function focusOnBoss(boss, marker) {
-        // Парсим координаты из строки "top:1120px;left:3836px;"
-        const top = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
-        const left = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
-
-        scale = 0.8; // Приближаем
-        posX = (window.innerWidth / 2) - (left * scale);
-        posY = (window.innerHeight / 2) - (top * scale);
-
-        render();
-
-        // Эффект подсветки
-        marker.classList.remove('highlight');
-        void marker.offsetWidth; // Магия для перезапуска анимации
-        marker.classList.add('highlight');
+    function focus(boss, m) {
+        const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
+        const l = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
+        scale = 0.8;
+        posX = (window.innerWidth/2) - (l * scale);
+        posY = (window.innerHeight/2) - (t * scale);
+        update();
+        m.classList.remove('active-target');
+        void m.offsetWidth;
+        m.classList.add('active-target');
     }
 
-    function render() {
+    function update() {
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
     }
 
-    // Зум
-    viewport.onwheel = (e) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.85 : 1.15;
-        const newScale = Math.min(Math.max(0.1, scale * delta), 3);
-        posX = e.clientX - (e.clientX - posX) * (newScale / scale);
-        posY = e.clientY - (e.clientY - posY) * (newScale / scale);
-        scale = newScale;
-        render();
-    };
+    function toggleEditor() {
+        isEdit = !isEdit;
+        document.body.classList.toggle('edit-active');
+        document.querySelector('.btn-mode').innerText = isEdit ? 'РЕЖИМ: РЕДАКТОР' : 'РЕЖИМ: АТЛАС';
+        viewport.style.cursor = isEdit ? 'crosshair' : 'grab';
+        save();
+    }
 
-    // Панорамирование (ЛКМ теперь тянет карту, так как это не конструктор)
-    let isDragging = false, lastX, lastY;
-    viewport.onmousedown = (e) => {
-        if (e.button === 0) { 
-            isDragging = true; 
-            lastX = e.clientX; lastY = e.clientY; 
+    viewport.onclick = (e) => {
+        if(!isEdit || isDrag) return;
+        const r = wrapper.getBoundingClientRect();
+        const x = Math.round((e.clientX - r.left) / scale);
+        const y = Math.round((e.clientY - r.top) / scale);
+        const n = prompt("Имя РБ:");
+        if(n) {
+            bossData.push({ name: n, pos: `top:${y}px;left:${x}px;` });
+            drawAll();
+            save();
         }
     };
-    window.onmousemove = (e) => {
-        if (!isDragging) return;
-        posX += (e.clientX - lastX);
-        posY += (e.clientY - lastY);
-        lastX = e.clientX; lastY = e.clientY;
-        render();
-    };
-    window.onmouseup = () => isDragging = false;
 
-    // Поиск
-    searchInput.oninput = (e) => {
-        const query = e.target.value.toLowerCase();
-        bossData.forEach(boss => {
-            const match = boss.name.toLowerCase().includes(query);
-            boss.element.style.display = match ? 'block' : 'none';
+    function filterList() {
+        const q = document.getElementById('search').value.toLowerCase();
+        bossData.forEach(b => {
+            b.el.style.display = b.name.toLowerCase().includes(q) ? 'block' : 'none';
         });
+    }
+
+    function save() { out.value = JSON.stringify(bossData.map(b=>({name:b.name, pos:b.pos})), null, 2); }
+
+    // Управление
+    viewport.onwheel = e => {
+        e.preventDefault();
+        const d = e.deltaY > 0 ? 0.85 : 1.15;
+        const ns = Math.min(Math.max(0.05, scale * d), 4);
+        posX = e.clientX - (e.clientX - posX) * (ns / scale);
+        posY = e.clientY - (e.clientY - posY) * (ns / scale);
+        scale = ns; update();
     };
+
+    let isDrag = false, lx, ly;
+    viewport.onmousedown = e => { 
+        if(e.button === (isEdit ? 2 : 0)) { isDrag = true; lx = e.clientX; ly = e.clientY; } 
+    };
+    window.onmousemove = e => { 
+        if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); } 
+    };
+    window.onmouseup = () => isDrag = false;
+    viewport.oncontextmenu = e => e.preventDefault();
 
     init();
 </script>
-
 </body>
 </html>
