@@ -2,136 +2,68 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 Aden World - Atlas & Editor</title>
+    <title>L2 Map - Fixed Markers</title>
     <style>
-        body { margin: 0; padding: 0; background: #0a0a0a; color: #eee; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #0a0a0a; color: #eee; font-family: sans-serif; overflow: hidden; }
         
-        #viewport {
-            width: 100vw; height: 100vh;
-            cursor: grab; overflow: hidden; position: relative;
-            background: #000;
-        }
+        #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
 
         #map-wrapper {
             position: absolute;
             transform-origin: 0 0;
             background-image: url('https://lineage.pmfun.com/data/maps/world/Aden%20World%20Map%20CT2%20%28relief_KPAK_Edit%29.gif');
             background-repeat: no-repeat;
-            width: 5062px; height: 4210px; 
-            background-size: contain;
+            /* ВНИМАНИЕ: Возвращаем размеры, под которые создавались твои координаты */
+            width: 5062px; 
+            height: 4210px; 
+            background-size: 5062px 4210px;
         }
+
+        /* Если метки все равно не там, попробуй изменить width выше на 2560px и height на 1707px */
 
         .rb-marker {
-            position: absolute; width: 16px; height: 16px;
-            background: radial-gradient(circle, #ff0000 0%, #660000 100%);
-            border: 2px solid #fff; border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(255,0,0,0.7);
-            z-index: 10; cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .rb-marker:hover { transform: translate(-50%, -50%) scale(1.5); z-index: 100; }
-        .rb-marker::after {
-            content: attr(data-name);
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.9); color: #00ff88; padding: 4px 10px;
-            border-radius: 4px; font-size: 12px; white-space: nowrap;
-            opacity: 0; transition: opacity 0.2s; pointer-events: none; border: 1px solid #00ff88;
-        }
-        .rb-marker:hover::after { opacity: 1; }
-
-        @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(2.5); box-shadow: 0 0 30px red; }
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-        .highlight { animation: pulse 1s ease-in-out 3; z-index: 1000 !important; }
-
-        /* --- Боковая панель --- */
-        #sidebar {
-            position: fixed; top: 20px; left: 20px; width: 300px; max-height: calc(100vh - 40px);
-            background: rgba(15, 15, 15, 0.95); border: 1px solid #444;
-            padding: 20px; z-index: 1000; border-radius: 12px;
-            display: flex; flex-direction: column; 
-            backdrop-filter: blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-            box-sizing: border-box;
-        }
-
-        .mode-toggle {
-            background: #222; border: 1px solid #444; border-radius: 8px;
-            display: flex; margin-bottom: 20px; padding: 4px; flex-shrink: 0;
-        }
-        .mode-toggle button {
-            flex: 1; border: none; padding: 8px; background: none; color: #888;
-            cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.3s;
-        }
-        .mode-toggle button.active { background: #008855; color: white; }
-
-        /* Контейнеры инструментов */
-        #view-tools, #editor-tools {
-            display: flex; flex-direction: column;
-            flex: 1; 
-            min-height: 0; /* Важно для скролла внутри flex */
-        }
-
-        #search {
-            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444;
-            background: #050505; color: #fff; margin-bottom: 15px; box-sizing: border-box; flex-shrink: 0;
-        }
-
-        /* --- СКРОЛЛИРУЕМЫЙ СПИСОК --- */
-        #rb-list { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding-right: 8px;
-            min-height: 0; 
+            position: absolute; width: 14px; height: 14px;
+            background: #ff0000; border: 2px solid #fff; border-radius: 50%;
+            transform: translate(-50%, -50%); /* Центрируем метку точно в точку */
+            box-shadow: 0 0 10px red; z-index: 10; cursor: pointer;
         }
         
-        .rb-item {
-            padding: 10px 12px; margin-bottom: 6px; border-radius: 6px;
-            background: #1a1a1a; cursor: pointer; font-size: 13px; 
-            border-left: 3px solid #333; transition: all 0.2s;
+        .rb-marker::after {
+            content: attr(data-name);
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #00ff88; padding: 2px 6px;
+            border-radius: 4px; font-size: 11px; white-space: nowrap; pointer-events: none;
         }
-        .rb-item:hover { background: #252525; color: #00ff88; border-left-color: #00ff88; transform: translateX(3px); }
 
-        /* Стилизация скроллбара */
-        #rb-list::-webkit-scrollbar { width: 6px; }
-        #rb-list::-webkit-scrollbar-track { background: #0a0a0a; border-radius: 10px; }
-        #rb-list::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
-        #rb-list::-webkit-scrollbar-thumb:hover { background: #008855; }
-
-        /* Поле вывода в редакторе */
-        textarea {
-            width: 100%; flex: 1; background: #000; color: #00ff88;
-            border: 1px solid #333; font-family: monospace; font-size: 11px;
-            margin: 10px 0; padding: 8px; box-sizing: border-box; resize: none;
+        #sidebar {
+            position: fixed; top: 20px; left: 20px; width: 280px; max-height: 90vh;
+            background: rgba(10,10,10,0.9); border: 1px solid #444;
+            padding: 15px; z-index: 1000; border-radius: 10px;
+            display: flex; flex-direction: column; backdrop-filter: blur(5px);
         }
-        .edit-btn { background: #333; color: white; border: 1px solid #555; padding: 10px; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
-        .edit-btn:hover { background: #444; border-color: #00ff88; }
+
+        #rb-list { flex: 1; overflow-y: auto; margin-top: 10px; }
+        .rb-item { 
+            padding: 8px; margin-bottom: 4px; background: #1a1a1a; 
+            cursor: pointer; font-size: 12px; border-radius: 4px; 
+        }
+        .rb-item:hover { background: #333; color: #00ff88; }
+        
+        textarea { width: 100%; height: 100px; font-size: 10px; margin-top: 10px; display: none; }
+        
+        .active-editor textarea { display: block; }
+        
+        /* Скроллбар */
+        #rb-list::-webkit-scrollbar { width: 4px; }
+        #rb-list::-webkit-scrollbar-thumb { background: #555; }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <div class="mode-toggle">
-        <button id="viewModeBtn" class="active" onclick="setMode('view')">АТЛАС</button>
-        <button id="editModeBtn" onclick="setMode('edit')">РЕДАКТОР</button>
-    </div>
-
-    <div id="view-tools">
-        <input type="text" id="search" placeholder="Поиск босса...">
-        <div id="rb-list"></div>
-    </div>
-
-    <div id="editor-tools" style="display: none;">
-        <div style="font-size: 11px; color: #ffaa00; line-height: 1.4;">
-            <b>ЛКМ:</b> Поставить метку<br>
-            <b>ПКМ:</b> Двигать карту<br>
-            <b>Клик на метку:</b> Удалить
-        </div>
-        <textarea id="output" readonly></textarea>
-        <button class="edit-btn" onclick="copyOutput()">Копировать JSON</button>
-    </div>
+<div id="sidebar" id="panel">
+    <button onclick="toggleEditor()" style="width: 100%; padding: 5px; cursor: pointer;">Режим Редактора (Вкл/Выкл)</button>
+    <div id="rb-list"></div>
+    <textarea id="output" readonly></textarea>
 </div>
 
 <div id="viewport">
@@ -139,7 +71,7 @@
 </div>
 
 <script>
-    // Твои данные
+    // ТВОИ КООРДИНАТЫ
     let bossData = [
         { name: "Ember", pos: "top:1120px;left:3836px;" },
         { name: "Hestia, Guardian Deity of the Hot Springs", pos: "top:1097px;left:3472px;" },
@@ -210,134 +142,103 @@
     const viewport = document.getElementById('viewport');
     const rbList = document.getElementById('rb-list');
     const output = document.getElementById('output');
-    const searchInput = document.getElementById('search');
 
-    let scale = 0.25;
-    let posX = 100, posY = 100;
-    let currentMode = 'view';
-
-    function init() {
-        renderMarkers();
-        render();
-    }
-
-    function setMode(mode) {
-        currentMode = mode;
-        document.getElementById('viewModeBtn').classList.toggle('active', mode === 'view');
-        document.getElementById('editModeBtn').classList.toggle('active', mode === 'edit');
-        document.getElementById('editor-tools').style.display = mode === 'edit' ? 'flex' : 'none';
-        document.getElementById('view-tools').style.display = mode === 'view' ? 'flex' : 'none';
-        viewport.style.cursor = mode === 'view' ? 'grab' : 'crosshair';
-        updateOutput();
-    }
+    let scale = 0.3;
+    let posX = 0, posY = 0;
+    let isEditMode = false;
 
     function renderMarkers() {
         wrapper.innerHTML = '';
         rbList.innerHTML = '';
         bossData.forEach((boss, index) => {
-            const marker = document.createElement('div');
-            marker.className = 'rb-marker';
-            marker.setAttribute('style', boss.pos);
-            marker.setAttribute('data-name', boss.name);
-            
-            marker.onclick = (e) => {
+            const dot = document.createElement('div');
+            dot.className = 'rb-marker';
+            dot.style.cssText = boss.pos;
+            dot.setAttribute('data-name', boss.name);
+            dot.onclick = (e) => {
                 e.stopPropagation();
-                if (currentMode === 'edit') {
-                    if (confirm(`Удалить ${boss.name}?`)) {
-                        bossData.splice(index, 1);
-                        renderMarkers();
-                        updateOutput();
-                    }
+                if(isEditMode && confirm("Удалить?")) {
+                    bossData.splice(index, 1);
+                    renderMarkers();
+                    updateJSON();
                 } else {
-                    focusOnBoss(boss, marker);
+                    focusBoss(boss);
                 }
             };
-            wrapper.appendChild(marker);
+            wrapper.appendChild(dot);
 
             const item = document.createElement('div');
             item.className = 'rb-item';
             item.innerText = boss.name;
-            item.onclick = () => focusOnBoss(boss, marker);
+            item.onclick = () => focusBoss(boss);
             rbList.appendChild(item);
-            boss.element = item;
         });
     }
 
-    function focusOnBoss(boss, marker) {
-        const top = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
-        const left = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
-        scale = 0.75;
-        posX = (window.innerWidth / 2) - (left * scale);
-        posY = (window.innerHeight / 2) - (top * scale);
-        render();
-        marker.classList.remove('highlight');
-        void marker.offsetWidth;
-        marker.classList.add('highlight');
+    function focusBoss(boss) {
+        const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
+        const l = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
+        scale = 0.8;
+        posX = (window.innerWidth/2) - (l * scale);
+        posY = (window.innerHeight/2) - (t * scale);
+        update();
     }
 
-    viewport.addEventListener('click', (e) => {
-        if (currentMode !== 'edit' || isDragging) return;
-        if (e.target.classList.contains('rb-marker')) return;
-
-        const rect = wrapper.getBoundingClientRect();
-        const x = Math.round((e.clientX - rect.left) / scale);
-        const y = Math.round((e.clientY - rect.top) / scale);
-
-        const name = prompt("Имя босса:", "New Raid Boss");
-        if (name) {
-            bossData.push({ name, pos: `top:${y}px;left:${x}px;` });
-            renderMarkers();
-            updateOutput();
-        }
-    });
-
-    function updateOutput() {
-        const clean = bossData.map(b => ({ name: b.name, pos: b.pos }));
-        output.value = JSON.stringify(clean, null, 2);
-    }
-
-    function render() {
+    function update() {
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
     }
 
+    function toggleEditor() {
+        isEditMode = !isEditMode;
+        document.getElementById('sidebar').classList.toggle('active-editor');
+        viewport.style.cursor = isEditMode ? 'crosshair' : 'grab';
+        updateJSON();
+    }
+
+    viewport.onclick = (e) => {
+        if(!isEditMode || isDragging) return;
+        const rect = wrapper.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left) / scale);
+        const y = Math.round((e.clientY - rect.top) / scale);
+        const name = prompt("Имя:");
+        if(name) {
+            bossData.push({name, pos: `top:${y}px;left:${x}px;`});
+            renderMarkers();
+            updateJSON();
+        }
+    };
+
+    function updateJSON() {
+        output.value = JSON.stringify(bossData, null, 2);
+    }
+
+    // Управление (Зум и Движение)
     viewport.onwheel = (e) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.85 : 1.15;
-        const newScale = Math.min(Math.max(0.1, scale * delta), 3);
+        const d = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = Math.min(Math.max(0.1, scale * d), 3);
         posX = e.clientX - (e.clientX - posX) * (newScale / scale);
         posY = e.clientY - (e.clientY - posY) * (newScale / scale);
         scale = newScale;
-        render();
+        update();
     };
 
-    let isDragging = false, lastX, lastY;
-    viewport.onmousedown = (e) => {
-        const btn = currentMode === 'view' ? 0 : 2;
-        if (e.button === btn) { isDragging = true; lastX = e.clientX; lastY = e.clientY; }
+    let isDragging = false, lx, ly;
+    viewport.onmousedown = (e) => { 
+        if(e.button === (isEditMode ? 2 : 0)) { isDragging = true; lx = e.clientX; ly = e.clientY; } 
     };
     window.onmousemove = (e) => {
-        if (!isDragging) return;
-        posX += (e.clientX - lastX);
-        posY += (e.clientY - lastY);
-        lastX = e.clientX; lastY = e.clientY;
-        render();
+        if(!isDragging) return;
+        posX += (e.clientX - lx);
+        posY += (e.clientY - ly);
+        lx = e.clientX; ly = e.clientY;
+        update();
     };
     window.onmouseup = () => isDragging = false;
-
-    searchInput.oninput = (e) => {
-        const q = e.target.value.toLowerCase();
-        bossData.forEach(b => {
-            if(b.element) b.element.style.display = b.name.toLowerCase().includes(q) ? 'block' : 'none';
-        });
-    };
-
-    function copyOutput() {
-        output.select();
-        document.execCommand('copy');
-        alert("JSON скопирован!");
-    }
+    viewport.oncontextmenu = e => e.preventDefault();
 
     init();
+    function init() { renderMarkers(); update(); }
 </script>
 
 </body>
