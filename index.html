@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Black Start</title>
+    <title>L2 FarmRB - Auto-Red Respawn</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -11,32 +11,33 @@
         /* МЕТКИ */
         .rb-marker {
             position: absolute; width: 26px; height: 26px;
-            background: #000; /* Изначально черные */
-            border: 2px solid #666; border-radius: 50%;
+            background: #000;
+            border: 2px solid #555; border-radius: 50%;
             transform: translate(-50%, -50%);
             z-index: 10; cursor: pointer;
+            transition: background 0.5s, box-shadow 0.5s;
         }
-        /* Состояние живого босса */
+
+        /* КРАСНАЯ МЕТКА (Босс жив) */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; 
-            box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
+            box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
         }
         
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            content: attr(data-name); position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.85); color: #00ff88; padding: 3px 10px;
             border-radius: 4px; font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
         .rb-timer-map {
-            position: absolute; bottom: 55px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
             font-weight: bold; font-family: monospace; font-size: 16px;
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
-        /* САЙДБАР */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 300px;
             background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
@@ -46,16 +47,17 @@
         #timer-monitor {
             background: rgba(0, 255, 204, 0.05); border: 1px solid #00ffcc33;
             border-radius: 8px; padding: 12px; margin-top: 15px;
-            max-height: 400px; overflow-y: auto;
+            max-height: 450px; overflow-y: auto;
         }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
             font-size: 13px; color: #00ffcc; margin-bottom: 8px;
             border-bottom: 1px solid #222; padding-bottom: 6px;
         }
+        .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
 
         #search-input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; box-sizing: border-box; outline: none; }
-        .hint { font-size: 11px; color: #666; text-align: center; margin-bottom: 5px; }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #00ffcc44; }
@@ -64,16 +66,15 @@
 <body>
 
 <div id="sidebar">
-    <input type="text" id="search-input" placeholder="Найти босса на карте..." oninput="handleSearch()">
+    <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
-    <div style="font-size: 12px; color: #00ffcc; margin-top: 15px; text-align: center; font-weight: bold;">
-        КЛИКНИ ПО ЧЕРНОЙ МЕТКЕ ДЛЯ ТАЙМЕРА
+    <div style="font-size: 12px; color: #00ffcc; margin-top: 15px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+        Мониторинг респауна
     </div>
-    <div class="hint">(Double-click чтобы сделать КРАСНЫМ)</div>
 
     <div id="timer-monitor">
         <div id="monitor-list">
-            <div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>
+            <div style="color: #444; font-size: 11px; text-align: center;">Все боссы мертвы (таймеры не запущены)</div>
         </div>
     </div>
 </div>
@@ -169,20 +170,20 @@
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
             
-            // ОДИН КЛИК: Запуск таймера (если он еще не запущен)
             m.onclick = (e) => {
                 e.stopPropagation();
-                if (!boss.timerInterval) {
+                // Если метка КРАСНАЯ (убили живого), возвращаем в ЧЕРНЫЙ
+                if (m.classList.contains('is-alive')) {
+                    m.classList.remove('is-alive');
+                    boss.currentTime = null;
+                    updateMonitor();
+                } 
+                // Если метка ЧЕРНАЯ и таймер не запущен - запускаем
+                else if (!boss.timerInterval) {
                     startTimer(boss);
                 } else {
                     focus(boss);
                 }
-            };
-
-            // ДВОЙНОЙ КЛИК: Сделать босса живым (КРАСНЫМ)
-            m.ondblclick = (e) => {
-                e.stopPropagation();
-                toggleAlive(boss);
             };
 
             wrapper.appendChild(m);
@@ -193,9 +194,6 @@
     function startTimer(boss) {
         if (boss.timerInterval) return;
         
-        // Оставляем черным и убираем статус "живого", если он был
-        boss.markerEl.classList.remove('is-alive');
-
         let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer-map';
@@ -215,24 +213,13 @@
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
+                
+                // ГЛАВНОЕ: Метка становится красной по окончании
+                boss.markerEl.classList.add('is-alive');
                 boss.currentTime = "READY!";
             }
             updateMonitor();
         }, 1000);
-        updateMonitor();
-    }
-
-    function toggleAlive(boss) {
-        // Останавливаем таймер если был
-        if (boss.timerInterval) {
-            clearInterval(boss.timerInterval);
-            boss.timerInterval = null;
-        }
-        if (boss.timerDisplay) boss.timerDisplay.remove();
-        boss.currentTime = null;
-
-        // Переключаем на КРАСНЫЙ
-        boss.markerEl.classList.toggle('is-alive');
         updateMonitor();
     }
 
@@ -242,12 +229,17 @@
             monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>';
             return;
         }
-        monitorList.innerHTML = active.map(b => `
-            <div class="monitor-item">
-                <span style="font-weight:bold; max-width:180px; overflow:hidden;">${b.name}</span>
-                <span style="font-family:monospace; background:#00ffcc22; padding:2px 6px; border-radius:4px;">${b.currentTime}</span>
-            </div>
-        `).join('');
+        monitorList.innerHTML = active.map(b => {
+            const isReady = b.currentTime === "READY!";
+            return `
+                <div class="monitor-item">
+                    <span style="font-weight:bold; max-width:180px; overflow:hidden;">${b.name}</span>
+                    <span class="${isReady ? 'ready-text' : ''}" style="font-family:monospace; background:${isReady ? '#ff330022' : '#00ffcc22'}; padding:2px 6px; border-radius:4px;">
+                        ${b.currentTime}
+                    </span>
+                </div>
+            `;
+        }).join('');
     }
 
     function handleSearch() {
