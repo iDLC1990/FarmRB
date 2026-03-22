@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Auto-Red Respawn</title>
+    <title>L2 FarmRB - Pro Monitor</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -11,11 +11,9 @@
         /* МЕТКИ */
         .rb-marker {
             position: absolute; width: 26px; height: 26px;
-            background: #000;
-            border: 2px solid #555; border-radius: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10; cursor: pointer;
-            transition: background 0.5s, box-shadow 0.5s;
+            background: #000; border: 2px solid #555; border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
+            transition: background 0.4s, box-shadow 0.4s;
         }
 
         /* КРАСНАЯ МЕТКА (Босс жив) */
@@ -25,6 +23,7 @@
             box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
         }
         
+        /* НАЗВАНИЕ НА КАРТЕ (Оригинальное) */
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.85); color: #00ff88; padding: 3px 10px;
@@ -39,21 +38,24 @@
         }
 
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 300px;
-            background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
+            position: fixed; top: 15px; left: 15px; width: 320px;
+            background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 12px; backdrop-filter: blur(8px);
         }
 
         #timer-monitor {
-            background: rgba(0, 255, 204, 0.05); border: 1px solid #00ffcc33;
-            border-radius: 8px; padding: 12px; margin-top: 15px;
-            max-height: 450px; overflow-y: auto;
+            background: rgba(0, 255, 204, 0.03); border: 1px solid #00ffcc22;
+            border-radius: 8px; padding: 10px; margin-top: 15px;
+            max-height: 500px; overflow-y: auto;
         }
+        
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 13px; color: #00ffcc; margin-bottom: 8px;
-            border-bottom: 1px solid #222; padding-bottom: 6px;
+            font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid #222; padding-bottom: 6px;
         }
+
+        /* ТЕХНИЧЕСКАЯ ПРИПИСКА В СПИСКЕ */
+        .monitor-note { color: #00ffcc; font-weight: bold; font-family: monospace; }
         .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
 
@@ -66,15 +68,15 @@
 <body>
 
 <div id="sidebar">
-    <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
+    <input type="text" id="search-input" placeholder="Поиск (имя или код)..." oninput="handleSearch()">
     
-    <div style="font-size: 12px; color: #00ffcc; margin-top: 15px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
-        Мониторинг респауна
+    <div style="font-size: 11px; color: #888; margin-top: 15px; text-align: center; font-weight: bold; text-transform: uppercase;">
+        Активные респауны
     </div>
 
     <div id="timer-monitor">
         <div id="monitor-list">
-            <div style="color: #444; font-size: 11px; text-align: center;">Все боссы мертвы (таймеры не запущены)</div>
+            <div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>
         </div>
     </div>
 </div>
@@ -85,70 +87,59 @@
 
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
+    
+    // Данные: Name для карты, Note для мониторинга
     let bossData = [
-        { "name": "Ember", "pos": "top:1173px;left:4720px;" },
-        { "name": "Hestia, Guardian Deity of the Hot Springs", "pos": "top:1152px;left:4191px;" },
-        { "name": "Ketra's Chief Brakki", "pos": "top:1385px;left:4289px;" },
-        { "name": "Ketra's Commander Tayr", "pos": "top:1421px;left:4298px;" },
-        { "name": "Ketra's Hero Hekaton", "pos": "top:1477px;left:4316px;" },
-        { "name": "Varka's Hero Shadith", "pos": "top:1750px;left:4017px;" },
-        { "name": "Varka's Commander Mos", "pos": "top:1770px;left:3960px;" },
-        { "name": "Varka's Chief Horus", "pos": "top:1721px;left:3923px;" },
-        { "name": "Vanor Chief Kandra", "pos": "top:1565px;left:4027px;" },
-        { "name": "Queen Shyeed", "pos": "top:1714px;left:3813px;" },
-        { "name": "Uruka", "pos": "top:1990px;left:3002px;" },
-        { "name": "Plague Golem", "pos": "top:1584px;left:4509px;" },
-        { "name": "Andreas van Halter", "pos": "top:1640px;left:3222px;" },
-        { "name": "Lord of Splendor Anays", "pos": "top:1402px;left:4036px;" },
-        { "name": "Sealed Evil Power Sailren", "pos": "top:1956px;left:3236px;" },
-        { "name": "Soul of Fire Nastron", "pos": "top:1411px;left:4266px;" },
-        { "name": "Soul of Water Ashutar", "pos": "top:1765px;left:3911px;" },
-        { "name": "Daimon the White-Eyed", "pos": "top:1717px;left:4660px;" },
-        { "name": "Last Lesser Giant Glaki", "pos": "top:2492px;left:4526px;" },
-        { "name": "Ocean Flame Ashakiel", "pos": "top:3264px;left:4100px;" },
-        { "name": "Flamestone Giant", "pos": "top:2014px;left:4287px;" },
-        { "name": "Palatanos of Horrific Power", "pos": "top:1906px;left:4305px;" },
-        { "name": "Storm Winged Naga", "pos": "top:1894px;left:4227px;" },
-        { "name": "Lesser Giant Olkuth", "pos": "top:2405px;left:4679px;" },
-        { "name": "Death Lord Shax", "pos": "top:1997px;left:4512px;" },
-        { "name": "Death Lord Ipos", "pos": "top:1949px;left:4379px;" },
-        { "name": "Bloody Empress Decarbia", "pos": "top:2161px;left:4690px;" },
-        { "name": "Krokian Padisha Sobekk", "pos": "top:3291px;left:4064px;" },
-        { "name": "Fafurion's Herald Lokness", "pos": "top:3295px;left:3910px;" },
-        { "name": "Eilhalder von Hellmann", "pos": "top:1729px;left:3504px;" },
-        { "name": "Roaring Skylancer", "pos": "top:2527px;left:4165px;" },
-        { "name": "Meanas Anor", "pos": "top:1992px;left:4402px;" },
-        { "name": "Beast Lord Behemoth", "pos": "top:1870px;left:4098px;" },
-        { "name": "Icicle Emperor Bumbalump", "pos": "top:1103px;left:4403px;" },
-        { "name": "Water Dragon Seer Sheshark", "pos": "top:3295px;left:3959px;" },
-        { "name": "Doom Blade Tanatos", "pos": "top:1953px;left:4150px;" },
-        { "name": "Shilen's Messenger Cabrio", "pos": "top:2145px;left:4614px;" },
-        { "name": "Palibati Queen Themis", "pos": "top:2226px;left:4712px;" },
-        { "name": "Flame of Splendor Barakiel", "pos": "top:1376px;left:3793px;" },
-        { "name": "Anakim's Nemesis Zakaron", "pos": "top:2750px;left:4256px;" },
-        { "name": "Spirit of Andras the Betrayer", "pos": "top:1851px;left:4661px;" },
-        { "name": "Kernon's Faithful Servant Kelone", "pos": "top:1838px;left:4284px;" },
-        { "name": "Last Titan Utenus", "pos": "top:2579px;left:4672px;" },
-        { "name": "Demons Agent Falston", "pos": "top:1460px;left:3819px;" },
-        { "name": "Gargoyle Lord Tiphon", "pos": "top:1853px;left:4509px;" },
-        { "name": "Rahha", "pos": "top:1981px;left:4047px;" },
-        { "name": "Hekaton Prime", "pos": "top:2606px;left:4688px;" },
-        { "name": "Shilen's Priest Hisilrome", "pos": "top:2279px;left:4503px;" },
-        { "name": "Fierce Tiger King Angel", "pos": "top:2713px;left:4517px;" },
-        { "name": "Gorgolos", "pos": "top:2542px;left:4659px;" },
-        { "name": "Roaring Lord Kastor", "pos": "top:2035px;left:3921px;" },
-        { "name": "Abyss Brukunt", "pos": "top:2721px;left:4385px;" },
-        { "name": "Demon Kurikups", "pos": "top:3725px;left:3430px;" },
-        { "name": "Ghost of the Lidia", "pos": "top:1906px;left:4528px;" },
-        { "name": "Enmity Ghost Ramdal", "pos": "top:2128px;left:3955px;" },
-        { "name": "Immortal Savior Mardil", "pos": "top:2216px;left:3954px;" },
-        { "name": "Death Lord Hallate", "pos": "top:2175px;left:3959px;" },
-        { "name": "Korim", "pos": "top:2259px;left:3958px;" },
-        { "name": "Kernon", "pos": "top:2129px;left:4074px;" },
-        { "name": "Fire of Wrath Shuriel", "pos": "top:2174px;left:4076px;" },
-        { "name": "Longhorn Golkonda", "pos": "top:2216px;left:4078px;" },
-        { "name": "Cherub Galaxia", "pos": "top:2261px;left:4084px;" },
-        { "name": "MILENU", "pos": "top:3972px;left:3737px;" }
+        { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
+        { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
+        { name: "Ghost of the Lidia", note: "ll_woatab center", pos: "top:1906px;left:4528px;" },
+        { name: "Fierce Tiger King Angel", note: "ll_woatab 1tab", pos: "top:2713px;left:4517px;" },
+        { name: "Shilen's Priest Hisilrome", note: "ll_woatab 3tab", pos: "top:2279px;left:4503px;" },
+        { name: "Rahha", note: "pp_woawarka KETP", pos: "top:1981px;left:4047px;" },
+        { name: "Enmity Ghost Ramdal", note: "dd_sumtoi 1pl", pos: "top:2128px;left:3955px;" },
+        { name: "Gargoyle Lord Tiphon", note: "ww_ulanworktk tripon", pos: "top:1853px;left:4509px;" },
+        { name: "Demons Agent Falston", note: "ll_woatab 5tab", pos: "top:1460px;left:3819px;" },
+        { name: "Kernon's Faithful Servant Kelone", note: "th_ostrov bswerx", pos: "top:1838px;left:4284px;" },
+        { name: "Spirit of Andras the Betrayer", note: "ww_ulanworktk androna", pos: "top:1851px;left:4661px;" },
+        { name: "Anakim's Nemesis Zakaron", note: "kk_port1 ssakaron", pos: "top:2750px;left:4256px;" },
+        { name: "Flame of Splendor Barakiel", note: "ll_woatab finisrb", pos: "top:1376px;left:3793px;" },
+        { name: "Korim", note: "ww_ulanworktk ibobo", pos: "top:2259px;left:3958px;" },
+        { name: "Palibati Queen Themis", note: "ww_ulanworktk paibatis", pos: "top:2226px;left:4712px;" },
+        { name: "Shilen's Messenger Cabrio", note: "kk_port1 sabrio", pos: "top:2145px;left:4614px;" },
+        { name: "Immortal Savior Mardil", note: "dd_sumtoi 4pl", pos: "top:2216px;left:3954px;" },
+        { name: "Doom Blade Tanatos", note: "pp_woawarka KBOX", pos: "top:1953px;left:4150px;" },
+        { name: "Water Dragon Seer Sheshark", note: "th_ostrov ostrov2", pos: "top:3295px;left:3959px;" },
+        { name: "Death Lord Hallate", note: "dd_sumtoi 2pl", pos: "top:2175px;left:3959px;" },
+        { name: "Beast Lord Behemoth", note: "LL_ULANX500 PIhIMOT", pos: "top:1870px;left:4098px;" },
+        { name: "Meanas Anor", note: "pp_woawarka fffff", pos: "top:1992px;left:4402px;" },
+        { name: "Roaring Skylancer", note: "pp_woawarka lancer", pos: "top:2527px;left:4165px;" },
+        { name: "Eilhalder von Hellmann", note: "th_ostrov fodvil", pos: "top:1729px;left:3504px;" },
+        { name: "Vanor Chief Kandra", note: "kk_port1 kandraa", pos: "top:1565px;left:4027px;" },
+        { name: "Fafurion's Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
+        { name: "Krokian Padisha Sobekk", note: "th_ostrov ostrov3", pos: "top:3291px;left:4064px;" },
+        { name: "Bloody Empress Decarbia", note: "LL_ULANX500 kobria", pos: "top:2161px;left:4690px;" },
+        { name: "Death Lord Ipos", note: "LL_ULANX500 IBOS", pos: "top:1949px;left:4379px;" },
+        { name: "Death Lord Shax", note: "kk_port1 sky4len", pos: "top:1997px;left:4512px;" },
+        { name: "Kernon", note: "dd_sumtoi 8pl", pos: "top:2129px;left:4074px;" },
+        { name: "Lesser Giant Olkuth", note: "LL_ULANX500 PLOVER", pos: "top:2405px;left:4679px;" },
+        { name: "Storm Winged Naga", note: "th_ostrov bsnaga", pos: "top:1894px;left:4227px;" },
+        { name: "Palatanos of Horrific Power", note: "pp_woawarka PALATAN5", pos: "top:1906px;left:4305px;" },
+        { name: "Flamestone Giant", note: "pp_woawarka WATP", pos: "top:2014px;left:4287px;" },
+        { name: "Ocean Flame Ashakiel", note: "th_ostrov ostrov4", pos: "top:3264px;left:4100px;" },
+        { name: "Hestia, Guardian Deity of the Hot Springs", note: "kk_port1 hestia", pos: "top:1152px;left:4191px;" },
+        { name: "Fire of Wrath Shuriel", note: "dd_sumtoi 10pl", pos: "top:2174px;left:4076px;" },
+        { name: "Longhorn Golkonda", note: "ww_ulanworktk halgonda", pos: "top:2216px;left:4078px;" },
+        { name: "Cherub Galaxia", note: "dd_sumtoi 13pl", pos: "top:2261px;left:4084px;" },
+        { name: "Varka's Hero Shadith", note: "pp_woawarka iiiadit", pos: "top:1750px;left:4017px;" },
+        { name: "Varka's Commander Mos", note: "LL_ULANX500 5ALI", pos: "top:1770px;left:3960px;" },
+        { name: "Ember", note: "ww_ulanworktk urkahan", pos: "top:1173px;left:4720px;" },
+        { name: "Uruka", note: "ww_ulanworktk bember", pos: "top:1990px;left:3002px;" },
+        { name: "Soul of Water Ashutar", note: "kk_port1 wwarka", pos: "top:1765px;left:3911px;" },
+        { name: "Soul of Fire Nastron", note: "kk_port1 kketra", pos: "top:1411px;left:4266px;" },
+        { name: "Varka's Chief Horus", note: "LL_ULANX500 4ALI", pos: "top:1721px;left:3923px;" },
+        { name: "Andreas van Halter", note: "LL_ULANX500 PAGANKA", pos: "top:1640px;left:3222px;" },
+        { name: "Plague Golem", note: "ll_woatab 4tab", pos: "top:1584px;left:4509px;" },
+        { name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
@@ -168,24 +159,20 @@
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
-            m.setAttribute('data-name', boss.name);
+            m.setAttribute('data-name', boss.name); // На карте ИМЯ
             
             m.onclick = (e) => {
                 e.stopPropagation();
-                // Если метка КРАСНАЯ (убили живого), возвращаем в ЧЕРНЫЙ
                 if (m.classList.contains('is-alive')) {
                     m.classList.remove('is-alive');
                     boss.currentTime = null;
                     updateMonitor();
-                } 
-                // Если метка ЧЕРНАЯ и таймер не запущен - запускаем
-                else if (!boss.timerInterval) {
+                } else if (!boss.timerInterval) {
                     startTimer(boss);
                 } else {
                     focus(boss);
                 }
             };
-
             wrapper.appendChild(m);
             boss.markerEl = m;
         });
@@ -193,7 +180,6 @@
 
     function startTimer(boss) {
         if (boss.timerInterval) return;
-        
         let timeLeft = 15 * 60;
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer-map';
@@ -205,7 +191,6 @@
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
-            
             timerDisplay.innerText = timeStr;
             boss.currentTime = timeStr;
 
@@ -213,8 +198,6 @@
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
                 timerDisplay.remove();
-                
-                // ГЛАВНОЕ: Метка становится красной по окончании
                 boss.markerEl.classList.add('is-alive');
                 boss.currentTime = "READY!";
             }
@@ -233,7 +216,7 @@
             const isReady = b.currentTime === "READY!";
             return `
                 <div class="monitor-item">
-                    <span style="font-weight:bold; max-width:180px; overflow:hidden;">${b.name}</span>
+                    <span class="monitor-note">${b.note}</span>
                     <span class="${isReady ? 'ready-text' : ''}" style="font-family:monospace; background:${isReady ? '#ff330022' : '#00ffcc22'}; padding:2px 6px; border-radius:4px;">
                         ${b.currentTime}
                     </span>
@@ -245,7 +228,8 @@
     function handleSearch() {
         const val = document.getElementById('search-input').value.toLowerCase();
         if (val.length < 2) return;
-        const boss = bossData.find(b => b.name.toLowerCase().includes(val));
+        // Поиск работает и по имени, и по приписке
+        const boss = bossData.find(b => b.name.toLowerCase().includes(val) || b.note.toLowerCase().includes(val));
         if (boss) focus(boss);
     }
 
