@@ -2,64 +2,69 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>L2 FarmRB - Pro Monitor</title>
+    <title>L2 RB Map - Professional Monitor</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; }
 
-        /* МЕТКИ */
+       
         .rb-marker {
-            position: absolute; width: 26px; height: 26px;
+            position: absolute; width: 24px; height: 24px;
             background: #000; border: 2px solid #555; border-radius: 50%;
             transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
-            transition: background 0.4s, box-shadow 0.4s;
+            transition: background 0.4s, box-shadow 0.4s, border-color 0.4s;
         }
 
-        /* КРАСНАЯ МЕТКА (Босс жив) */
+        
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; 
             box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
         }
         
-        /* НАЗВАНИЕ НА КАРТЕ (Оригинальное) */
+        
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+            content: attr(data-name); position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.85); color: #00ff88; padding: 3px 10px;
             border-radius: 4px; font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
         .rb-timer-map {
-            position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 55px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
             font-weight: bold; font-family: monospace; font-size: 16px;
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
+        /* БОКОВАЯ ПАНЕЛЬ */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 320px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 12px; backdrop-filter: blur(8px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         #timer-monitor {
             background: rgba(0, 255, 204, 0.03); border: 1px solid #00ffcc22;
             border-radius: 8px; padding: 10px; margin-top: 15px;
-            max-height: 500px; overflow-y: auto;
+            max-height: 550px; overflow-y: auto;
         }
         
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid #222; padding-bottom: 6px;
+            font-size: 13px; margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 6px;
         }
 
-        /* ТЕХНИЧЕСКАЯ ПРИПИСКА В СПИСКЕ */
-        .monitor-note { color: #00ffcc; font-weight: bold; font-family: monospace; }
-        .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        .monitor-note { color: #00ffcc; font-weight: bold; font-family: 'Courier New', monospace; font-size: 14px; }
+        .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; text-shadow: 0 0 5px #ff3300; }
+        
+        @keyframes blink { 50% { opacity: 0.4; } }
 
-        #search-input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; box-sizing: border-box; outline: none; }
+        #search-input { 
+            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; 
+            background: #111; color: #fff; box-sizing: border-box; outline: none; 
+        }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #00ffcc44; }
@@ -68,15 +73,15 @@
 <body>
 
 <div id="sidebar">
-    <input type="text" id="search-input" placeholder="Поиск (имя или код)..." oninput="handleSearch()">
+    <input type="text" id="search-input" placeholder="Поиск босса или кода..." oninput="handleSearch()">
     
-    <div style="font-size: 11px; color: #888; margin-top: 15px; text-align: center; font-weight: bold; text-transform: uppercase;">
-        Активные респауны
+    <div style="font-size: 11px; color: #888; margin-top: 15px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+        Активные таймеры / Респаун
     </div>
 
     <div id="timer-monitor">
         <div id="monitor-list">
-            <div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>
+            <div style="color: #444; font-size: 12px; text-align: center; padding: 10px;">Список пуст</div>
         </div>
     </div>
 </div>
@@ -88,7 +93,7 @@
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
-    // Данные: Name для карты, Note для мониторинга
+ 
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -132,20 +137,34 @@
         { name: "Cherub Galaxia", note: "dd_sumtoi 13pl", pos: "top:2261px;left:4084px;" },
         { name: "Varka's Hero Shadith", note: "pp_woawarka iiiadit", pos: "top:1750px;left:4017px;" },
         { name: "Varka's Commander Mos", note: "LL_ULANX500 5ALI", pos: "top:1770px;left:3960px;" },
-        { name: "Ember", note: "ww_ulanworktk urkahan", pos: "top:1173px;left:4720px;" },
-        { name: "Uruka", note: "ww_ulanworktk bember", pos: "top:1990px;left:3002px;" },
+        { name: "Ember", note: "ww_ulanworktk bember", pos: "top:1173px;left:4720px;" },
+        { name: "Uruka", note: "ww_ulanworktk urkahan", pos: "top:1990px;left:3002px;" },
         { name: "Soul of Water Ashutar", note: "kk_port1 wwarka", pos: "top:1765px;left:3911px;" },
         { name: "Soul of Fire Nastron", note: "kk_port1 kketra", pos: "top:1411px;left:4266px;" },
         { name: "Varka's Chief Horus", note: "LL_ULANX500 4ALI", pos: "top:1721px;left:3923px;" },
         { name: "Andreas van Halter", note: "LL_ULANX500 PAGANKA", pos: "top:1640px;left:3222px;" },
         { name: "Plague Golem", note: "ll_woatab 4tab", pos: "top:1584px;left:4509px;" },
-        { name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" }
+        { name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" },
+        // Боссы без кодов 
+        { name: "Ketra's Chief Brakki", note: "kk_port1 kketra", pos: "top:1385px;left:4289px;" },
+        { name: "Ketra's Commander Tayr", note: "kk_port1 kketra", pos: "top:1421px;left:4298px;" },
+        { name: "Ketra's Hero Hekaton", note: "Ketra Hekaton", pos: "top:1477px;left:4316px;" },
+        { name: "Queen Shyeed", note: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
+        { name: "Lord of Splendor Anays", note: "Anays", pos: "top:1402px;left:4036px;" },
+        { name: "Sealed Evil Power Sailren", note: "Sailren", pos: "top:1956px;left:3236px;" },
+        { name: "Daimon the White-Eyed", note: "Daimon", pos: "top:1717px;left:4660px;" },
+        { name: "Last Lesser Giant Glaki", note: "Glaki", pos: "top:2492px;left:4526px;" },
+        { name: "Icicle Emperor Bumbalump", note: "Bumbalump", pos: "top:1103px;left:4403px;" },
+        { name: "Gorgolos", note: "GM_RUSMAG BATAT", pos: "top:2542px;left:4659px;" },
+        { name: "Roaring Lord Kastor", note: "Kastor", pos: "top:2035px;left:3921px;" },
+        { name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
+        { name: "Last Titan Utenus", note: "GM_RUSMAG BATAT", pos: "top:2579px;left:4672px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
     const monitorList = document.getElementById('monitor-list');
     const viewport = document.getElementById('viewport');
-    let scale = 0.2, posX = 0, posY = 0;
+    let scale = 0.25, posX = 0, posY = 0;
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
@@ -163,11 +182,14 @@
             
             m.onclick = (e) => {
                 e.stopPropagation();
+                // Если красный - сбрасываем в черный
                 if (m.classList.contains('is-alive')) {
                     m.classList.remove('is-alive');
                     boss.currentTime = null;
                     updateMonitor();
-                } else if (!boss.timerInterval) {
+                } 
+                // Если черный и нет таймера - запускаем
+                else if (!boss.timerInterval) {
                     startTimer(boss);
                 } else {
                     focus(boss);
@@ -180,7 +202,8 @@
 
     function startTimer(boss) {
         if (boss.timerInterval) return;
-        let timeLeft = 15 * 60;
+        let timeLeft = 15 * 60; // 15 минут
+        
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer-map';
         boss.markerEl.appendChild(timerDisplay);
@@ -191,13 +214,16 @@
             const m = Math.floor(timeLeft / 60);
             const s = timeLeft % 60;
             const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
+            
             timerDisplay.innerText = timeStr;
             boss.currentTime = timeStr;
 
             if (timeLeft <= 0) {
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
-                timerDisplay.remove();
+                if (timerDisplay) timerDisplay.remove();
+                
+                // СТАНОВИТСЯ КРАСНЫМ
                 boss.markerEl.classList.add('is-alive');
                 boss.currentTime = "READY!";
             }
@@ -209,7 +235,7 @@
     function updateMonitor() {
         const active = bossData.filter(b => b.timerInterval || b.currentTime === "READY!");
         if (active.length === 0) {
-            monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center;">Таймеры не запущены</div>';
+            monitorList.innerHTML = '<div style="color: #444; font-size: 12px; text-align: center; padding: 10px;">Список пуст</div>';
             return;
         }
         monitorList.innerHTML = active.map(b => {
@@ -217,7 +243,7 @@
             return `
                 <div class="monitor-item">
                     <span class="monitor-note">${b.note}</span>
-                    <span class="${isReady ? 'ready-text' : ''}" style="font-family:monospace; background:${isReady ? '#ff330022' : '#00ffcc22'}; padding:2px 6px; border-radius:4px;">
+                    <span class="${isReady ? 'ready-text' : ''}" style="font-family:monospace; background:${isReady ? '#ff330022' : '#00ffcc22'}; padding:2px 8px; border-radius:4px; border: 1px solid ${isReady ? '#ff3300' : '#00ffcc44'}">
                         ${b.currentTime}
                     </span>
                 </div>
@@ -228,7 +254,6 @@
     function handleSearch() {
         const val = document.getElementById('search-input').value.toLowerCase();
         if (val.length < 2) return;
-        // Поиск работает и по имени, и по приписке
         const boss = bossData.find(b => b.name.toLowerCase().includes(val) || b.note.toLowerCase().includes(val));
         if (boss) focus(boss);
     }
