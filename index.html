@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Live Sync</title>
+    <title>L2 RB Map - Perfect Sync</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* Стили маркеров */
         .rb-marker {
             position: absolute; width: 28px; height: 28px;
             background: #000; border: 2px solid #555; border-radius: 50%;
@@ -35,7 +34,6 @@
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
-        /* Сайдбар */
         #sidebar {
             position: fixed; top: 10px; left: 10px; 
             width: calc(100% - 40px); max-width: 300px;
@@ -43,7 +41,6 @@
             padding: 12px; z-index: 1000; border-radius: 12px; backdrop-filter: blur(10px);
         }
 
-        /* Блок часов */
         #game-clock-container {
             background: linear-gradient(180deg, rgba(30,30,30,0.9) 0%, rgba(10,10,10,1) 100%);
             border: 1px solid #ffd70055; border-radius: 8px;
@@ -88,7 +85,7 @@
 <div id="sidebar">
     <div id="game-clock-container">
         <span id="game-clock-label">L2 Game Time</span>
-        <div id="game-time">--:--</div>
+        <div id="game-time">Синхронизация...</div>
     </div>
     
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
@@ -107,6 +104,7 @@
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
+    // --- ДАННЫЕ БОССОВ ---
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -183,22 +181,22 @@
     let prevDiff = -1;
 
     // --- ЛОГИКА СИНХРОНИЗАЦИИ ---
-    // Точка отсчета: Реальные 22:56:00 = Игровые 17:36:00
-    const SYNC_REAL_SEC = (22 * 3600) + (56 * 60);
+    // Точка отсчета: 22:56:00 (реальное) = 17:36:00 (игровое)
+    // КОРРЕКЦИЯ: Добавлено +6 секунд к реальному времени, чтобы сайт шел медленнее.
+    const CORRECTION_SECONDS = 6; 
+    const SYNC_REAL_SEC = (22 * 3600) + (56 * 60) + CORRECTION_SECONDS;
     const SYNC_GAME_MIN = (17 * 60) + 36;
 
     function updateGameTime() {
         const now = new Date();
-        // Текущие секунды реального дня
         const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
         
-        // Разница в реальных секундах
+        // Разница в реальных секундах с учетом коррекции
         const diffRealSec = nowRealSec - SYNC_REAL_SEC;
         
-        // Перевод разницы в игровые минуты (1 минута игры = 10 реальных секунд)
+        // Игровое время (1 мин игры = 10 сек реала)
         const diffGameMin = diffRealSec / 10;
         
-        // Итоговые игровые минуты (с учетом 24ч цикла)
         let totalGameMin = Math.floor(SYNC_GAME_MIN + diffGameMin);
         totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
         
@@ -208,7 +206,6 @@
         gameClockDisplay.innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
-    // Обновляем раз в секунду для точности
     setInterval(updateGameTime, 1000);
 
     // --- ФУНКЦИИ КАРТЫ ---
