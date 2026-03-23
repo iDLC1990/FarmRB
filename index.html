@@ -9,6 +9,7 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
+        /* Стили маркеров */
         .rb-marker {
             position: absolute; width: 28px; height: 28px;
             background: #000; border: 2px solid #555; border-radius: 50%;
@@ -34,11 +35,39 @@
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
+        /* Сайдбар и Элементы управления */
         #sidebar {
             position: fixed; top: 10px; left: 10px; 
             width: calc(100% - 40px); max-width: 300px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 12px; z-index: 1000; border-radius: 12px; backdrop-filter: blur(10px);
+        }
+
+        /* Игровые часы */
+        #game-clock-container {
+            background: rgba(255, 215, 0, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        #game-clock-label {
+            font-size: 10px;
+            color: #8a8a8a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        #game-time {
+            font-family: 'Courier New', monospace;
+            font-size: 26px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
         }
 
         #timer-monitor {
@@ -65,7 +94,13 @@
 <body>
 
 <div id="sidebar">
-    <input type="text" id="search-input" placeholder="Поиск..." oninput="handleSearch()">
+    <div id="game-clock-container">
+        <span id="game-clock-label">Игровое время</span>
+        <div id="game-time">00:00</div>
+    </div>
+    
+    <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
+    
     <div id="timer-monitor">
         <div id="monitor-list">
             <div style="color: #444; font-size: 11px; text-align: center; padding: 10px;">Список пуст</div>
@@ -80,7 +115,6 @@
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
-    // Твои данные боссов остаются без изменений
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -150,19 +184,58 @@
     const wrapper = document.getElementById('map-wrapper');
     const monitorList = document.getElementById('monitor-list');
     const viewport = document.getElementById('viewport');
+    const gameClockDisplay = document.getElementById('game-time');
     
     let scale = window.innerWidth / 5062;
     let posX = 0, posY = 0;
-
-    // Переменные для Pinch-to-zoom
     let evCache = [];
     let prevDiff = -1;
+
+    // --- ЛОГИКА ИГРОВЫХ ЧАСОВ ---
+    // 1 игровая минута = 10 реальных сек. 
+    // В игровых сутках 1440 минут (24ч * 60мин).
+    // Полный цикл игровых суток = 14400 реальных секунд (4 часа).
+    
+    // Смещение для синхронизации с твоим временем (16:30 сейчас)
+    let timeOffset = 0; 
+
+    function calculateInitialOffset(targetH, targetM) {
+        const now = new Date();
+        const realSecs = Math.floor(now.getTime() / 1000);
+        const targetTotalMinutes = (targetH * 60) + targetM;
+        const targetRealSecs = targetTotalMinutes * 10;
+        // Находим разницу между желаемыми секундами и текущим положением в 4-часовом цикле
+        timeOffset = targetRealSecs - (realSecs % 14400);
+    }
+
+    // Устанавливаем стартовую точку (твои 16:30)
+    calculateInitialOffset(16, 30);
+
+    function updateGameTime() {
+        const now = new Date();
+        const realSecs = Math.floor(now.getTime() / 1000);
+        
+        // Вычисляем текущую игровую минуту в цикле 1440 минут
+        const totalGameMinutes = Math.floor((realSecs + timeOffset) / 10);
+        const currentDayMinute = totalGameMinutes % 1440;
+        
+        const h = Math.floor(currentDayMinute / 60);
+        const m = currentDayMinute % 60;
+        
+        gameClockDisplay.innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+    }
+
+    // Обновляем часы каждую секунду
+    setInterval(updateGameTime, 1000);
+
+    // --- ОСТАЛЬНОЙ ФУНКЦИОНАЛ ---
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
         posY = (window.innerHeight - (4210 * scale)) / 2;
         drawMarkers();
         update();
+        updateGameTime();
     }
 
     function drawMarkers() {
@@ -191,7 +264,7 @@
 
     function startTimer(boss) {
         if (boss.timerInterval) return;
-        let timeLeft = 15 * 60;
+        let timeLeft = 15 * 60; // 15 минут респауна (пример)
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer-map';
         boss.markerEl.appendChild(timerDisplay);
@@ -252,11 +325,9 @@
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
     }
 
-    // --- ЛОГИКА УПРАВЛЕНИЯ (MOBILE + DESKTOP) ---
-
+    // Управление
     let isDrag = false, lx, ly;
 
-    // Обработка колеса мыши
     viewport.onwheel = e => {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.8 : 1.2;
@@ -271,18 +342,14 @@
         update();
     }
 
-    // Тач события
     viewport.ontouchstart = e => {
         if (e.touches.length === 1) {
             isDrag = true;
             lx = e.touches[0].clientX;
             ly = e.touches[0].clientY;
         } else if (e.touches.length === 2) {
-            isDrag = false; // Отключаем перетаскивание при зуме
-            prevDiff = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
+            isDrag = false;
+            prevDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         }
     };
 
@@ -295,10 +362,7 @@
             ly = e.touches[0].clientY;
             update();
         } else if (e.touches.length === 2) {
-            const curDiff = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
+            const curDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
             if (prevDiff > 0) {
                 const delta = curDiff / prevDiff;
                 const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
@@ -314,12 +378,11 @@
         if (e.touches.length < 2) prevDiff = -1;
     };
 
-    // Мышь (для десктопа)
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; }};
     window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }};
     window.onmouseup = () => isDrag = false;
-
     viewport.oncontextmenu = e => e.preventDefault();
+
     init();
 </script>
 </body>
