@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Ultimate Mobile</title>
+    <title>L2 RB Map - Live Sync</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
@@ -43,31 +43,23 @@
             padding: 12px; z-index: 1000; border-radius: 12px; backdrop-filter: blur(10px);
         }
 
-        /* Игровые часы */
+        /* Блок часов */
         #game-clock-container {
-            background: rgba(255, 215, 0, 0.05);
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            border-radius: 8px;
-            padding: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        #game-clock-label {
-            font-size: 10px;
-            color: #8a8a8a;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: block;
-            margin-bottom: 2px;
+            background: linear-gradient(180deg, rgba(30,30,30,0.9) 0%, rgba(10,10,10,1) 100%);
+            border: 1px solid #ffd70055; border-radius: 8px;
+            padding: 10px; margin-bottom: 12px; text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         }
 
         #game-time {
             font-family: 'Courier New', monospace;
-            font-size: 26px;
-            font-weight: bold;
-            color: #ffd700;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            font-size: 32px; font-weight: bold;
+            color: #ffd700; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+
+        #game-clock-label {
+            font-size: 10px; color: #777; text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 4px; display: block;
         }
 
         #timer-monitor {
@@ -95,8 +87,8 @@
 
 <div id="sidebar">
     <div id="game-clock-container">
-        <span id="game-clock-label">Игровое время</span>
-        <div id="game-time">00:00</div>
+        <span id="game-clock-label">L2 Game Time</span>
+        <div id="game-time">--:--</div>
     </div>
     
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
@@ -190,39 +182,36 @@
     let posX = 0, posY = 0;
     let prevDiff = -1;
 
-    // --- ЛОГИКА ИГРОВЫХ ЧАСОВ ---
-    let timeOffset = 0; 
-
-    function calculateInitialOffset(targetH, targetM) {
-        const now = new Date();
-        const realSecs = Math.floor(now.getTime() / 1000);
-        const targetTotalMinutes = (targetH * 60) + targetM;
-        const targetRealSecs = targetTotalMinutes * 10;
-        // Находим разницу между целевым временем и текущим остатком в реальном 4-часовом цикле
-        timeOffset = targetRealSecs - (realSecs % 14400);
-    }
-
-    // Твое текущее время в игре
-    calculateInitialOffset(17, 9);
+    // --- ЛОГИКА СИНХРОНИЗАЦИИ ---
+    // Точка отсчета: Реальные 22:56:00 = Игровые 17:36:00
+    const SYNC_REAL_SEC = (22 * 3600) + (56 * 60);
+    const SYNC_GAME_MIN = (17 * 60) + 36;
 
     function updateGameTime() {
         const now = new Date();
-        const realSecs = Math.floor(now.getTime() / 1000);
+        // Текущие секунды реального дня
+        const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
         
-        // Математика 10 сек = 1 минута в цикле 1440 минут
-        const totalGameMinutes = Math.floor((realSecs + timeOffset) / 10);
-        const currentDayMinute = ((totalGameMinutes % 1440) + 1440) % 1440; // защита от отрицательных значений
+        // Разница в реальных секундах
+        const diffRealSec = nowRealSec - SYNC_REAL_SEC;
         
-        const h = Math.floor(currentDayMinute / 60);
-        const m = currentDayMinute % 60;
+        // Перевод разницы в игровые минуты (1 минута игры = 10 реальных секунд)
+        const diffGameMin = diffRealSec / 10;
+        
+        // Итоговые игровые минуты (с учетом 24ч цикла)
+        let totalGameMin = Math.floor(SYNC_GAME_MIN + diffGameMin);
+        totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
+        
+        const h = Math.floor(totalGameMin / 60);
+        const m = totalGameMin % 60;
         
         gameClockDisplay.innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
+    // Обновляем раз в секунду для точности
     setInterval(updateGameTime, 1000);
 
-    // --- ОСНОВНОЙ ФУНКЦИОНАЛ КАРТЫ ---
-
+    // --- ФУНКЦИИ КАРТЫ ---
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
         posY = (window.innerHeight - (4210 * scale)) / 2;
@@ -320,12 +309,7 @@
 
     // Управление
     let isDrag = false, lx, ly;
-
-    viewport.onwheel = e => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.8 : 1.2;
-        applyZoom(delta, e.clientX, e.clientY);
-    };
+    viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.8 : 1.2, e.clientX, e.clientY); };
 
     function applyZoom(delta, centerX, centerY) {
         const ns = Math.min(Math.max(0.05, scale * delta), 4);
@@ -336,41 +320,23 @@
     }
 
     viewport.ontouchstart = e => {
-        if (e.touches.length === 1) {
-            isDrag = true;
-            lx = e.touches[0].clientX;
-            ly = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            isDrag = false;
-            prevDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        }
+        if (e.touches.length === 1) { isDrag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }
+        else if (e.touches.length === 2) { isDrag = false; prevDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
     };
 
     viewport.ontouchmove = e => {
         e.preventDefault();
         if (e.touches.length === 1 && isDrag) {
-            posX += e.touches[0].clientX - lx;
-            posY += e.touches[0].clientY - ly;
-            lx = e.touches[0].clientX;
-            ly = e.touches[0].clientY;
-            update();
+            posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
+            lx = e.touches[0].clientX; ly = e.touches[0].clientY; update();
         } else if (e.touches.length === 2) {
             const curDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            if (prevDiff > 0) {
-                const delta = curDiff / prevDiff;
-                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                applyZoom(delta, centerX, centerY);
-            }
+            if (prevDiff > 0) applyZoom(curDiff / prevDiff, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
             prevDiff = curDiff;
         }
     };
 
-    viewport.ontouchend = e => {
-        isDrag = false;
-        if (e.touches.length < 2) prevDiff = -1;
-    };
-
+    viewport.ontouchend = () => { isDrag = false; prevDiff = -1; };
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; }};
     window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }};
     window.onmouseup = () => isDrag = false;
