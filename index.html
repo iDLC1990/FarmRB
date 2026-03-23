@@ -35,7 +35,7 @@
             border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
-        /* Сайдбар и Элементы управления */
+        /* Сайдбар */
         #sidebar {
             position: fixed; top: 10px; left: 10px; 
             width: calc(100% - 40px); max-width: 300px;
@@ -188,15 +188,9 @@
     
     let scale = window.innerWidth / 5062;
     let posX = 0, posY = 0;
-    let evCache = [];
     let prevDiff = -1;
 
     // --- ЛОГИКА ИГРОВЫХ ЧАСОВ ---
-    // 1 игровая минута = 10 реальных сек. 
-    // В игровых сутках 1440 минут (24ч * 60мин).
-    // Полный цикл игровых суток = 14400 реальных секунд (4 часа).
-    
-    // Смещение для синхронизации с твоим временем (16:30 сейчас)
     let timeOffset = 0; 
 
     function calculateInitialOffset(targetH, targetM) {
@@ -204,20 +198,20 @@
         const realSecs = Math.floor(now.getTime() / 1000);
         const targetTotalMinutes = (targetH * 60) + targetM;
         const targetRealSecs = targetTotalMinutes * 10;
-        // Находим разницу между желаемыми секундами и текущим положением в 4-часовом цикле
+        // Находим разницу между целевым временем и текущим остатком в реальном 4-часовом цикле
         timeOffset = targetRealSecs - (realSecs % 14400);
     }
 
-    // Устанавливаем стартовую точку (твои 16:30)
-    calculateInitialOffset(16, 30);
+    // Твое текущее время в игре
+    calculateInitialOffset(17, 9);
 
     function updateGameTime() {
         const now = new Date();
         const realSecs = Math.floor(now.getTime() / 1000);
         
-        // Вычисляем текущую игровую минуту в цикле 1440 минут
+        // Математика 10 сек = 1 минута в цикле 1440 минут
         const totalGameMinutes = Math.floor((realSecs + timeOffset) / 10);
-        const currentDayMinute = totalGameMinutes % 1440;
+        const currentDayMinute = ((totalGameMinutes % 1440) + 1440) % 1440; // защита от отрицательных значений
         
         const h = Math.floor(currentDayMinute / 60);
         const m = currentDayMinute % 60;
@@ -225,10 +219,9 @@
         gameClockDisplay.innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
-    // Обновляем часы каждую секунду
     setInterval(updateGameTime, 1000);
 
-    // --- ОСТАЛЬНОЙ ФУНКЦИОНАЛ ---
+    // --- ОСНОВНОЙ ФУНКЦИОНАЛ КАРТЫ ---
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
@@ -264,7 +257,7 @@
 
     function startTimer(boss) {
         if (boss.timerInterval) return;
-        let timeLeft = 15 * 60; // 15 минут респауна (пример)
+        let timeLeft = 15 * 60; 
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer-map';
         boss.markerEl.appendChild(timerDisplay);
