@@ -3,35 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Perfect Sync</title>
+    <title>L2 RB Map - Clean & Sync</title>
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
         .rb-marker {
-            position: absolute; width: 28px; height: 28px;
-            background: #000; border: 2px solid #555; border-radius: 50%;
-            transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
+            position: absolute; 
+            width: 18px; height: 18px; 
+            background: rgba(0, 0, 0, 0.8); 
+            border: 1px solid #777; 
+            border-radius: 50%;
+            transform: translate(-50%, -50%); 
+            z-index: 10; 
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .rb-marker:hover {
+            z-index: 1000; 
+            transform: translate(-50%, -50%) scale(1.3);
+            border-color: #00ff88;
         }
 
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; 
-            box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
+            box-shadow: 0 0 12px rgba(255, 50, 0, 0.8) !important; 
         }
         
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: #00ff88; padding: 4px 12px;
-            border-radius: 6px; font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
+            content: attr(data-name); 
+            position: absolute; 
+            bottom: 22px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75); 
+            color: #999; 
+            padding: 2px 8px;
+            border-radius: 4px; 
+            font-size: 10px; 
+            white-space: nowrap; 
+            border: 1px solid #333; 
+            pointer-events: none;
+            opacity: 0.8;
+            transition: all 0.2s;
+        }
+
+        .rb-marker:hover::after {
+            color: #00ff88;
+            background: rgba(0,0,0,0.95);
+            border-color: #00ff88;
+            opacity: 1;
+            z-index: 1001;
         }
 
         .rb-timer-map {
-            position: absolute; bottom: 65px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 16px;
-            border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
+            position: absolute; 
+            top: 22px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: #000; 
+            color: #00ffcc; 
+            padding: 1px 6px; 
+            border-radius: 4px;
+            font-weight: bold; 
+            font-family: monospace; 
+            font-size: 12px;
+            border: 1px solid #00ffcc; 
+            z-index: 100; 
+            pointer-events: none;
         }
 
         #sidebar {
@@ -45,7 +87,6 @@
             background: linear-gradient(180deg, rgba(30,30,30,0.9) 0%, rgba(10,10,10,1) 100%);
             border: 1px solid #ffd70055; border-radius: 8px;
             padding: 10px; margin-bottom: 12px; text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         }
 
         #game-time {
@@ -54,21 +95,19 @@
             color: #ffd700; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
         }
 
-        #game-clock-label {
-            font-size: 10px; color: #777; text-transform: uppercase;
-            letter-spacing: 2px; margin-bottom: 4px; display: block;
-        }
-
         #timer-monitor {
             background: rgba(0, 255, 204, 0.03); border: 1px solid #00ffcc22;
             border-radius: 8px; padding: 8px; margin-top: 10px;
-            max-height: 30vh; overflow-y: auto;
+            max-height: 35vh; overflow-y: auto;
         }
         
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 13px; margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 6px;
+            font-size: 13px; margin-bottom: 8px; border-bottom: 1px solid #222; 
+            padding: 6px; cursor: pointer; transition: background 0.2s;
         }
+
+        .monitor-item:hover { background: rgba(255,255,255,0.05); }
 
         .monitor-note { color: #00ffcc; font-weight: bold; font-family: monospace; }
         .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
@@ -84,7 +123,7 @@
 
 <div id="sidebar">
     <div id="game-clock-container">
-        <span id="game-clock-label">L2 Game Time</span>
+        <span style="font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 2px;">L2 Game Time</span>
         <div id="game-time">Синхронизация...</div>
     </div>
     
@@ -104,7 +143,6 @@
 <script>
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
-    // --- ДАННЫЕ БОССОВ ---
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -180,9 +218,6 @@
     let posX = 0, posY = 0;
     let prevDiff = -1;
 
-    // --- ЛОГИКА СИНХРОНИЗАЦИИ ---
-    // Точка отсчета: 22:56:00 (реальное) = 17:36:00 (игровое)
-    // КОРРЕКЦИЯ: Добавлено +6 секунд к реальному времени, чтобы сайт шел медленнее.
     const CORRECTION_SECONDS = 6; 
     const SYNC_REAL_SEC = (22 * 3600) + (56 * 60) + CORRECTION_SECONDS;
     const SYNC_GAME_MIN = (17 * 60) + 36;
@@ -190,25 +225,17 @@
     function updateGameTime() {
         const now = new Date();
         const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        
-        // Разница в реальных секундах с учетом коррекции
         const diffRealSec = nowRealSec - SYNC_REAL_SEC;
-        
-        // Игровое время (1 мин игры = 10 сек реала)
         const diffGameMin = diffRealSec / 10;
-        
         let totalGameMin = Math.floor(SYNC_GAME_MIN + diffGameMin);
         totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
-        
         const h = Math.floor(totalGameMin / 60);
         const m = totalGameMin % 60;
-        
         gameClockDisplay.innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
     setInterval(updateGameTime, 1000);
 
-    // --- ФУНКЦИИ КАРТЫ ---
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
         posY = (window.innerHeight - (4210 * scale)) / 2;
@@ -247,6 +274,7 @@
         const timerDisplay = document.createElement('div');
         timerDisplay.className = 'rb-timer-map';
         boss.markerEl.appendChild(timerDisplay);
+        
         boss.timerInterval = setInterval(() => {
             timeLeft--;
             const m = Math.floor(timeLeft / 60);
@@ -254,6 +282,7 @@
             const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
             timerDisplay.innerText = timeStr;
             boss.currentTime = timeStr;
+            
             if (timeLeft <= 0) {
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
@@ -266,15 +295,24 @@
     }
 
     function updateMonitor() {
+    
         const active = bossData.filter(b => b.timerInterval || b.currentTime === "READY!");
+
+        active.sort((a, b) => {
+            if (a.timerInterval && !b.timerInterval) return -1;
+            if (!a.timerInterval && b.timerInterval) return 1;
+            return 0;
+        });
+
         if (active.length === 0) {
             monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center; padding: 10px;">Список пуст</div>';
             return;
         }
+
         monitorList.innerHTML = active.map(b => {
             const isReady = b.currentTime === "READY!";
             return `
-                <div class="monitor-item">
+                <div class="monitor-item" onclick="focusByName('${b.name.replace(/'/g, "\\'")}')">
                     <span class="monitor-note">${b.note}</span>
                     <span class="${isReady ? 'ready-text' : ''}" style="font-family:monospace; background:${isReady ? '#ff330022' : '#00ffcc22'}; padding:2px 8px; border-radius:4px; border: 1px solid ${isReady ? '#ff3300' : '#00ffcc44'}">
                         ${b.currentTime}
@@ -282,6 +320,11 @@
                 </div>
             `;
         }).join('');
+    }
+
+    function focusByName(name) {
+        const boss = bossData.find(b => b.name === name);
+        if (boss) focus(boss);
     }
 
     function handleSearch() {
@@ -304,7 +347,6 @@
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
     }
 
-    // Управление
     let isDrag = false, lx, ly;
     viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.8 : 1.2, e.clientX, e.clientY); };
 
