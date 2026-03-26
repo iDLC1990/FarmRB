@@ -1,0 +1,15 @@
+{
+  "name": "L2 RB Map",
+  "short_name": "RB Map",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#00ffcc",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/800/800212.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
