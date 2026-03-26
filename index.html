@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Mobile App</title>
+    <title>L2 RB Map - App</title>
     
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#050505">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/800/800212.png">
 
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
+        /* Маркеры */
         .rb-marker {
             position: absolute; 
             width: 22px; height: 22px; 
@@ -35,37 +38,21 @@
         .rb-marker::after {
             content: attr(data-name); 
             position: absolute; 
-            bottom: 26px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); 
-            color: #ccc; 
-            padding: 3px 10px;
-            border-radius: 6px; 
-            font-size: 11px; 
-            white-space: nowrap; 
-            border: 1px solid #444; 
-            pointer-events: none;
-            opacity: 0.9;
+            bottom: 26px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #ccc; 
+            padding: 3px 10px; border-radius: 6px; 
+            font-size: 11px; white-space: nowrap; 
+            border: 1px solid #444; pointer-events: none; opacity: 0.9;
         }
 
         .rb-timer-map {
-            position: absolute; 
-            top: 26px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            background: #000; 
-            color: #00ffcc; 
-            padding: 2px 8px; 
-            border-radius: 4px;
-            font-weight: bold; 
-            font-family: monospace; 
-            font-size: 13px;
-            border: 1px solid #00ffcc; 
-            z-index: 100; 
-            pointer-events: none;
+            position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
+            font-weight: bold; font-family: monospace; font-size: 13px;
+            border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
         }
 
+        /* Интерфейс */
         #sidebar {
             position: fixed; top: 15px; left: 15px; 
             width: 280px;
@@ -81,8 +68,7 @@
         }
 
         #game-time {
-            font-family: 'Courier New', monospace;
-            font-size: 36px; font-weight: bold;
+            font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold;
             color: #ffd700; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
         }
 
@@ -106,7 +92,6 @@
         #search-input { 
             width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; 
             background: #111; color: #fff; box-sizing: border-box; outline: none;
-            font-size: 14px;
         }
     </style>
 </head>
@@ -118,11 +103,11 @@
         <div id="game-time">--:--</div>
     </div>
     
-    <input type="text" id="search-input" placeholder="Поиск (имя или ноут)..." oninput="handleSearch()">
+    <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
     <div id="timer-monitor">
         <div id="monitor-list">
-            <div style="color: #555; font-size: 11px; text-align: center; padding: 20px;">Активных боссов нет</div>
+            <div style="color: #555; font-size: 11px; text-align: center; padding: 20px;">Нет активных таймеров</div>
         </div>
     </div>
 </div>
@@ -132,6 +117,7 @@
 </div>
 
 <script>
+    // Настройки карты
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
     let bossData = [
@@ -209,7 +195,7 @@
     let posX = 0, posY = 0;
     let prevDiff = -1;
 
-    // Синхронизация времени
+    // Игровое время
     const CORRECTION_SECONDS = 6; 
     const SYNC_REAL_SEC = (22 * 3600) + (56 * 60) + CORRECTION_SECONDS;
     const SYNC_GAME_MIN = (17 * 60) + 36;
@@ -228,11 +214,12 @@
 
     setInterval(updateGameTime, 1000);
 
+    // Инициализация
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
         posY = (window.innerHeight - (4210 * scale)) / 2;
         drawMarkers();
-        loadState(); // Загрузка сохраненных данных
+        loadState(); 
         update();
         updateGameTime();
     }
@@ -357,7 +344,7 @@
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
     }
 
-    // Управление зумом и перетаскиванием
+    // Zoom & Pan
     let isDrag = false, lx, ly;
     viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY); };
 
@@ -390,6 +377,15 @@
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; }};
     window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }};
     window.onmouseup = () => isDrag = false;
+
+    // РЕГИСТРАЦИЯ SERVICE WORKER (ДЛЯ КНОПКИ УСТАНОВКИ)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('SW registered!');
+            }).catch(err => console.log('SW error:', err));
+        });
+    }
 
     init();
 </script>
