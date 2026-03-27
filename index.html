@@ -61,6 +61,26 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
+        /* Стиль кнопки сброса */
+        #reset-btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #880000;
+            color: #ffffff;
+            border: 1px solid #ff4444;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+            transition: 0.2s;
+            display: block;
+            box-shadow: 0 4px 10px rgba(255, 0, 0, 0.2);
+        }
+        #reset-btn:active { transform: scale(0.98); background: #aa0000; }
+
         #game-clock-container {
             background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
             border: 1px solid #ffd70044; border-radius: 10px;
@@ -75,7 +95,7 @@
         #timer-monitor {
             background: rgba(255, 255, 255, 0.03); border: 1px solid #ffffff11;
             border-radius: 10px; padding: 5px; margin-top: 15px;
-            max-height: 35vh; overflow-y: auto;
+            max-height: 30vh; overflow-y: auto;
         }
         
         .monitor-item {
@@ -93,32 +113,13 @@
             width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; 
             background: #111; color: #fff; box-sizing: border-box; outline: none;
         }
-
-        /* Кнопка сброса */
-        #reset-btn {
-            width: 100%;
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(255, 51, 0, 0.15);
-            color: #ff4444;
-            border: 1px solid #ff330044;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 11px;
-            transition: all 0.3s;
-        }
-        #reset-btn:hover {
-            background: rgba(255, 51, 0, 0.3);
-            border-color: #ff3300;
-            box-shadow: 0 0 15px rgba(255, 51, 0, 0.2);
-        }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
+    <button id="reset-btn" onclick="resetAllMarkers()">Сбросить всё</button>
+
     <div id="game-clock-container">
         <span style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 2px;">L2 Game Time</span>
         <div id="game-time">--:--</div>
@@ -126,8 +127,6 @@
     
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
-    <button id="reset-btn" onclick="resetAllMarkers()">Сбросить всё (Reset)</button>
-
     <div id="timer-monitor">
         <div id="monitor-list">
             <div style="color: #555; font-size: 11px; text-align: center; padding: 20px;">Нет активных таймеров</div>
@@ -140,7 +139,6 @@
 </div>
 
 <script>
-    // Настройки карты
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     
     let bossData = [
@@ -237,7 +235,6 @@
 
     setInterval(updateGameTime, 1000);
 
-    // Инициализация
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
         posY = (window.innerHeight - (4210 * scale)) / 2;
@@ -299,32 +296,32 @@
         }, 1000);
     }
 
-    // Функция сброса всех меток
+    // ЛОГИКА СБРОСА
     function resetAllMarkers() {
-        if (!confirm("Сбросить все активные таймеры и красные метки?")) return;
+        if (!confirm("Внимание! Это сбросит все активные таймеры и красные метки. Продолжить?")) return;
 
         bossData.forEach(boss => {
-            // 1. Останавливаем интервалы
+            // Останавливаем таймеры
             if (boss.timerInterval) {
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
             }
             
-            // 2. Сбрасываем время
+            // Сбрасываем данные
             boss.currentTime = null;
 
-            // 3. Визуал на карте
+            // Сбрасываем визуал на карте
             if (boss.markerEl) {
                 boss.markerEl.classList.remove('is-alive');
-                const timerOnMap = boss.markerEl.querySelector('.rb-timer-map');
-                if (timerOnMap) timerOnMap.remove();
+                const tMap = boss.markerEl.querySelector('.rb-timer-map');
+                if (tMap) tMap.remove();
             }
         });
 
-        // 4. Чистим хранилище
+        // Очищаем локальную память
         localStorage.removeItem('l2_alive_bosses');
         
-        // 5. Обновляем список
+        // Обновляем список в меню
         updateMonitor();
     }
 
@@ -396,7 +393,7 @@
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
     }
 
-    // Zoom & Pan logic
+    // Zoom & Pan
     let isDrag = false, lx, ly;
     viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY); };
 
