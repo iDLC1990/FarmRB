@@ -16,43 +16,70 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* Маркеры */
+        /* --- Маркеры (ИЗМЕНЕНО: Сделаны маленькими) --- */
         .rb-marker {
             position: absolute; 
-            width: 22px; height: 22px; 
-            background: rgba(0, 0, 0, 0.8); 
-            border: 2px solid #555; 
+            width: 10px; height: 10px; /* Было 22x22 */
+            background: rgba(150, 150, 150, 0.4); 
+            border: 1px solid #555; /* Тоньше обводка */
             border-radius: 50%;
             transform: translate(-50%, -50%); 
             z-index: 10; 
             cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s, border-color 0.2s, background 0.2s;
         }
 
+        /* Состояние "Живой" для маленькой метки */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; 
-            box-shadow: 0 0 15px rgba(255, 50, 0, 0.9) !important; 
+            box-shadow: 0 0 10px rgba(255, 50, 0, 0.8) !important; 
+            width: 12px; height: 12px; /* Чуть увеличиваем живого */
         }
         
+        /* --- Имя босса (ИЗМЕНЕНО: Кликабельно, увеличивается при наведении) --- */
         .rb-marker::after {
             content: attr(data-name); 
             position: absolute; 
-            bottom: 26px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: #ccc; 
-            padding: 3px 10px; border-radius: 6px; 
+            bottom: 15px; /* Сдвинули ближе к маленькой метке */
+            left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #bbb; 
+            padding: 2px 8px; border-radius: 4px; 
             font-size: 11px; white-space: nowrap; 
-            border: 1px solid #444; pointer-events: none; opacity: 0.9;
+            border: 1px solid #333; 
+            opacity: 0.8;
+            /* pointer-events: none; <- УБРАНО, теперь имя кликабельно */
+            transition: all 0.2s ease-in-out; /* Плавное увеличение */
+            will-change: font-size, opacity;
         }
 
+        /* Эффект при наведении на метку ИЛИ имя */
+        .rb-marker:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: #fff;
+            z-index: 100; /* Поднимаем над другими при наведении */
+        }
+
+        /* ИЗМЕНЕНО: Увеличение имени при наведении */
+        .rb-marker:hover::after {
+            font-size: 14px; /* Увеличиваем шрифт */
+            color: #fff; /* Делаем ярче */
+            opacity: 1;
+            background: rgba(0,0,0,0.95);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Таймер на карте (Коррекция позиции) */
         .rb-timer-map {
-            position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 2px 8px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 13px;
-            border: 1px solid #00ffcc; z-index: 100; pointer-events: none;
+            position: absolute; 
+            top: 15px; /* Сдвинули ближе */
+            left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 4px;
+            font-weight: bold; font-family: monospace; font-size: 12px;
+            border: 1px solid #00ffcc; z-index: 90; pointer-events: none;
         }
 
-        /* Интерфейс */
+        /* Интерфейс (Боковая панель) */
         #sidebar {
             position: fixed; top: 15px; left: 15px; 
             width: 280px;
@@ -61,23 +88,12 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* Стиль кнопки сброса */
         #reset-btn {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            background: #880000;
-            color: #ffffff;
-            border: 1px solid #ff4444;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 1px;
-            transition: 0.2s;
-            display: block;
-            box-shadow: 0 4px 10px rgba(255, 0, 0, 0.2);
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            background: #880000; color: #ffffff; border: 1px solid #ff4444;
+            border-radius: 10px; cursor: pointer; font-weight: bold;
+            text-transform: uppercase; font-size: 12px; letter-spacing: 1px;
+            transition: 0.2s; display: block;
         }
         #reset-btn:active { transform: scale(0.98); background: #aa0000; }
 
@@ -103,7 +119,6 @@
             font-size: 13px; margin-bottom: 5px; border-bottom: 1px solid #222; 
             padding: 8px; cursor: pointer; border-radius: 5px;
         }
-
         .monitor-item:hover { background: rgba(255,255,255,0.07); }
         .monitor-note { color: #00ffcc; font-size: 11px; font-family: monospace; }
         .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
@@ -167,7 +182,7 @@
         { name: "Roaring Skylancer", note: "pp_woawarka lancer", pos: "top:2527px;left:4165px;" },
         { name: "Eilhalder von Hellmann", note: "th_ostrov fodvil", pos: "top:1729px;left:3504px;" },
         { name: "Vanor Chief Kandra", note: "kk_port1 kandraa", pos: "top:1565px;left:4027px;" },
-        { name: "Fafurion's Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
+        { name: "Fafurion'Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
         { name: "Krokian Padisha Sobekk", note: "th_ostrov ostrov3", pos: "top:3291px;left:4064px;" },
         { name: "Bloody Empress Decarbia", note: "LL_ULANX500 kobria", pos: "top:2161px;left:4690px;" },
         { name: "Death Lord Ipos", note: "LL_ULANX500 IBOS", pos: "top:1949px;left:4379px;" },
@@ -251,14 +266,19 @@
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
+            
+            // Нажатие на метку (или имя)
             m.onclick = (e) => {
                 e.stopPropagation();
                 if (m.classList.contains('is-alive')) {
+                    // Если живой - сбрасываем состояние
                     m.classList.remove('is-alive');
                     boss.currentTime = null;
                 } else if (!boss.timerInterval) {
+                    // Если мертвый и нет таймера - запускаем таймер
                     startTimer(boss);
                 } else {
+                    // Если таймер идет - фокусируемся
                     focus(boss);
                 }
                 saveState();
@@ -296,32 +316,21 @@
         }, 1000);
     }
 
-    // ЛОГИКА СБРОСА
     function resetAllMarkers() {
-        if (!confirm("Внимание! Это сбросит все активные таймеры и красные метки. Продолжить?")) return;
-
+        if (!confirm("Сбросить все активные таймеры и красные метки?")) return;
         bossData.forEach(boss => {
-            // Останавливаем таймеры
             if (boss.timerInterval) {
                 clearInterval(boss.timerInterval);
                 boss.timerInterval = null;
             }
-            
-            // Сбрасываем данные
             boss.currentTime = null;
-
-            // Сбрасываем визуал на карте
             if (boss.markerEl) {
                 boss.markerEl.classList.remove('is-alive');
                 const tMap = boss.markerEl.querySelector('.rb-timer-map');
                 if (tMap) tMap.remove();
             }
         });
-
-        // Очищаем локальную память
         localStorage.removeItem('l2_alive_bosses');
-        
-        // Обновляем список в меню
         updateMonitor();
     }
 
@@ -349,12 +358,10 @@
     function updateMonitor() {
         const active = bossData.filter(b => b.timerInterval || b.currentTime === "READY!");
         active.sort((a, b) => (a.currentTime === "READY!" ? 1 : -1));
-
         if (active.length === 0) {
             monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center; padding: 15px;">Список пуст</div>';
             return;
         }
-
         monitorList.innerHTML = active.map(b => {
             const isReady = b.currentTime === "READY!";
             return `
@@ -434,7 +441,6 @@
             }).catch(err => console.log('SW error:', err));
         });
     }
-
     init();
 </script>
 </body>
