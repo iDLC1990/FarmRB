@@ -75,7 +75,7 @@
         #timer-monitor {
             background: rgba(255, 255, 255, 0.03); border: 1px solid #ffffff11;
             border-radius: 10px; padding: 5px; margin-top: 15px;
-            max-height: 40vh; overflow-y: auto;
+            max-height: 35vh; overflow-y: auto;
         }
         
         .monitor-item {
@@ -93,6 +93,27 @@
             width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; 
             background: #111; color: #fff; box-sizing: border-box; outline: none;
         }
+
+        /* Кнопка сброса */
+        #reset-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 51, 0, 0.15);
+            color: #ff4444;
+            border: 1px solid #ff330044;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+        #reset-btn:hover {
+            background: rgba(255, 51, 0, 0.3);
+            border-color: #ff3300;
+            box-shadow: 0 0 15px rgba(255, 51, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -105,6 +126,8 @@
     
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
+    <button id="reset-btn" onclick="resetAllMarkers()">Сбросить всё (Reset)</button>
+
     <div id="timer-monitor">
         <div id="monitor-list">
             <div style="color: #555; font-size: 11px; text-align: center; padding: 20px;">Нет активных таймеров</div>
@@ -276,9 +299,38 @@
         }, 1000);
     }
 
+    // Функция сброса всех меток
+    function resetAllMarkers() {
+        if (!confirm("Сбросить все активные таймеры и красные метки?")) return;
+
+        bossData.forEach(boss => {
+            // 1. Останавливаем интервалы
+            if (boss.timerInterval) {
+                clearInterval(boss.timerInterval);
+                boss.timerInterval = null;
+            }
+            
+            // 2. Сбрасываем время
+            boss.currentTime = null;
+
+            // 3. Визуал на карте
+            if (boss.markerEl) {
+                boss.markerEl.classList.remove('is-alive');
+                const timerOnMap = boss.markerEl.querySelector('.rb-timer-map');
+                if (timerOnMap) timerOnMap.remove();
+            }
+        });
+
+        // 4. Чистим хранилище
+        localStorage.removeItem('l2_alive_bosses');
+        
+        // 5. Обновляем список
+        updateMonitor();
+    }
+
     function saveState() {
         const activeNames = bossData
-            .filter(b => b.markerEl.classList.contains('is-alive'))
+            .filter(b => b.markerEl && b.markerEl.classList.contains('is-alive'))
             .map(b => b.name);
         localStorage.setItem('l2_alive_bosses', JSON.stringify(activeNames));
     }
@@ -344,7 +396,7 @@
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
     }
 
-    // Zoom & Pan
+    // Zoom & Pan logic
     let isDrag = false, lx, ly;
     viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY); };
 
@@ -378,7 +430,6 @@
     window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }};
     window.onmouseup = () => isDrag = false;
 
-    // РЕГИСТРАЦИЯ SERVICE WORKER (ДЛЯ КНОПКИ УСТАНОВКИ)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js').then(reg => {
