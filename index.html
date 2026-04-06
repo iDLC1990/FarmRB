@@ -3,149 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - App</title>
+    <title>L2 RB Map - Live Sync</title>
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#050505">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/800/800212.png">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
         body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* --- Маркеры (ИЗМЕНЕНО: Сделаны маленькими) --- */
+        /* Маркеры */
         .rb-marker {
-            position: absolute; 
-            width: 10px; height: 10px; /* Было 22x22 */
-            background: rgba(150, 150, 150, 0.4); 
-            border: 1px solid #555; /* Тоньше обводка */
-            border-radius: 50%;
-            transform: translate(-50%, -50%); 
-            z-index: 10; 
-            cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s, background 0.2s;
+            position: absolute; width: 10px; height: 10px;
+            background: rgba(150, 150, 150, 0.4); border: 1px solid #555;
+            border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
         }
 
-        /* Состояние "Живой" для маленькой метки */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
-            border-color: #fff !important; 
-            box-shadow: 0 0 10px rgba(255, 50, 0, 0.8) !important; 
-            width: 12px; height: 12px; /* Чуть увеличиваем живого */
+            border-color: #fff !important; box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
+            width: 14px; height: 14px; z-index: 15;
         }
-        
-        /* --- Имя босса (ИЗМЕНЕНО: Кликабельно, увеличивается при наведении) --- */
+
         .rb-marker::after {
-            content: attr(data-name); 
-            position: absolute; 
-            bottom: 15px; /* Сдвинули ближе к маленькой метке */
-            left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #bbb; 
-            padding: 2px 8px; border-radius: 4px; 
-            font-size: 11px; white-space: nowrap; 
-            border: 1px solid #333; 
-            opacity: 0.8;
-            /* pointer-events: none; <- УБРАНО, теперь имя кликабельно */
-            transition: all 0.2s ease-in-out; /* Плавное увеличение */
-            will-change: font-size, opacity;
+            content: attr(data-name); position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #bbb; padding: 2px 8px; border-radius: 4px; 
+            font-size: 11px; white-space: nowrap; border: 1px solid #333; opacity: 0.8; transition: 0.2s;
         }
 
-        /* Эффект при наведении на метку ИЛИ имя */
-        .rb-marker:hover {
-            background: rgba(255, 255, 255, 0.8);
-            border-color: #fff;
-            z-index: 100; /* Поднимаем над другими при наведении */
-        }
+        .rb-marker:hover::after { opacity: 1; color: #fff; font-size: 14px; background: #000; z-index: 100; }
 
-        /* ИЗМЕНЕНО: Увеличение имени при наведении */
-        .rb-marker:hover::after {
-            font-size: 14px; /* Увеличиваем шрифт */
-            color: #fff; /* Делаем ярче */
-            opacity: 1;
-            background: rgba(0,0,0,0.95);
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        /* Таймер на карте (Коррекция позиции) */
         .rb-timer-map {
-            position: absolute; 
-            top: 15px; /* Сдвинули ближе */
-            left: 50%; transform: translateX(-50%);
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 12px;
-            border: 1px solid #00ffcc; z-index: 90; pointer-events: none;
+            font-weight: bold; font-family: monospace; font-size: 12px; border: 1px solid #00ffcc;
         }
 
-        /* Интерфейс (Боковая панель) */
+        /* Панель */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; 
-            width: 280px;
+            position: fixed; top: 15px; left: 15px; width: 280px;
             background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(15px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        #reset-btn {
-            width: 100%; padding: 12px; margin-bottom: 15px;
-            background: #880000; color: #ffffff; border: 1px solid #ff4444;
-            border-radius: 10px; cursor: pointer; font-weight: bold;
-            text-transform: uppercase; font-size: 12px; letter-spacing: 1px;
-            transition: 0.2s; display: block;
-        }
-        #reset-btn:active { transform: scale(0.98); background: #aa0000; }
-
-        #game-clock-container {
-            background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
-            border: 1px solid #ffd70044; border-radius: 10px;
-            padding: 12px; margin-bottom: 15px; text-align: center;
-        }
-
-        #game-time {
-            font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold;
-            color: #ffd700; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-        }
-
-        #timer-monitor {
-            background: rgba(255, 255, 255, 0.03); border: 1px solid #ffffff11;
-            border-radius: 10px; padding: 5px; margin-top: 15px;
-            max-height: 30vh; overflow-y: auto;
-        }
-        
+        #timer-monitor { margin-top: 15px; max-height: 45vh; overflow-y: auto; border-top: 1px solid #222; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 13px; margin-bottom: 5px; border-bottom: 1px solid #222; 
-            padding: 8px; cursor: pointer; border-radius: 5px;
+            font-size: 12px; padding: 8px; border-bottom: 1px solid #222; cursor: pointer;
         }
-        .monitor-item:hover { background: rgba(255,255,255,0.07); }
-        .monitor-note { color: #00ffcc; font-size: 11px; font-family: monospace; }
+        .monitor-item:hover { background: rgba(255,255,255,0.05); }
         .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.4; } }
-
-        #search-input { 
-            width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; 
-            background: #111; color: #fff; box-sizing: border-box; outline: none;
-        }
+        
+        #game-time { font-size:32px; color:#ffd700; font-family:monospace; text-align:center; margin: 10px 0; }
+        input { width:100%; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:8px; box-sizing:border-box; margin-bottom:10px; }
+        button { cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <button id="reset-btn" onclick="resetAllMarkers()">Сбросить всё</button>
+    <div style="text-align:center; color:#888; font-size:10px; letter-spacing:1px;">L2 GAME TIME</div>
+    <div id="game-time">00:00</div>
 
-    <div id="game-clock-container">
-        <span style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 2px;">L2 Game Time</span>
-        <div id="game-time">--:--</div>
-    </div>
-    
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
+    <button onclick="resetAllFirebase()" style="width:100%; padding:10px; background:#400; color:#f88; border:1px solid #844; border-radius:8px; font-weight:bold; font-size:11px;">СБРОСИТЬ ВСЕ ТАЙМЕРЫ</button>
+
     <div id="timer-monitor">
-        <div id="monitor-list">
-            <div style="color: #555; font-size: 11px; text-align: center; padding: 20px;">Нет активных таймеров</div>
-        </div>
+        <div id="monitor-list"></div>
     </div>
 </div>
 
@@ -154,8 +83,22 @@
 </div>
 
 <script>
+    // --- ТВОИ НАСТРОЙКИ FIREBASE ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
+        projectId: "l2-rb-map",
+        databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app",
+    };
+
+    // Инициализация
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const rbRef = db.ref('bosses');
+
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
-    
+    const SPAWN_WINDOW = 15 * 60; // 15 минут в секундах
+
+    // Данные боссов
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -213,7 +156,7 @@
         { name: "Queen Shyeed", note: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
         { name: "Lord of Splendor Anays", note: "Anays", pos: "top:1402px;left:4036px;" },
         { name: "Sealed Evil Power Sailren", note: "Sailren", pos: "top:1956px;left:3236px;" },
-        { name: "Daimon the White-Eyed", note: "Daimon", pos: "top:1717px;left:4660px;" },
+        { name: "Daimon the White-Eyes", note: "Daimon", pos: "top:1717px;left:4660px;" },
         { name: "Last Lesser Giant Glaki", note: "Glaki", pos: "top:2492px;left:4526px;" },
         { name: "Icicle Emperor Bumbalump", note: "Bumbalump", pos: "top:1103px;left:4403px;" },
         { name: "Gorgolos", note: "GM_RUSMAG BATAT", pos: "top:2542px;left:4659px;" },
@@ -225,38 +168,17 @@
     const wrapper = document.getElementById('map-wrapper');
     const monitorList = document.getElementById('monitor-list');
     const viewport = document.getElementById('viewport');
-    const gameClockDisplay = document.getElementById('game-time');
     
     let scale = window.innerWidth / 5062;
     let posX = 0, posY = 0;
-    let prevDiff = -1;
-
-    // Игровое время
-    const CORRECTION_SECONDS = 6; 
-    const SYNC_REAL_SEC = (22 * 3600) + (56 * 60) + CORRECTION_SECONDS;
-    const SYNC_GAME_MIN = (17 * 60) + 36;
-
-    function updateGameTime() {
-        const now = new Date();
-        const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        const diffRealSec = nowRealSec - SYNC_REAL_SEC;
-        const diffGameMin = diffRealSec / 10;
-        let totalGameMin = Math.floor(SYNC_GAME_MIN + diffGameMin);
-        totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(totalGameMin / 60);
-        const m = totalGameMin % 60;
-        gameClockDisplay.innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
-    }
-
-    setInterval(updateGameTime, 1000);
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
-        posY = (window.innerHeight - (4210 * scale)) / 2;
         drawMarkers();
-        loadState(); 
+        listenFirebase(); 
         update();
-        updateGameTime();
+        setInterval(tick, 1000);
+        setInterval(updateGameTime, 1000);
     }
 
     function drawMarkers() {
@@ -266,110 +188,118 @@
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
-            
-            // Нажатие на метку (или имя)
-            m.onclick = (e) => {
-                e.stopPropagation();
-                if (m.classList.contains('is-alive')) {
-                    // Если живой - сбрасываем состояние
-                    m.classList.remove('is-alive');
-                    boss.currentTime = null;
-                } else if (!boss.timerInterval) {
-                    // Если мертвый и нет таймера - запускаем таймер
-                    startTimer(boss);
-                } else {
-                    // Если таймер идет - фокусируемся
-                    focus(boss);
-                }
-                saveState();
-                updateMonitor();
-            };
+            m.onclick = (e) => { e.stopPropagation(); onMarkerClick(boss); };
             wrapper.appendChild(m);
             boss.markerEl = m;
         });
     }
 
-    function startTimer(boss) {
-        if (boss.timerInterval) return;
-        let timeLeft = 15 * 60; 
-        const timerDisplay = document.createElement('div');
-        timerDisplay.className = 'rb-timer-map';
-        boss.markerEl.appendChild(timerDisplay);
-        
-        boss.timerInterval = setInterval(() => {
-            timeLeft--;
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
-            const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
-            timerDisplay.innerText = timeStr;
-            boss.currentTime = timeStr;
+    // Клик по маркеру
+    function onMarkerClick(boss) {
+        const dbId = boss.name.replace(/\./g, '_'); // Firebase не любит точки
+        if (boss.isAlive) {
+            // Если босс "живой", клик убирает его из базы (сбрасывает статус)
+            rbRef.child(dbId).set(null);
+        } else if (!boss.deathTime) {
+            // Если таймера нет — запускаем новый
+            rbRef.child(dbId).set({ deathTime: Date.now(), isAlive: false });
+        } else {
+            // Если таймер идет — центрируем камеру
+            focus(boss);
+        }
+    }
+
+    // Слушаем базу данных
+    function listenFirebase() {
+        rbRef.on('value', (snapshot) => {
+            const data = snapshot.val() || {};
             
-            if (timeLeft <= 0) {
-                clearInterval(boss.timerInterval);
-                boss.timerInterval = null;
-                if (timerDisplay) timerDisplay.remove();
-                boss.markerEl.classList.add('is-alive');
-                boss.currentTime = "READY!";
-                saveState();
-            }
-            updateMonitor();
-        }, 1000);
-    }
-
-    function resetAllMarkers() {
-        if (!confirm("Сбросить все активные таймеры и красные метки?")) return;
-        bossData.forEach(boss => {
-            if (boss.timerInterval) {
-                clearInterval(boss.timerInterval);
-                boss.timerInterval = null;
-            }
-            boss.currentTime = null;
-            if (boss.markerEl) {
-                boss.markerEl.classList.remove('is-alive');
-                const tMap = boss.markerEl.querySelector('.rb-timer-map');
-                if (tMap) tMap.remove();
-            }
-        });
-        localStorage.removeItem('l2_alive_bosses');
-        updateMonitor();
-    }
-
-    function saveState() {
-        const activeNames = bossData
-            .filter(b => b.markerEl && b.markerEl.classList.contains('is-alive'))
-            .map(b => b.name);
-        localStorage.setItem('l2_alive_bosses', JSON.stringify(activeNames));
-    }
-
-    function loadState() {
-        const saved = localStorage.getItem('l2_alive_bosses');
-        if (saved) {
-            const aliveNames = JSON.parse(saved);
+            // Сброс всех перед обновлением
             bossData.forEach(boss => {
-                if (aliveNames.includes(boss.name)) {
-                    boss.markerEl.classList.add('is-alive');
-                    boss.currentTime = "READY!";
+                boss.deathTime = null;
+                boss.isAlive = false;
+                if(boss.markerEl) {
+                    boss.markerEl.classList.remove('is-alive');
+                    const t = boss.markerEl.querySelector('.rb-timer-map');
+                    if(t) t.remove();
                 }
             });
-            updateMonitor();
-        }
+
+            // Применяем данные
+            for (let id in data) {
+                const name = id.replace(/_/g, '.');
+                const boss = bossData.find(b => b.name === name);
+                if (boss) {
+                    boss.deathTime = data[id].deathTime;
+                    boss.isAlive = data[id].isAlive;
+                    if (boss.isAlive) boss.markerEl.classList.add('is-alive');
+                }
+            }
+            renderMonitor();
+        });
     }
 
-    function updateMonitor() {
-        const active = bossData.filter(b => b.timerInterval || b.currentTime === "READY!");
-        active.sort((a, b) => (a.currentTime === "READY!" ? 1 : -1));
-        if (active.length === 0) {
-            monitorList.innerHTML = '<div style="color: #444; font-size: 11px; text-align: center; padding: 15px;">Список пуст</div>';
-            return;
-        }
+    function resetAllFirebase() {
+        if(confirm("Очистить ВСЕ таймеры для всех игроков?")) rbRef.set(null);
+    }
+
+    // Обновление таймеров каждую секунду
+    function tick() {
+        const now = Date.now();
+        let needsRender = false;
+
+        bossData.forEach(boss => {
+            if (boss.deathTime && !boss.isAlive) {
+                const elapsed = Math.floor((now - boss.deathTime) / 1000);
+                const remaining = SPAWN_WINDOW - elapsed;
+
+                if (remaining <= 0) {
+                    // Время вышло — обновляем в Firebase на "Alive"
+                    const dbId = boss.name.replace(/\./g, '_');
+                    rbRef.child(dbId).update({ isAlive: true, deathTime: null });
+                } else {
+                    let tMap = boss.markerEl.querySelector('.rb-timer-map');
+                    if (!tMap) {
+                        tMap = document.createElement('div');
+                        tMap.className = 'rb-timer-map';
+                        boss.markerEl.appendChild(tMap);
+                    }
+                    const m = Math.floor(remaining / 60);
+                    const s = remaining % 60;
+                    tMap.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                }
+                needsRender = true;
+            }
+        });
+        if (needsRender) renderMonitor();
+    }
+
+    function renderMonitor() {
+        const active = bossData.filter(b => b.deathTime || b.isAlive);
+        active.sort((a, b) => {
+            if (a.isAlive && !b.isAlive) return -1;
+            if (!a.isAlive && b.isAlive) return 1;
+            return a.deathTime - b.deathTime;
+        });
+
+        const now = Date.now();
         monitorList.innerHTML = active.map(b => {
-            const isReady = b.currentTime === "READY!";
+            let timeStr = "READY!";
+            if (!b.isAlive) {
+                const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
+                const m = Math.max(0, Math.floor(rem / 60));
+                const s = Math.max(0, rem % 60);
+                timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
+            }
             return `
                 <div class="monitor-item" onclick="focusByName('${b.name.replace(/'/g, "\\'")}')">
-                    <span class="monitor-note">${b.note}</span>
-                    <span class="${isReady ? 'ready-text' : ''}" style="font-family:monospace; background:${isReady ? '#ff330022' : '#00ffcc22'}; padding:2px 8px; border-radius:4px; border: 1px solid ${isReady ? '#ff3300' : '#00ffcc44'}">
-                        ${b.currentTime}
-                    </span>
+                    <div style="flex:1">
+                        <div style="font-weight:bold; color:#fff">${b.name}</div>
+                        <div style="font-size:10px; color:#666">${b.note}</div>
+                    </div>
+                    <div class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; padding:4px 8px; border:1px solid ${b.isAlive ? '#f30' : '#0fc'}; border-radius:4px;">
+                        ${timeStr}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -382,7 +312,7 @@
 
     function handleSearch() {
         const val = document.getElementById('search-input').value.toLowerCase();
-        if (val.length < 2) return;
+        if (val.length < 3) return;
         const boss = bossData.find(b => b.name.toLowerCase().includes(val) || b.note.toLowerCase().includes(val));
         if (boss) focus(boss);
     }
@@ -390,20 +320,31 @@
     function focus(boss) {
         const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
         const l = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
-        scale = 0.8;
-        posX = (window.innerWidth/2) - (l * scale);
-        posY = (window.innerHeight/2) - (t * scale);
+        scale = window.innerWidth < 600 ? 1.2 : 0.8;
+        posX = (window.innerWidth / 2) - (l * scale);
+        posY = (window.innerHeight / 2) - (t * scale);
         update();
     }
 
-    function update() { 
-        wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
+    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+
+    function updateGameTime() {
+        const SYNC_REAL_SEC = (22 * 3600) + (56 * 60) + 6;
+        const SYNC_GAME_MIN = (17 * 60) + 36;
+        const now = new Date();
+        const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+        const diffRealSec = nowRealSec - SYNC_REAL_SEC;
+        const diffGameMin = diffRealSec / 10;
+        let totalGameMin = Math.floor(SYNC_GAME_MIN + diffGameMin);
+        totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
+        const h = Math.floor(totalGameMin / 60);
+        const m = totalGameMin % 60;
+        document.getElementById('game-time').innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
     // Zoom & Pan
     let isDrag = false, lx, ly;
     viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY); };
-
     function applyZoom(delta, centerX, centerY) {
         const ns = Math.min(Math.max(0.1, scale * delta), 3);
         posX = centerX - (centerX - posX) * (ns / scale);
@@ -411,36 +352,13 @@
         scale = ns;
         update();
     }
-
-    viewport.ontouchstart = e => {
-        if (e.touches.length === 1) { isDrag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }
-        else if (e.touches.length === 2) { isDrag = false; prevDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
-    };
-
-    viewport.ontouchmove = e => {
-        e.preventDefault();
-        if (e.touches.length === 1 && isDrag) {
-            posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
-            lx = e.touches[0].clientX; ly = e.touches[0].clientY; update();
-        } else if (e.touches.length === 2) {
-            const curDiff = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            if (prevDiff > 0) applyZoom(curDiff / prevDiff, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
-            prevDiff = curDiff;
-        }
-    };
-
-    viewport.ontouchend = () => { isDrag = false; prevDiff = -1; };
     viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; }};
     window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }};
     window.onmouseup = () => isDrag = false;
+    viewport.ontouchstart = e => { if (e.touches.length === 1) { isDrag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; } };
+    viewport.ontouchmove = e => { if (e.touches.length === 1 && isDrag) { posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly; lx = e.touches[0].clientX; ly = e.touches[0].clientY; update(); } };
+    viewport.ontouchend = () => isDrag = false;
 
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                console.log('SW registered!');
-            }).catch(err => console.log('SW error:', err));
-        });
-    }
     init();
 </script>
 </body>
