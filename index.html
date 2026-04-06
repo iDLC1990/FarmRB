@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Ultimate Fix</title>
+    <title>L2 RB Map - Notes Restored</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -47,23 +47,23 @@
             z-index: 100; pointer-events: none;
         }
 
-        .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
-        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
-
         /* Боковая панель */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 280px;
+            position: fixed; top: 15px; left: 15px; width: 290px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
         }
-        #monitor-list { margin-top: 15px; max-height: 50vh; overflow-y: auto; }
+        #monitor-list { margin-top: 15px; max-height: 55vh; overflow-y: auto; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
             font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
         }
         .monitor-item:hover { background: rgba(255,255,255,0.1); }
-        .ready-text { color: #ff3300; font-weight: bold; }
         
+        /* Стили для приписки (note) */
+        .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
+        
+        .ready-text { color: #ff3300; font-weight: bold; }
         #game-time { font-size:36px; color:#ffd700; font-family:monospace; text-align:center; margin-bottom: 10px; }
         .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
@@ -99,83 +99,82 @@
     const db = firebase.database();
     const rbRef = db.ref('bosses');
 
-    const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     const SPAWN_WINDOW = 15 * 60; 
 
     let isEditorMode = false;
     let draggedBossId = null;
 
-    // ПОЛНЫЙ СПИСОК БОССОВ (Всегда подгружается первым)
+    // ВОЗВРАЩЕННЫЙ СПИСОК С ПРИПИСКАМИ (note)
     let bossData = [
-        { id: "Abyss_Brukunt", name: "Abyss Brukunt", pos: "top:2721px;left:4385px;" },
-        { id: "Demon_Kurikups", name: "Demon Kurikups", pos: "top:3725px;left:3430px;" },
-        { id: "Ghost_of_the_Lidia", name: "Ghost of the Lidia", pos: "top:1906px;left:4528px;" },
-        { id: "Fierce_Tiger_King_Angel", name: "Fierce Tiger King Angel", pos: "top:2713px;left:4517px;" },
-        { id: "Shilen_Priest_Hisilrome", name: "Shilen's Priest Hisilrome", pos: "top:2279px;left:4503px;" },
-        { id: "Rahha", name: "Rahha", pos: "top:1981px;left:4047px;" },
-        { id: "Enmity_Ghost_Ramdal", name: "Enmity Ghost Ramdal", pos: "top:2128px;left:3955px;" },
-        { id: "Gargoyle_Lord_Tiphon", name: "Gargoyle Lord Tiphon", pos: "top:1853px;left:4509px;" },
-        { id: "Demons_Agent_Falston", name: "Demons Agent Falston", pos: "top:1460px;left:3819px;" },
-        { id: "Kernon_Faithful_Kelone", name: "Kernon's Faithful Kelone", pos: "top:1838px;left:4284px;" },
-        { id: "Spirit_of_Andras", name: "Spirit of Andras", pos: "top:1851px;left:4661px;" },
-        { id: "Anakim_Nemesis_Zakaron", name: "Anakim's Nemesis Zakaron", pos: "top:2750px;left:4256px;" },
-        { id: "Barakiel", name: "Flame of Splendor Barakiel", pos: "top:1376px;left:3793px;" },
-        { id: "Korim", name: "Korim", pos: "top:2259px;left:3958px;" },
-        { id: "Queen_Themis", name: "Palibati Queen Themis", pos: "top:2226px;left:4712px;" },
-        { id: "Cabrio", name: "Shilen's Messenger Cabrio", pos: "top:2145px;left:4614px;" },
-        { id: "Savior_Mardil", name: "Immortal Savior Mardil", pos: "top:2216px;left:3954px;" },
-        { id: "Tanatos", name: "Doom Blade Tanatos", pos: "top:1953px;left:4150px;" },
-        { id: "Sheshark", name: "Water Dragon Seer Sheshark", pos: "top:3295px;left:3959px;" },
-        { id: "Hallate", name: "Death Lord Hallate", pos: "top:2175px;left:3959px;" },
-        { id: "Behemoth", name: "Beast Lord Behemoth", pos: "top:1870px;left:4098px;" },
-        { id: "Meanas_Anor", name: "Meanas Anor", pos: "top:1992px;left:4402px;" },
-        { id: "Skylancer", name: "Roaring Skylancer", pos: "top:2527px;left:4165px;" },
-        { id: "Hellmann", name: "Eilhalder von Hellmann", pos: "top:1729px;left:3504px;" },
-        { id: "Kandra", name: "Vanor Chief Kandra", pos: "top:1565px;left:4027px;" },
-        { id: "Lokness", name: "Fafurion'Herald Lokness", pos: "top:3295px;left:3910px;" },
-        { id: "Sobekk", name: "Krokian Padisha Sobekk", pos: "top:3291px;left:4064px;" },
-        { id: "Decarbia", name: "Bloody Empress Decarbia", pos: "top:2161px;left:4690px;" },
-        { id: "Ipos", name: "Death Lord Ipos", pos: "top:1949px;left:4379px;" },
-        { id: "Shax", name: "Death Lord Shax", pos: "top:1997px;left:4512px;" },
-        { id: "Kernon", name: "Kernon", pos: "top:2129px;left:4074px;" },
-        { id: "Olkuth", name: "Lesser Giant Olkuth", pos: "top:2405px;left:4679px;" },
-        { id: "Naga", name: "Storm Winged Naga", pos: "top:1894px;left:4227px;" },
-        { id: "Palatanos", name: "Palatanos of Horrific Power", pos: "top:1906px;left:4305px;" },
-        { id: "Flamestone_Giant", name: "Flamestone Giant", pos: "top:2014px;left:4287px;" },
-        { id: "Ashakiel", name: "Ocean Flame Ashakiel", pos: "top:3264px;left:4100px;" },
-        { id: "Hestia", name: "Hestia", pos: "top:1152px;left:4191px;" },
-        { id: "Shuriel", name: "Fire of Wrath Shuriel", pos: "top:2174px;left:4076px;" },
-        { id: "Golkonda", name: "Longhorn Golkonda", pos: "top:2216px;left:4078px;" },
-        { id: "Galaxia", name: "Cherub Galaxia", pos: "top:2261px;left:4084px;" },
-        { id: "Shadith", name: "Varka's Hero Shadith", pos: "top:1750px;left:4017px;" },
-        { id: "Mos", name: "Varka's Commander Mos", pos: "top:1770px;left:3960px;" },
-        { id: "Ember", name: "Ember", pos: "top:1173px;left:4720px;" },
-        { id: "Uruka", name: "Uruka", pos: "top:1990px;left:3002px;" },
-        { id: "Ashutar", name: "Soul of Water Ashutar", pos: "top:1765px;left:3911px;" },
-        { id: "Nastron", name: "Soul of Fire Nastron", pos: "top:1411px;left:4266px;" },
-        { id: "Horus", name: "Varka's Chief Horus", pos: "top:1721px;left:3923px;" },
-        { id: "Halter", name: "Andreas van Halter", pos: "top:1640px;left:3222px;" },
-        { id: "Plague_Golem", name: "Plague Golem", pos: "top:1584px;left:4509px;" },
-        { id: "MILENU", name: "MILENU", pos: "top:3972px;left:3737px;" },
-        { id: "Brakki", name: "Ketra's Chief Brakki", pos: "top:1385px;left:4289px;" },
-        { id: "Tayr", name: "Ketra's Commander Tayr", pos: "top:1421px;left:4298px;" },
-        { id: "Hekaton", name: "Ketra's Hero Hekaton", pos: "top:1477px;left:4316px;" },
-        { id: "Queen_Shyeed", name: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
-        { id: "Anays", name: "Lord of Splendor Anays", pos: "top:1402px;left:4036px;" },
-        { id: "Sailren", name: "Sailren", pos: "top:1956px;left:3236px;" },
-        { id: "Daimon", name: "Daimon the White-Eyes", pos: "top:1717px;left:4660px;" },
-        { id: "Glaki", name: "Last Lesser Giant Glaki", pos: "top:2492px;left:4526px;" },
-        { id: "Bumbalump", name: "Icicle Emperor Bumbalump", pos: "top:1103px;left:4403px;" },
-        { id: "Gorgolos", name: "Gorgolos", pos: "top:2542px;left:4659px;" },
-        { id: "Kastor", name: "Roaring Lord Kastor", pos: "top:2035px;left:3921px;" },
-        { id: "Hekaton_Prime", name: "Hekaton Prime", pos: "top:2606px;left:4688px;" },
-        { id: "Utenus", name: "Last Titan Utenus", pos: "top:2579px;left:4672px;" },
-        { id: "Isabella", name: "Isabella", pos: "top:2627px;left:2408px;" },
-        { id: "Sharpshooter", name: "Royal Sharpshooter", pos: "top:2638px;left:3712px;" },
-        { id: "Mimir", name: "Enchanced Mimir", pos: "top:2937px;left:4001px;" },
-        { id: "Makkum", name: "Abyssal Makkum", pos: "top:2567px;left:3804px;" },
-        { id: "gordon", name: "gordon", pos: "top:1577px;left:4400px;" },
-        { id: "Typhoon", name: "Typhoon", pos: "top:4008px;left:2830px;" }
+        { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
+        { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
+        { id: "Ghost_of_the_Lidia", name: "Ghost of the Lidia", note: "ll_woatab center", pos: "top:1906px;left:4528px;" },
+        { id: "Fierce_Tiger_King_Angel", name: "Fierce Tiger King Angel", note: "ll_woatab 1tab", pos: "top:2713px;left:4517px;" },
+        { id: "Shilen_Priest_Hisilrome", name: "Shilen's Priest Hisilrome", note: "ll_woatab 3tab", pos: "top:2279px;left:4503px;" },
+        { id: "Rahha", name: "Rahha", note: "pp_woawarka KETP", pos: "top:1981px;left:4047px;" },
+        { id: "Enmity_Ghost_Ramdal", name: "Enmity Ghost Ramdal", note: "dd_sumtoi 1pl", pos: "top:2128px;left:3955px;" },
+        { id: "Gargoyle_Lord_Tiphon", name: "Gargoyle Lord Tiphon", note: "ww_ulanworktk tripon", pos: "top:1853px;left:4509px;" },
+        { id: "Demons_Agent_Falston", name: "Demons Agent Falston", note: "ll_woatab 5tab", pos: "top:1460px;left:3819px;" },
+        { id: "Kernon_Faithful_Kelone", name: "Kernon's Faithful Kelone", note: "th_ostrov bswerx", pos: "top:1838px;left:4284px;" },
+        { id: "Spirit_of_Andras", name: "Spirit of Andras", note: "ww_ulanworktk androna", pos: "top:1851px;left:4661px;" },
+        { id: "Anakim_Nemesis_Zakaron", name: "Anakim's Nemesis Zakaron", note: "kk_port1 ssakaron", pos: "top:2750px;left:4256px;" },
+        { id: "Barakiel", name: "Flame of Splendor Barakiel", note: "ll_woatab finisrb", pos: "top:1376px;left:3793px;" },
+        { id: "Korim", name: "Korim", note: "ww_ulanworktk ibobo", pos: "top:2259px;left:3958px;" },
+        { id: "Queen_Themis", name: "Palibati Queen Themis", note: "ww_ulanworktk paibatis", pos: "top:2226px;left:4712px;" },
+        { id: "Cabrio", name: "Shilen's Messenger Cabrio", note: "kk_port1 sabrio", pos: "top:2145px;left:4614px;" },
+        { id: "Savior_Mardil", name: "Immortal Savior Mardil", note: "dd_sumtoi 4pl", pos: "top:2216px;left:3954px;" },
+        { id: "Tanatos", name: "Doom Blade Tanatos", note: "pp_woawarka KBOX", pos: "top:1953px;left:4150px;" },
+        { id: "Sheshark", name: "Water Dragon Seer Sheshark", note: "th_ostrov ostrov2", pos: "top:3295px;left:3959px;" },
+        { id: "Hallate", name: "Death Lord Hallate", note: "dd_sumtoi 2pl", pos: "top:2175px;left:3959px;" },
+        { id: "Behemoth", name: "Beast Lord Behemoth", note: "LL_ULANX500 PIhIMOT", pos: "top:1870px;left:4098px;" },
+        { id: "Meanas_Anor", name: "Meanas Anor", note: "pp_woawarka wbox", pos: "top:1992px;left:4402px;" },
+        { id: "Skylancer", name: "Roaring Skylancer", note: "pp_woawarka lancer", pos: "top:2527px;left:4165px;" },
+        { id: "Hellmann", name: "Eilhalder von Hellmann", note: "th_ostrov fodvil", pos: "top:1729px;left:3504px;" },
+        { id: "Kandra", name: "Vanor Chief Kandra", note: "kk_port1 kandraa", pos: "top:1565px;left:4027px;" },
+        { id: "Lokness", name: "Fafurion'Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
+        { id: "Sobekk", name: "Krokian Padisha Sobekk", note: "th_ostrov ostrov3", pos: "top:3291px;left:4064px;" },
+        { id: "Decarbia", name: "Bloody Empress Decarbia", note: "LL_ULANX500 kobria", pos: "top:2161px;left:4690px;" },
+        { id: "Ipos", name: "Death Lord Ipos", note: "LL_ULANX500 IBOS", pos: "top:1949px;left:4379px;" },
+        { id: "Shax", name: "Death Lord Shax", note: "kk_port1 sky4len", pos: "top:1997px;left:4512px;" },
+        { id: "Kernon", name: "Kernon", note: "dd_sumtoi 8pl", pos: "top:2129px;left:4074px;" },
+        { id: "Olkuth", name: "Lesser Giant Olkuth", note: "LL_ULANX500 PLOVER", pos: "top:2405px;left:4679px;" },
+        { id: "Naga", name: "Storm Winged Naga", note: "th_ostrov bsnaga", pos: "top:1894px;left:4227px;" },
+        { id: "Palatanos", name: "Palatanos of Horrific Power", note: "pp_woawarka PALATAN5", pos: "top:1906px;left:4305px;" },
+        { id: "Flamestone_Giant", name: "Flamestone Giant", note: "pp_woawarka WATP", pos: "top:2014px;left:4287px;" },
+        { id: "Ashakiel", name: "Ocean Flame Ashakiel", note: "th_ostrov ostrov4", pos: "top:3264px;left:4100px;" },
+        { id: "Hestia", name: "Hestia", note: "kk_port1 hestia", pos: "top:1152px;left:4191px;" },
+        { id: "Shuriel", name: "Fire of Wrath Shuriel", note: "dd_sumtoi 10pl", pos: "top:2174px;left:4076px;" },
+        { id: "Golkonda", name: "Longhorn Golkonda", note: "ww_ulanworktk halgonda", pos: "top:2216px;left:4078px;" },
+        { id: "Galaxia", name: "Cherub Galaxia", note: "dd_sumtoi 13pl", pos: "top:2261px;left:4084px;" },
+        { id: "Shadith", name: "Varka's Hero Shadith", note: "pp_woawarka iiiadit", pos: "top:1750px;left:4017px;" },
+        { id: "Mos", name: "Varka's Commander Mos", note: "LL_ULANX500 5ALI", pos: "top:1770px;left:3960px;" },
+        { id: "Ember", name: "Ember", note: "ww_ulanworktk bember", pos: "top:1173px;left:4720px;" },
+        { id: "Uruka", name: "Uruka", note: "ww_ulanworktk urkahan", pos: "top:1990px;left:3002px;" },
+        { id: "Ashutar", name: "Soul of Water Ashutar", note: "kk_port1 wwarka", pos: "top:1765px;left:3911px;" },
+        { id: "Nastron", name: "Soul of Fire Nastron", note: "kk_port1 kketra", pos: "top:1411px;left:4266px;" },
+        { id: "Horus", name: "Varka's Chief Horus", note: "LL_ULANX500 4ALI", pos: "top:1721px;left:3923px;" },
+        { id: "Halter", name: "Andreas van Halter", note: "LL_ULANX500 PAGANKA", pos: "top:1640px;left:3222px;" },
+        { id: "Plague_Golem", name: "Plague Golem", note: "ll_woatab 4tab", pos: "top:1584px;left:4509px;" },
+        { id: "MILENU", name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" },
+        { id: "Brakki", name: "Ketra's Chief Brakki", note: "kk_port1 kketra", pos: "top:1385px;left:4289px;" },
+        { id: "Tayr", name: "Ketra's Commander Tayr", note: "kk_port1 kketra", pos: "top:1421px;left:4298px;" },
+        { id: "Hekaton", name: "Ketra's Hero Hekaton", note: "Ketra Hekaton", pos: "top:1477px;left:4316px;" },
+        { id: "Queen_Shyeed", name: "Queen Shyeed", note: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
+        { id: "Anays", name: "Lord of Splendor Anays", note: "Anays", pos: "top:1402px;left:4036px;" },
+        { id: "Sailren", name: "Sailren", note: "Sailren", pos: "top:1956px;left:3236px;" },
+        { id: "Daimon", name: "Daimon the White-Eyes", note: "Daimon", pos: "top:1717px;left:4660px;" },
+        { id: "Glaki", name: "Last Lesser Giant Glaki", note: "Glaki", pos: "top:2492px;left:4526px;" },
+        { id: "Bumbalump", name: "Icicle Emperor Bumbalump", note: "Bumbalump", pos: "top:1103px;left:4403px;" },
+        { id: "Gorgolos", name: "Gorgolos", note: "GM_RUSMAG BATAT", pos: "top:2542px;left:4659px;" },
+        { id: "Kastor", name: "Roaring Lord Kastor", note: "Kastor", pos: "top:2035px;left:3921px;" },
+        { id: "Hekaton_Prime", name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
+        { name: "Isabella", note: "newly added", pos: "top:2627px;left:2408px;" },
+{ name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
+{ name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
+{ name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
+{ name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
+{ name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" },
+        { id: "Utenus", name: "Last Titan Utenus", note: "GM_RUSMAG BATAT", pos: "top:2579px;left:4672px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
@@ -184,32 +183,21 @@
     let posX = 0, posY = 0;
 
     function init() {
-        wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
-        update();
-        // Сначала рисуем все метки из кода
+        wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
         bossData.forEach(createMarker);
-        // Потом подключаем Firebase для обновления статусов
+        update();
         listenFirebase(); 
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
-        addSpecialMarker();
-    }
-
-    function addSpecialMarker() {
-        const sm = document.createElement('div');
-        sm.className = 'rb-marker special-marker';
-        sm.style.top = "2970px"; sm.style.left = "4322px";
-        sm.setAttribute('data-name', 'SECRET MINI-MAP');
-        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'block'; };
-        wrapper.appendChild(sm);
     }
 
     function createMarker(boss) {
         let m = document.createElement('div');
         m.id = 'rb-' + boss.id;
         m.className = 'rb-marker';
-        m.style.top = boss.pos.split(';')[0].split(':')[1];
-        m.style.left = boss.pos.split(';')[1].split(':')[1];
+        const p = boss.pos.split(';');
+        m.style.top = p[0].split(':')[1];
+        m.style.left = p[1].split(':')[1];
         m.setAttribute('data-name', boss.name);
         
         let clickTimer = null;
@@ -252,8 +240,9 @@
                         boss.pos = item.pos;
                         const m = document.getElementById('rb-' + boss.id);
                         if (m && !m.classList.contains('dragging')) {
-                            m.style.top = item.pos.split(';')[0].split(':')[1];
-                            m.style.left = item.pos.split(';')[1].split(':')[1];
+                            const p = item.pos.split(';');
+                            m.style.top = p[0].split(':')[1];
+                            m.style.left = p[1].split(':')[1];
                         }
                     }
                 }
@@ -302,7 +291,11 @@
                 timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <b>${b.name}</b> <span class="${b.isAlive ? 'ready-text' : ''}">${timeStr}</span>
+                <div>
+                    <div style="font-weight:bold">${b.name}</div>
+                    <div class="rb-note-text">${b.note || ""}</div>
+                </div>
+                <span class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid; padding:2px 5px; border-radius:4px">${timeStr}</span>
             </div>`;
         }).join('');
     }
