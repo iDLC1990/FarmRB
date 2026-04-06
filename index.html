@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Protected Editor</title>
+    <title>L2 RB Map - Global Time Sync</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -351,12 +351,19 @@
 
     function updateGameTime() {
         const now = new Date();
-        const nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        const syncReal = (22 * 3600) + (56 * 60) + 6;
+        // Исправлено: используем UTC секунды для глобальной синхронизации
+        const nowSec = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
+        
+        // Точка синхронизации пересчитана под UTC
+        const syncReal = (19 * 3600) + (56 * 60) + 6; 
         const syncGame = (17 * 60) + 36;
+        
         let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
         gameMin = ((gameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(gameMin / 60); const m = gameMin % 60;
+        
+        const h = Math.floor(gameMin / 60); 
+        const m = gameMin % 60;
+        
         document.getElementById('game-time').innerText = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}`;
     }
 
