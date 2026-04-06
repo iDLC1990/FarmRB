@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - LIVE Sync & Sub-Map Editor</title>
+    <title>L2 RB Map - LIVE Sync & Editor</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -14,68 +14,49 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* Метки */
         .rb-marker {
             position: absolute; width: 12px; height: 12px;
             background: rgba(150, 150, 150, 0.4); border: 1px solid #555;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             transition: background 0.3s;
         }
+
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
         }
+
+        /* Стили режима конструктора */
+        .edit-mode .rb-marker { border: 2px dashed #ff0 !important; cursor: move !important; width: 16px; height: 16px; }
+        #coords-output { 
+            display:none; background:#000; color:#0f0; padding:10px; font-size:10px; 
+            font-family:monospace; margin-top:10px; max-height:150px; overflow-y:auto; border: 1px solid #333;
+            white-space: pre-wrap; word-break: break-all;
+        }
+
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #bbb; padding: 2px 8px; border-radius: 4px; 
             font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
         }
 
-        /* Таймер на карте */
         .rb-timer-map {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 4px;
             font-weight: bold; font-family: monospace; font-size: 12px; border: 1px solid #00ffcc;
         }
 
-        /* Метка входа на подкарту */
-        .submap-entrance {
-            position: absolute; width: 30px; height: 30px;
-            background: rgba(0, 255, 200, 0.2); border: 2px solid #0ff;
-            border-radius: 50%; transform: translate(-50%, -50%); z-index: 5; cursor: pointer;
-            box-shadow: 0 0 15px #0ff; animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.2); } 100% { transform: translate(-50%, -50%) scale(1); } }
-
-        /* Окно подкарты */
-        #submap-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.95); z-index: 5000; justify-content: center; align-items: center;
-            backdrop-filter: blur(10px);
-        }
-        #submap-container {
-            position: relative; width: 90vw; height: 90vh; border: 2px solid #444; overflow: hidden; background: #111;
-        }
-        #submap-wrapper {
-            position: absolute; width: 2000px; height: 2000px; /* Размер 34.jpg */
-            background-repeat: no-repeat; background-size: cover; transform-origin: 0 0;
-        }
-
-        /* Интерфейс */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 280px;
             background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(15px);
         }
+
         #game-time { font-size:32px; color:#ffd700; font-family:monospace; text-align: center; margin-bottom: 10px; }
         input { width:100%; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:8px; margin-bottom:10px; box-sizing: border-box; }
+        
         button { width:100%; padding:8px; border-radius:5px; cursor:pointer; font-size:11px; margin-bottom: 5px; border: 1px solid #444; color: white; background: #222; }
         #edit-mode-btn { background: #440; color: #ff0; border-color: #880; font-weight: bold; }
-        
-        #coords-output { 
-            display:none; background:#000; color:#0f0; padding:10px; font-size:9px; 
-            font-family:monospace; margin-top:10px; max-height:100px; overflow-y:auto; border: 1px solid #333;
-        }
         
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
@@ -90,8 +71,10 @@
 <div id="sidebar">
     <div id="game-time">--:--</div>
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
+    
     <button id="edit-mode-btn" onclick="toggleEditMode()">КОНСТРУКТОР: OFF</button>
     <button onclick="resetAllFirebase()" style="color:#f66;">СБРОСИТЬ ВСЕ ТАЙМЕРЫ</button>
+    
     <div id="coords-output"></div>
     <div id="monitor-list"></div>
 </div>
@@ -100,15 +83,8 @@
     <div id="map-wrapper"></div>
 </div>
 
-<!-- Оверлей подкарты -->
-<div id="submap-overlay">
-    <button onclick="closeSubMap()" style="position:fixed; top:20px; right:20px; z-index:6000; padding:10px 20px; background:#800; border-radius:5px; color:white; border:none; cursor:pointer;">ЗАКРЫТЬ КАРТУ</button>
-    <div id="submap-container" id="sub-viewport">
-        <div id="submap-wrapper"></div>
-    </div>
-</div>
-
 <script>
+    // --- КОНФИГУРАЦИЯ FIREBASE ---
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
@@ -119,14 +95,10 @@
     const db = firebase.database();
     const rbRef = db.ref('bosses');
 
-    const MAIN_MAP = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
-    const SUB_MAP_IMG = "https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true";
+    const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
     const TIMER_SEC = 15 * 60;
 
     let isEditMode = false;
-    let isSubMapOpen = false;
-
-    // ГЛАВНЫЙ СПИСОК БОССОВ
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -193,121 +165,111 @@
         { name: "Last Titan Utenus", note: "GM_RUSMAG BATAT", pos: "top:2579px;left:4672px;" }
     ];
 
-    // БОССЫ ДЛЯ ПОДКАРТЫ (34.jpg)
-    let subBossData = [
-        { name: "Sub-Boss Example", note: "34.jpg boss", pos: "top:500px;left:500px;" }
-    ];
-
     const wrapper = document.getElementById('map-wrapper');
-    const subWrapper = document.getElementById('submap-wrapper');
     const viewport = document.getElementById('viewport');
     let scale = 0.3, posX = 0, posY = 0;
-    let subScale = 1.0, subX = 0, subY = 0;
 
     function init() {
-        wrapper.style.backgroundImage = `url('${MAIN_MAP}')`;
-        subWrapper.style.backgroundImage = `url('${SUB_MAP_IMG}')`;
-        drawMarkers(wrapper, bossData);
-        drawSubMapEntrance();
+        wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
+        drawMarkers();
         listenFirebase();
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
         update();
     }
 
-    // Вход на подкарту
-    function drawSubMapEntrance() {
-        const ent = document.createElement('div');
-        ent.className = 'submap-entrance';
-        ent.style.cssText = "top:2970px;left:4322px;";
-        ent.onclick = openSubMap;
-        wrapper.appendChild(ent);
-    }
-
-    function openSubMap() {
-        isSubMapOpen = true;
-        document.getElementById('submap-overlay').style.display = 'flex';
-        drawMarkers(subWrapper, subBossData);
-    }
-
-    function closeSubMap() {
-        isSubMapOpen = false;
-        document.getElementById('submap-overlay').style.display = 'none';
-    }
-
-    // Режим конструктора
+    // --- РЕЖИМ КОНСТРУКТОРА ---
     function toggleEditMode() {
         isEditMode = !isEditMode;
         document.body.classList.toggle('edit-mode', isEditMode);
         document.getElementById('edit-mode-btn').innerText = isEditMode ? "КОНСТРУКТОР: ON" : "КОНСТРУКТОР: OFF";
         document.getElementById('edit-mode-btn').style.background = isEditMode ? "#660" : "#440";
         document.getElementById('coords-output').style.display = isEditMode ? "block" : "none";
-        generateCode();
+        if(isEditMode) generateCode();
     }
 
-    function drawMarkers(container, data) {
-        container.innerHTML = '';
-        if(container === wrapper) drawSubMapEntrance(); // Не забываем вход
-        
-        data.forEach((boss) => {
+    function drawMarkers() {
+        wrapper.innerHTML = '';
+        bossData.forEach((boss) => {
             const m = document.createElement('div');
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
+            
             let lastTap = 0;
 
+            // Перетаскивание (только в режиме конструктора)
             m.onmousedown = (e) => {
                 if (!isEditMode) return;
                 e.stopPropagation();
-                const currentScale = container === wrapper ? scale : 1; 
-                const onMove = (ev) => {
-                    const rect = container.getBoundingClientRect();
-                    const x = Math.round((ev.clientX - rect.left) / currentScale);
-                    const y = Math.round((ev.clientY - rect.top) / currentScale);
+                const onMouseMove = (ev) => {
+                    const rect = wrapper.getBoundingClientRect();
+                    const x = Math.round((ev.clientX - rect.left) / scale);
+                    const y = Math.round((ev.clientY - rect.top) / scale);
                     boss.pos = `top:${y}px;left:${x}px;`;
                     m.style.cssText = boss.pos;
                     generateCode();
                 };
-                window.onmousemove = onMove;
+                window.onmousemove = onMouseMove;
                 window.onmouseup = () => window.onmousemove = null;
             };
 
+            // Клик по маркеру (Двойной - активация, Одиночный - фокус)
             m.onclick = (e) => {
                 if (isEditMode) return;
                 e.stopPropagation();
                 const now = Date.now();
-                if (now - lastTap < 300) { onMarkerClick(boss); lastTap = 0; }
-                else { if(container === wrapper) focus(boss); lastTap = now; }
+                if (now - lastTap < 300) {
+                    onMarkerClick(boss);
+                    lastTap = 0;
+                } else {
+                    focus(boss);
+                    lastTap = now;
+                }
             };
-            container.appendChild(m);
+
+            wrapper.appendChild(m);
             boss.markerEl = m;
         });
     }
 
+    // Клик по пустой карте для нового РБ
+    wrapper.onclick = (e) => {
+        if (!isEditMode || e.target !== wrapper) return;
+        const rect = wrapper.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left) / scale);
+        const y = Math.round((e.clientY - rect.top) / scale);
+        const name = prompt("Имя нового РБ:");
+        if (name) {
+            bossData.push({ name: name, note: "newly added", pos: `top:${y}px;left:${x}px;` });
+            drawMarkers();
+            generateCode();
+        }
+    };
+
     function generateCode() {
-        const mainCode = bossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
-        const subCode = subBossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
-        document.getElementById('coords-output').innerText = "MAIN DATA:\n" + mainCode + "\n\nSUB DATA:\n" + subCode;
+        const code = bossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
+        document.getElementById('coords-output').innerText = "Скопируй это в bossData:\n\n" + code;
     }
 
-    // Firebase
+    // --- ЛОГИКА FIREBASE & ТАЙМЕРОВ ---
     function onMarkerClick(boss) {
-        const id = boss.name.replace(/\./g, '_');
-        if (boss.isAlive) rbRef.child(id).set(null);
-        else if (!boss.deathTime) rbRef.child(id).set({ deathTime: Date.now(), isAlive: false });
+        const dbId = boss.name.replace(/\./g, '_');
+        if (boss.isAlive) rbRef.child(dbId).set(null);
+        else if (!boss.deathTime) rbRef.child(dbId).set({ deathTime: Date.now(), isAlive: false });
     }
 
     function listenFirebase() {
-        rbRef.on('value', (s) => {
-            const data = s.val() || {};
-            [...bossData, ...subBossData].forEach(boss => {
+        rbRef.on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            bossData.forEach(boss => {
                 const node = data[boss.name.replace(/\./g, '_')];
                 boss.deathTime = node ? node.deathTime : null;
                 boss.isAlive = node ? node.isAlive : false;
                 if(boss.markerEl) {
                     boss.markerEl.classList.toggle('is-alive', boss.isAlive);
-                    const oldT = boss.markerEl.querySelector('.rb-timer-map');
-                    if(oldT) oldT.remove();
+                    const existingTimer = boss.markerEl.querySelector('.rb-timer-map');
+                    if (existingTimer) existingTimer.remove();
                 }
             });
             renderMonitor();
@@ -315,53 +277,61 @@
     }
 
     function tick() {
-        [...bossData, ...subBossData].forEach(boss => {
+        bossData.forEach(boss => {
             if (boss.deathTime && !boss.isAlive) {
                 const rem = TIMER_SEC - Math.floor((Date.now() - boss.deathTime) / 1000);
-                if (rem <= 0) rbRef.child(boss.name.replace(/\./g, '_')).update({ isAlive: true, deathTime: null });
-                else {
+                if (rem <= 0) {
+                    rbRef.child(boss.name.replace(/\./g, '_')).update({ isAlive: true, deathTime: null });
+                } else {
                     let tMap = boss.markerEl.querySelector('.rb-timer-map');
-                    if (!tMap) { tMap = document.createElement('div'); tMap.className = 'rb-timer-map'; boss.markerEl.appendChild(tMap); }
-                    const m = Math.floor(rem/60), s = rem%60;
-                    tMap.innerText = `${m}:${s<10?'0':''}${s}`;
+                    if (!tMap) {
+                        tMap = document.createElement('div');
+                        tMap.className = 'rb-timer-map';
+                        boss.markerEl.appendChild(tMap);
+                    }
+                    const m = Math.floor(rem / 60), s = rem % 60;
+                    tMap.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
                 }
             }
         });
     }
 
     function renderMonitor() {
-        const active = [...bossData, ...subBossData].filter(b => b.deathTime || b.isAlive);
-        active.sort((a,b) => (a.isAlive?-1:1)-(b.isAlive?-1:1) || a.deathTime - b.deathTime);
-        document.getElementById('monitor-list').innerHTML = active.map(b => {
-            let ts = "READY!";
-            if(!b.isAlive){
-                const r = TIMER_SEC - Math.floor((Date.now()-b.deathTime)/1000);
-                ts = `${Math.floor(r/60)}:${(r%60)<10?'0':''}${r%60}`;
+        const active = bossData.filter(b => b.deathTime || b.isAlive);
+        active.sort((a, b) => (a.isAlive ? -1 : 1) - (b.isAlive ? -1 : 1) || a.deathTime - b.deathTime);
+        const list = document.getElementById('monitor-list');
+        list.innerHTML = active.map(b => {
+            let timeStr = "READY!";
+            if (!b.isAlive) {
+                const rem = TIMER_SEC - Math.floor((Date.now() - b.deathTime) / 1000);
+                const m = Math.max(0, Math.floor(rem / 60)), s = Math.max(0, rem % 60);
+                timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
             }
-            return `<div class="monitor-item" onclick="focusByName('${b.name}')"><span>${b.name}</span><span class="${b.isAlive?'ready-text':''}">${ts}</span></div>`;
+            return `<div class="monitor-item" onclick="focusByName('${b.name}')">
+                <span>${b.name}</span>
+                <span class="${b.isAlive?'ready-text':''}">${timeStr}</span>
+            </div>`;
         }).join('');
     }
 
-    function resetAllFirebase() { if(confirm("Сбросить?")) rbRef.set(null); }
+    function resetAllFirebase() { if(confirm("Сбросить всё?")) rbRef.set(null); }
 
-    // Камера
+    // --- УПРАВЛЕНИЕ КАМЕРОЙ & ЗУМОМ ---
     function focus(b) {
         const t = parseInt(b.pos.match(/top:(\d+)/)[1]), l = parseInt(b.pos.match(/left:(\d+)/)[1]);
         scale = 0.8; posX = window.innerWidth/2 - l*scale; posY = window.innerHeight/2 - t*scale;
         update();
     }
-    function focusByName(n) { 
-        if(isSubMapOpen) return;
-        const b = bossData.find(x => x.name === n); 
-        if(b) focus(b); 
-    }
-    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+
+    function focusByName(n) { const b = bossData.find(x => x.name === n); if(b) focus(b); }
 
     function handleSearch() {
-        const v = document.getElementById('search-input').value.toLowerCase();
-        const b = bossData.find(x => x.name.toLowerCase().includes(v));
-        if(b && v.length > 2) focus(b);
+        const val = document.getElementById('search-input').value.toLowerCase();
+        const b = bossData.find(x => x.name.toLowerCase().includes(val));
+        if (b && val.length > 2) focus(b);
     }
+
+    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     function updateGameTime() {
         const now = new Date();
@@ -370,30 +340,27 @@
         document.getElementById('game-time').innerText = `${h<10?'0'+h:h}:${m<10?'0'+m:m}`;
     }
 
-    // Zoom & Pan
+    // Zoom & Pan Logic (PC + Mobile)
     let isDrag = false, lx, ly, initialDist = 0;
     viewport.onmousedown = e => { if(e.button===0){isDrag=true; lx=e.clientX; ly=e.clientY;}};
-    window.onmousemove = e => { if(isDrag && !isSubMapOpen){posX+=e.clientX-lx; posY+=e.clientY-ly; lx=e.clientX; ly=e.clientY; update();}};
+    window.onmousemove = e => { if(isDrag){posX+=e.clientX-lx; posY+=e.clientY-ly; lx=e.clientX; ly=e.clientY; update();}};
     window.onmouseup = () => isDrag = false;
 
     viewport.addEventListener('wheel', e => {
-        if(isSubMapOpen) return;
         e.preventDefault();
-        const d = e.deltaY > 0 ? 0.8 : 1.2;
-        const ns = Math.min(Math.max(0.05, scale * d), 4);
+        const delta = e.deltaY > 0 ? 0.8 : 1.2;
+        const ns = Math.min(Math.max(0.05, scale * delta), 4);
         posX = e.clientX - (e.clientX - posX) * (ns / scale);
         posY = e.clientY - (e.clientY - posY) * (ns / scale);
         scale = ns; update();
     }, {passive: false});
 
     viewport.addEventListener('touchstart', e => {
-        if(isSubMapOpen) return;
         if(e.touches.length === 1){ isDrag=true; lx=e.touches[0].clientX; ly=e.touches[0].clientY; }
         if(e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     }, {passive: false});
 
     viewport.addEventListener('touchmove', e => {
-        if(isSubMapOpen) return;
         e.preventDefault();
         if(e.touches.length === 1 && isDrag){
             posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
@@ -401,8 +368,8 @@
         }
         if(e.touches.length === 2){
             const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-            const d = dist / initialDist;
-            const ns = Math.min(Math.max(0.05, scale * d), 4);
+            const delta = dist / initialDist;
+            const ns = Math.min(Math.max(0.05, scale * delta), 4);
             const cx = (e.touches[0].clientX + e.touches[1].clientX)/2, cy = (e.touches[0].clientY + e.touches[1].clientY)/2;
             posX = cx - (cx - posX) * (ns / scale); posY = cy - (cy - posY) * (ns / scale);
             scale = ns; initialDist = dist; update();
