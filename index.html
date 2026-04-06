@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Reset Function</title>
+    <title>L2 RB Map - Protected Editor</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -44,6 +44,9 @@
             z-index: 100; pointer-events: none;
         }
 
+        .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
+        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
+
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 290px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
@@ -64,7 +67,6 @@
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
         .btn-reset { background: #441111; color: #ff6666; border: 1px solid #662222; margin-top: 5px; }
-        .btn-reset:hover { background: #662222; color: #fff; }
 
         #minimap-overlay {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -181,10 +183,23 @@
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
         bossData.forEach(createMarker);
+        addSpecialMarker();
         update();
         listenFirebase(); 
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
+    }
+
+    function addSpecialMarker() {
+        const sm = document.createElement('div');
+        sm.className = 'rb-marker special-marker';
+        sm.style.top = "2970px"; sm.style.left = "4322px";
+        sm.setAttribute('data-name', 'SECRET MINI-MAP');
+        sm.onclick = (e) => { 
+            e.stopPropagation(); 
+            document.getElementById('minimap-overlay').style.display = 'block'; 
+        };
+        wrapper.appendChild(sm);
     }
 
     function createMarker(boss) {
@@ -241,9 +256,6 @@
                             m.style.left = p[1].split(':')[1];
                         }
                     }
-                } else {
-                    boss.deathTime = null;
-                    boss.isAlive = false;
                 }
                 const m = document.getElementById('rb-' + boss.id);
                 if (m) {
@@ -311,9 +323,21 @@
     }
 
     function toggleEditor() {
-        isEditorMode = !isEditorMode;
-        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
-        document.getElementById('editor-btn').classList.toggle('active');
+        if (!isEditorMode) {
+            const pass = prompt("Введите пароль для входа в режим редактора:");
+            if (pass === "D36rk43mgm") {
+                isEditorMode = true;
+            } else {
+                alert("Неверный пароль!");
+                return;
+            }
+        } else {
+            isEditorMode = false;
+        }
+        
+        const btn = document.getElementById('editor-btn');
+        btn.innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
+        btn.classList.toggle('active');
     }
 
     function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
