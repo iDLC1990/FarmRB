@@ -187,7 +187,7 @@
         setInterval(updateGameTime, 1000);
     }
 
-    function createMarker(boss) {
+   function createMarker(boss) {
         if (!boss || !boss.id || !boss.pos) return;
         if (document.getElementById('rb-' + boss.id)) return;
 
@@ -203,30 +203,66 @@
 
         m.setAttribute('data-name', boss.name);
         
-        let lastClick = 0;
+        // --- ОБНОВЛЕННАЯ ЛОГИКА КЛИКОВ ---
+        let lastClickTime = 0;
 
-        m.onpointerdown = (e) => {
+        m.addEventListener('pointerdown', (e) => {
             if (isEditorMode) {
                 e.stopPropagation();
                 draggedBossId = boss.id;
                 m.classList.add('dragging');
                 m.setPointerCapture(e.pointerId);
-                return;
             }
+        });
+
+        m.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation(); // Запрещаем карте реагировать
+
+            if (isEditorMode) return;
 
             const now = Date.now();
-            if (now - lastClick < 300) {
-                e.stopPropagation();
+            const diff = now - lastClickTime;
+
+            if (diff > 50 && diff < 400) {
+                // ЭТО ДАБЛКЛИК
+                lastClickTime = 0; 
                 toggleBossStatus(boss.id);
-                lastClick = 0;
             } else {
-                lastClick = now;
+                // ЭТО ОДИНОЧНЫЙ КЛИК
+                lastClickTime = now;
                 setTimeout(() => {
-                    if (lastClick !== 0) { focus(boss); lastClick = 0; }
-                }, 300);
+                    if (lastClickTime !== 0) {
+                        focus(boss);
+                        lastClickTime = 0;
+                    }
+                }, 400);
             }
-        };
+        });
+        
         wrapper.appendChild(m);
+    }
+
+    function toggleBossStatus(id) {
+        // Находим актуальные данные напрямую из массива, который обновил Firebase
+        const b = bossData.find(x => x.id === id);
+        if (!b) return;
+
+        console.log("Переключаю статус для:", id, "Текущее состояние:", b.isAlive ? "Жив" : "Мертв");
+
+        if (b.isAlive || b.deathTime) {
+            // Если босс был жив или таймер уже шел — сбрасываем в "просто мертв"
+            rbRef.child(id).update({
+                isAlive: false,
+                deathTime: null
+            });
+        } else {
+            // Если босс был серый (просто мертв) — запускаем таймер респауна
+            rbRef.child(id).update({
+                isAlive: false,
+                deathTime: Date.now()
+            });
+        }
     }
 
     function toggleBossStatus(id) {
