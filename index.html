@@ -203,9 +203,9 @@
 
         m.setAttribute('data-name', boss.name);
         
-        // --- ОБНОВЛЕННАЯ ЛОГИКА КЛИКОВ ---
-        let lastClickTime = 0;
+        let lastClick = 0;
 
+        // Используем pointerdown для захвата, но click для логики
         m.addEventListener('pointerdown', (e) => {
             if (isEditorMode) {
                 e.stopPropagation();
@@ -216,25 +216,20 @@
         });
 
         m.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopImmediatePropagation(); // Запрещаем карте реагировать
-
-            if (isEditorMode) return;
-
+            e.stopPropagation(); // Остановка всплытия к карте
             const now = Date.now();
-            const diff = now - lastClickTime;
-
-            if (diff > 50 && diff < 400) {
-                // ЭТО ДАБЛКЛИК
-                lastClickTime = 0; 
+            
+            if (now - lastClick < 400) {
+                // ДАБЛКЛИК
+                lastClick = 0;
                 toggleBossStatus(boss.id);
             } else {
-                // ЭТО ОДИНОЧНЫЙ КЛИК
-                lastClickTime = now;
+                // ОБЫЧНЫЙ КЛИК
+                lastClick = now;
                 setTimeout(() => {
-                    if (lastClickTime !== 0) {
+                    if (lastClick !== 0) {
                         focus(boss);
-                        lastClickTime = 0;
+                        lastClick = 0;
                     }
                 }, 400);
             }
@@ -244,36 +239,68 @@
     }
 
     function toggleBossStatus(id) {
-        // Находим актуальные данные напрямую из массива, который обновил Firebase
         const b = bossData.find(x => x.id === id);
         if (!b) return;
 
-        console.log("Переключаю статус для:", id, "Текущее состояние:", b.isAlive ? "Жив" : "Мертв");
+        const now = Date.now();
+        let updates = {};
 
         if (b.isAlive || b.deathTime) {
-            // Если босс был жив или таймер уже шел — сбрасываем в "просто мертв"
-            rbRef.child(id).update({
-                isAlive: false,
-                deathTime: null
-            });
+            // Если он жив или таймер уже шел -> сбрасываем (делаем серым)
+            updates = { isAlive: false, deathTime: null };
+            b.isAlive = false;
+            b.deathTime = null;
         } else {
-            // Если босс был серый (просто мертв) — запускаем таймер респауна
-            rbRef.child(id).update({
-                isAlive: false,
-                deathTime: Date.now()
-            });
+            // Если он был серым -> запускаем таймер
+            updates = { isAlive: false, deathTime: now };
+            b.isAlive = false;
+            b.deathTime = now;
         }
+
+        // Отправляем в Firebase
+        rbRef.child(id).update(updates).then(() => {
+            console.log("Firebase updated for:", id);
+            renderMonitor(); // Принудительно обновляем список сразу
+        }).catch(err => console.error("Firebase error:", err));
     }
 
-    function toggleBossStatus(id) {
-        const boss = bossData.find(b => b.id === id);
-        if (!boss) return;
+    // Важное исправление в функции tick, чтобы она видела изменения
+    function tick() {
+        const now = Date.now();
+        bossData.forEach(boss => {
+            const m = document.getElementById('rb-' + boss.id);
+            if (!m) return;
 
-        if (boss.isAlive || boss.deathTime) {
-            rbRef.child(id).update({ isAlive: false, deathTime: null });
-        } else {
-            rbRef.child(id).update({ isAlive: false, deathTime: Date.now() });
-        }
+            // Если есть время смерти и босс не помечен как живой
+            if (boss.deathTime && !boss.isAlive) {
+                const elapsed = Math.floor((now - boss.deathTime) / 1000);
+                const rem = SPAWN_WINDOW - elapsed;
+
+                if (rem <= 0) {
+                    // Время вышло -> оживляем
+                    boss.isAlive = true;
+                    boss.deathTime = null;
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
+                } else {
+                    // Рисуем таймер на карте
+                    let t = m.querySelector('.rb-timer-map');
+                    if (!t) {
+                        t = document.createElement('div');
+                        t.className = 'rb-timer-map';
+                        m.appendChild(t);
+                    }
+                    const min = Math.floor(rem / 60);
+                    const sec = rem % 60;
+                    t.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+                }
+            } else {
+                // Если условий для таймера нет — удаляем его с карты
+                const t = m.querySelector('.rb-timer-map');
+                if (t) t.remove();
+            }
+        });
+        
+        renderMonitor(); // Обновляем боковую панель каждую секунду
     }
 
     function listenFirebase() {
