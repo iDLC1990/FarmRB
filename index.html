@@ -342,23 +342,87 @@
         document.getElementById('game-time').innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
-    // Zoom & Pan
-    let isDrag = false, lx, ly;
-    viewport.onwheel = e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX, e.clientY); };
+    // --- ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ БЛОК УПРАВЛЕНИЯ (PC + MOBILE) ---
+    let isDrag = false;
+    let lx, ly;
+    let initialDist = 0; // Для зума на мобилках
+
+    // Зум колесиком мыши
+    viewport.addEventListener('wheel', e => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.8 : 1.2;
+        applyZoom(delta, e.clientX, e.clientY);
+    }, { passive: false });
+
     function applyZoom(delta, centerX, centerY) {
-        const ns = Math.min(Math.max(0.1, scale * delta), 3);
+        const ns = Math.min(Math.max(0.05, scale * delta), 4);
         posX = centerX - (centerX - posX) * (ns / scale);
         posY = centerY - (centerY - posY) * (ns / scale);
         scale = ns;
         update();
     }
-    viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; }};
-    window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }};
-    window.onmouseup = () => isDrag = false;
-    viewport.ontouchstart = e => { if (e.touches.length === 1) { isDrag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; } };
-    viewport.ontouchmove = e => { if (e.touches.length === 1 && isDrag) { posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly; lx = e.touches[0].clientX; ly = e.touches[0].clientY; update(); } };
-    viewport.ontouchend = () => isDrag = false;
 
+    // --- УПРАВЛЕНИЕ МЫШЬЮ (ПК) ---
+    viewport.onmousedown = e => { 
+        if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; viewport.style.cursor = 'grabbing'; }
+    };
+    window.onmousemove = e => { 
+        if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }
+    };
+    window.onmouseup = () => { isDrag = false; viewport.style.cursor = 'grab'; };
+
+    // --- УПРАВЛЕНИЕ ТАЧЕМ (ТЕЛЕФОН) ---
+    viewport.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+            isDrag = true;
+            lx = e.touches[0].clientX;
+            ly = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+            isDrag = false; 
+            // Считаем начальное расстояние между двумя пальцами
+            initialDist = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+        }
+    }, { passive: false });
+
+    viewport.addEventListener('touchmove', e => {
+        // КРИТИЧЕСКИ ВАЖНО: отключаем стандартный скролл браузера
+        e.preventDefault(); 
+
+        if (e.touches.length === 1 && isDrag) {
+            // Перетаскивание одним пальцем
+            posX += e.touches[0].clientX - lx;
+            posY += e.touches[0].clientY - ly;
+            lx = e.touches[0].clientX;
+            ly = e.touches[0].clientY;
+            update();
+        } else if (e.touches.length === 2) {
+            // Зум двумя пальцами (Pinch)
+            const currentDist = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+            
+            // Центр между пальцами для точки зума
+            const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            
+            if (initialDist > 0) {
+                const delta = currentDist / initialDist;
+                applyZoom(delta, centerX, centerY);
+                initialDist = currentDist; // Обновляем дистанцию для плавности
+            }
+        }
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', () => {
+        isDrag = false;
+        initialDist = 0;
+    });
+
+    // Запуск приложения
     init();
 </script>
 </body>
