@@ -13,7 +13,7 @@
             margin: 0; padding: 0; background: #050505; color: #eee; 
             font-family: 'Segoe UI', sans-serif; overflow: hidden; 
             touch-action: none; 
-            user-select: none; -webkit-user-select: none; /* Запрет выделения для удобства редактора */
+            user-select: none; -webkit-user-select: none;
         }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
@@ -33,7 +33,6 @@
             width: 22px; height: 22px; z-index: 15;
         }
 
-        /* Стиль для перетаскиваемого маркера */
         .rb-marker.dragging { 
             opacity: 0.7; 
             scale: 2.5; 
@@ -80,6 +79,7 @@
         .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
+        .btn-add { background:#004488; color:#fff; border: 1px solid #0066cc; display: none; }
         .btn-reset { background: #441111; color: #ff6666; border: 1px solid #662222; margin-top: 5px; }
 
         #minimap-overlay {
@@ -97,6 +97,7 @@
 <div id="sidebar">
     <div id="game-time">00:00</div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
+    <button onclick="startAddingBoss()" id="add-boss-btn" class="btn btn-add">+ ДОБАВИТЬ РБ</button>
     <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ ТАЙМЕРЫ</button>
     <div id="monitor-list"></div>
 </div>
@@ -115,6 +116,7 @@
 
     const SPAWN_WINDOW = 15 * 60; 
     let isEditorMode = false;
+    let isAddingMode = false;
     let draggedBossId = null;
 
     let bossData = [
@@ -195,7 +197,7 @@
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
-        bossData.forEach(createMarker);
+        // Мы не вызываем отрисовку вручную здесь, так как listenFirebase сделает это при загрузке
         addSpecialMarker();
         update();
         listenFirebase(); 
@@ -216,6 +218,8 @@
     }
 
     function createMarker(boss) {
+        if (document.getElementById('rb-' + boss.id)) return; // Предотвращаем дубликаты
+
         let m = document.createElement('div');
         m.id = 'rb-' + boss.id;
         m.className = 'rb-marker';
@@ -226,14 +230,13 @@
         
         let clickTimer = null;
 
-        // ПРАВКА: Используем pointerdown для захвата в режиме редактора
         m.onpointerdown = (e) => {
             if (isEditorMode) {
                 e.preventDefault(); 
                 e.stopPropagation();
                 draggedBossId = boss.id;
                 m.classList.add('dragging');
-                m.setPointerCapture(e.pointerId); // Захватываем указатель
+                m.setPointerCapture(e.pointerId);
             }
         };
 
@@ -259,27 +262,38 @@
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
-            bossData.forEach(boss => {
-                const item = data[boss.id];
-                if (item) {
-                    boss.deathTime = item.deathTime || null;
-                    boss.isAlive = item.isAlive || false;
-                    if (item.pos) {
-                        boss.pos = item.pos;
-                        const m = document.getElementById('rb-' + boss.id);
-                        if (m && !m.classList.contains('dragging')) {
-                            const p = item.pos.split(';');
-                            m.style.top = p[0].split(':')[1];
-                            m.style.left = p[1].split(':')[1];
-                        }
-                    }
+            
+            // Обрабатываем всех боссов из БД
+            Object.keys(data).forEach(id => {
+                const item = data[id];
+                let boss = bossData.find(b => b.id === id);
+                
+                // Если босса нет в локальном списке (добавлен через редактор)
+                if (!boss) {
+                    boss = { id: id, name: item.name, note: item.note, pos: item.pos };
+                    bossData.push(boss);
                 }
-                const m = document.getElementById('rb-' + boss.id);
-                if (m) {
+
+                boss.deathTime = item.deathTime || null;
+                boss.isAlive = item.isAlive || false;
+                boss.pos = item.pos || boss.pos;
+
+                // Создаем маркер если его нет
+                createMarker(boss);
+                
+                const m = document.getElementById('rb-' + id);
+                if (m && !m.classList.contains('dragging')) {
+                    const p = boss.pos.split(';');
+                    m.style.top = p[0].split(':')[1];
+                    m.style.left = p[1].split(':')[1];
                     if (boss.isAlive) m.classList.add('is-alive');
                     else m.classList.remove('is-alive');
                 }
             });
+
+            // Первичная отрисовка маркеров из статического списка, если их нет в БД
+            bossData.forEach(boss => createMarker(boss));
+            
             renderMonitor();
         });
     }
@@ -350,16 +364,25 @@
             }
         } else {
             isEditorMode = false;
+            isAddingMode = false;
         }
         
         const btn = document.getElementById('editor-btn');
+        const addBtn = document.getElementById('add-boss-btn');
         btn.innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
         btn.classList.toggle('active');
+        addBtn.style.display = isEditorMode ? "block" : "none";
+    }
+
+    function startAddingBoss() {
+        isAddingMode = true;
+        alert("Режим добавления: Нажмите в ЛЮБОЕ МЕСТО НА КАРТЕ, чтобы создать там нового босса.");
     }
 
     function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
     function focus(boss) {
         const m = document.getElementById('rb-' + boss.id);
+        if(!m) return;
         const t = parseInt(m.style.top); const l = parseInt(m.style.left);
         scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale);
         update();
@@ -378,7 +401,6 @@
         document.getElementById('game-time').innerText = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}`;
     }
 
-    // ЛОГИКА ПЕРЕМЕЩЕНИЯ (КАРТА И МАРКЕРЫ)
     let isDrag = false, lx, ly;
 
     window.onpointerdown = e => { 
@@ -389,7 +411,6 @@
 
     window.onpointermove = e => {
         if (draggedBossId) {
-            // ДВИЖЕНИЕ МАРКЕРА
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
@@ -399,17 +420,37 @@
                 m.style.left = x + 'px';
             }
         } else if (isDrag) {
-            // ПАНОРАМИРОВАНИЕ КАРТЫ
             posX += e.clientX - lx; posY += e.clientY - ly;
             lx = e.clientX; ly = e.clientY; update();
         }
     };
 
     window.onpointerup = (e) => {
+        // Логика добавления нового РБ
+        if (isAddingMode && isEditorMode && !draggedBossId) {
+            const rect = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / scale);
+            const y = Math.round((e.clientY - rect.top) / scale);
+            
+            const name = prompt("Введите имя нового Raid Boss:");
+            if (name) {
+                const note = prompt("Введите заметку (например, точку ТП):", "");
+                const id = name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') + "_" + Date.now();
+                
+                rbRef.child(id).set({
+                    name: name,
+                    note: note,
+                    pos: `top:${y}px;left:${x}px;`,
+                    isAlive: false,
+                    deathTime: null
+                });
+            }
+            isAddingMode = false;
+        }
+
         if (draggedBossId) {
             const m = document.getElementById('rb-' + draggedBossId);
             if (m) {
-                // Сохранение в БД
                 rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
                 m.classList.remove('dragging');
                 m.releasePointerCapture(e.pointerId);
