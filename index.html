@@ -356,8 +356,16 @@
     function startAddingBoss() { isAddingMode = true; alert("Кликни на карту"); }
 
     function resetTimers() {
-        if(confirm("Сбросить таймеры?")) {
-            bossData.forEach(b => { if (b.isAlive || b.deathTime) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); });
+        if(confirm("Сбросить READY-статусы? (Метки исчезнут из списка до следующей смерти)")) {
+            bossData.forEach(b => {
+                // Проверяем: если босс УЖЕ живой (READY), сбрасываем его в дефолтное состояние
+                if (b.isAlive) { 
+                    rbRef.child(b.id).update({ 
+                        isAlive: false, 
+                        deathTime: null 
+                    });
+                }
+            });
         }
     }
 
