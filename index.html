@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Live Sync</title>
+    <title>L2 RB Map - Live Sync & Editor</title>
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -16,7 +15,7 @@
 
         /* Маркеры */
         .rb-marker {
-            position: absolute; width: 10px; height: 10px;
+            position: absolute; width: 12px; height: 12px;
             background: rgba(150, 150, 150, 0.4); border: 1px solid #555;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
         }
@@ -24,21 +23,31 @@
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
-            width: 14px; height: 14px; z-index: 15;
+            width: 16px; height: 16px; z-index: 15;
+        }
+
+        /* Специальная мигающая метка */
+        .special-marker {
+            background: #ffd700 !important; border: 2px solid #fff !important;
+            animation: pulse-special 1.5s infinite; z-index: 20;
+        }
+        @keyframes pulse-special {
+            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+            70% { transform: translate(-50%, -50%) scale(1.3); box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
+            100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.85); color: #bbb; padding: 2px 8px; border-radius: 4px; 
-            font-size: 11px; white-space: nowrap; border: 1px solid #333; opacity: 0.8; transition: 0.2s;
+            font-size: 11px; white-space: nowrap; border: 1px solid #333; opacity: 0.8; pointer-events: none;
         }
-
         .rb-marker:hover::after { opacity: 1; color: #fff; font-size: 14px; background: #000; z-index: 100; }
 
         .rb-timer-map {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 12px; border: 1px solid #00ffcc;
+            position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 1px 4px; border-radius: 4px;
+            font-weight: bold; font-family: monospace; font-size: 11px; border: 1px solid #00ffcc;
         }
 
         /* Панель */
@@ -48,7 +57,7 @@
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(15px);
         }
 
-        #timer-monitor { margin-top: 15px; max-height: 45vh; overflow-y: auto; border-top: 1px solid #222; }
+        #timer-monitor { margin-top: 15px; max-height: 40vh; overflow-y: auto; border-top: 1px solid #222; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
             font-size: 12px; padding: 8px; border-bottom: 1px solid #222; cursor: pointer;
@@ -59,11 +68,22 @@
         
         #game-time { font-size:32px; color:#ffd700; font-family:monospace; text-align:center; margin: 10px 0; }
         input { width:100%; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:8px; box-sizing:border-box; margin-bottom:10px; }
-        button { cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
+        
+        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; font-size:11px; margin-bottom:5px; border:1px solid transparent; cursor:pointer; }
+        .btn-reset { background:#400; color:#f88; border-color:#844; }
+        .btn-editor { background:#222; color:#0f0; border-color:#050; }
+        .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 10px #0f0; }
+        
+        #editor-hint { 
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,255,0,0.8); color: #000; padding: 10px 20px; 
+            border-radius: 20px; font-weight: bold; display: none; z-index: 2000;
+        }
     </style>
 </head>
 <body>
+
+<div id="editor-hint">РЕЖИМ РЕДАКТОРА: Кликни на карту, чтобы поставить метку</div>
 
 <div id="sidebar">
     <div style="text-align:center; color:#888; font-size:10px; letter-spacing:1px;">L2 GAME TIME</div>
@@ -71,7 +91,8 @@
 
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     
-    <button onclick="resetAllFirebase()" style="width:100%; padding:10px; background:#400; color:#f88; border:1px solid #844; border-radius:8px; font-weight:bold; font-size:11px;">СБРОСИТЬ ВСЕ ТАЙМЕРЫ</button>
+    <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">ВКЛЮЧИТЬ РЕДАКТОР</button>
+    <button onclick="resetAllFirebase()" class="btn btn-reset">СБРОСИТЬ ВСЕ ТАЙМЕРЫ</button>
 
     <div id="timer-monitor">
         <div id="monitor-list"></div>
@@ -83,22 +104,20 @@
 </div>
 
 <script>
-    // --- ТВОИ НАСТРОЙКИ FIREBASE ---
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
         databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app",
     };
 
-    // Инициализация
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const rbRef = db.ref('bosses');
 
     const MAP_IMAGE = "https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true";
-    const SPAWN_WINDOW = 15 * 60; // 15 минут в секундах
+    const SPAWN_WINDOW = 15 * 60; 
 
-    // Данные боссов
+    let isEditorMode = false;
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -164,11 +183,11 @@
         { name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
         { name: "Last Titan Utenus", note: "GM_RUSMAG BATAT", pos: "top:2579px;left:4672px;" },
         { name: "Isabella", note: "newly added", pos: "top:2627px;left:2408px;" },
-{ name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
-{ name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
-{ name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
-{ name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
-{ name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
+        { name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
+        { name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
+        { name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
+        { name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
+        { name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
@@ -185,65 +204,96 @@
         update();
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
+
+        // Клик по обертке (для режима редактора)
+        wrapper.addEventListener('click', (e) => {
+            if (!isEditorMode) return;
+            const rect = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / scale);
+            const y = Math.round((e.clientY - rect.top) / scale);
+            
+            const bossName = prompt("Введите имя нового босса:");
+            if (bossName) {
+                const dbId = bossName.replace(/\./g, '_');
+                rbRef.child(dbId).set({
+                    name: bossName,
+                    pos: `top:${y}px;left:${x}px;`,
+                    note: "Добавлено вручную",
+                    isCustom: true
+                });
+            }
+        });
+
+        // Добавляем секретную метку
+        addSpecialMarker();
+    }
+
+    function addSpecialMarker() {
+        const sm = document.createElement('div');
+        sm.className = 'rb-marker special-marker';
+        sm.style.cssText = "top:2970px;left:4322px;";
+        sm.setAttribute('data-name', 'SECRET IMAGE');
+        sm.onclick = (e) => {
+            e.stopPropagation();
+            window.open('https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true', '_blank');
+        };
+        wrapper.appendChild(sm);
     }
 
     function drawMarkers() {
-        wrapper.innerHTML = '';
-        bossData.forEach((boss) => {
-            const m = document.createElement('div');
-            m.className = 'rb-marker';
-            m.style.cssText = boss.pos;
-            m.setAttribute('data-name', boss.name);
-            
-            // Переменная для хранения времени последнего клика по ЭТОМУ маркеру
-            let lastClickTime = 0;
-
-            m.onclick = (e) => {
-                e.stopPropagation();
-                const currentTime = Date.now();
-                const diff = currentTime - lastClickTime;
-
-                if (diff < 300) { 
-                    // МЕНЬШЕ 300мс — ЭТО ДВОЙНОЙ КЛИК
-                    console.log("Двойной клик по: " + boss.name);
-                    onMarkerClick(boss); // Активируем таймер в Firebase
-                    lastClickTime = 0;   // Сбрасываем, чтобы не сработало трижды
-                } else {
-                    // ОДИНОЧНЫЙ КЛИК — ПРОСТО ФОКУСИРУЕМ КАМЕРУ
-                    focus(boss);
-                    lastClickTime = currentTime;
-                }
-            };
-
-            wrapper.appendChild(m);
-            boss.markerEl = m;
-        });
+        // Очищаем только тех, кого нет в bossData
+        wrapper.querySelectorAll('.rb-marker:not(.special-marker)').forEach(m => m.remove());
+        bossData.forEach(createMarkerElement);
     }
 
-    // Клик по маркеру
-    function onMarkerClick(boss) {
-        const dbId = boss.name.replace(/\./g, '_'); // Firebase не любит точки
+    function createMarkerElement(boss) {
+        if (boss.markerEl) boss.markerEl.remove();
+        
+        const m = document.createElement('div');
+        m.className = 'rb-marker';
+        m.style.cssText = boss.pos;
+        m.setAttribute('data-name', boss.name);
+        
+        let clickTimer = null;
+
+        m.onclick = (e) => {
+            if (isEditorMode) return;
+            e.stopPropagation();
+
+            if (clickTimer) {
+                // ДВОЙНОЙ КЛИК
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                onMarkerDoubleClick(boss);
+            } else {
+                // ОДИНОЧНЫЙ КЛИК (ждем, не будет ли второго)
+                clickTimer = setTimeout(() => {
+                    focus(boss);
+                    clickTimer = null;
+                }, 250);
+            }
+        };
+
+        wrapper.appendChild(m);
+        boss.markerEl = m;
+    }
+
+    function onMarkerDoubleClick(boss) {
+        const dbId = boss.name.replace(/\./g, '_');
         if (boss.isAlive) {
-            // Если босс "живой", клик убирает его из базы (сбрасывает статус)
-            rbRef.child(dbId).set(null);
-        } else if (!boss.deathTime) {
-            // Если таймера нет — запускаем новый
-            rbRef.child(dbId).set({ deathTime: Date.now(), isAlive: false });
+            rbRef.child(dbId).update({ isAlive: false, deathTime: null });
         } else {
-            // Если таймер идет — центрируем камеру
-            focus(boss);
+            rbRef.child(dbId).update({ deathTime: Date.now(), isAlive: false });
         }
     }
 
-    // Слушаем базу данных
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
             
-            // Сброс всех перед обновлением
+            // Сброс состояний
             bossData.forEach(boss => {
-                boss.deathTime = null;
-                boss.isAlive = false;
+                boss.deathTime = null; boss.isAlive = false;
                 if(boss.markerEl) {
                     boss.markerEl.classList.remove('is-alive');
                     const t = boss.markerEl.querySelector('.rb-timer-map');
@@ -251,38 +301,42 @@
                 }
             });
 
-            // Применяем данные
             for (let id in data) {
-                const name = id.replace(/_/g, '.');
-                const boss = bossData.find(b => b.name === name);
-                if (boss) {
-                    boss.deathTime = data[id].deathTime;
-                    boss.isAlive = data[id].isAlive;
-                    if (boss.isAlive) boss.markerEl.classList.add('is-alive');
+                const item = data[id];
+                const name = item.name || id.replace(/_/g, '.');
+                let boss = bossData.find(b => b.name === name);
+                
+                // Если босс новый (из редактора)
+                if (!boss) {
+                    boss = { name: name, pos: item.pos, note: item.note || "" };
+                    bossData.push(boss);
+                    createMarkerElement(boss);
                 }
+
+                boss.deathTime = item.deathTime;
+                boss.isAlive = item.isAlive;
+                if (boss.isAlive && boss.markerEl) boss.markerEl.classList.add('is-alive');
             }
             renderMonitor();
         });
     }
 
-    function resetAllFirebase() {
-        if(confirm("Очистить ВСЕ таймеры для всех игроков?")) rbRef.set(null);
+    function toggleEditor() {
+        isEditorMode = !isEditorMode;
+        document.getElementById('editor-btn').classList.toggle('active');
+        document.getElementById('editor-hint').style.display = isEditorMode ? 'block' : 'none';
+        viewport.style.cursor = isEditorMode ? 'crosshair' : 'grab';
     }
 
-    // Обновление таймеров каждую секунду
     function tick() {
         const now = Date.now();
-        let needsRender = false;
-
         bossData.forEach(boss => {
             if (boss.deathTime && !boss.isAlive) {
                 const elapsed = Math.floor((now - boss.deathTime) / 1000);
                 const remaining = SPAWN_WINDOW - elapsed;
 
                 if (remaining <= 0) {
-                    // Время вышло — обновляем в Firebase на "Alive"
-                    const dbId = boss.name.replace(/\./g, '_');
-                    rbRef.child(dbId).update({ isAlive: true, deathTime: null });
+                    rbRef.child(boss.name.replace(/\./g, '_')).update({ isAlive: true, deathTime: null });
                 } else {
                     let tMap = boss.markerEl.querySelector('.rb-timer-map');
                     if (!tMap) {
@@ -294,19 +348,13 @@
                     const s = remaining % 60;
                     tMap.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
                 }
-                needsRender = true;
             }
         });
-        if (needsRender) renderMonitor();
     }
 
     function renderMonitor() {
         const active = bossData.filter(b => b.deathTime || b.isAlive);
-        active.sort((a, b) => {
-            if (a.isAlive && !b.isAlive) return -1;
-            if (!a.isAlive && b.isAlive) return 1;
-            return a.deathTime - b.deathTime;
-        });
+        active.sort((a, b) => (a.isAlive === b.isAlive) ? (a.deathTime - b.deathTime) : (a.isAlive ? -1 : 1));
 
         const now = Date.now();
         monitorList.innerHTML = active.map(b => {
@@ -339,7 +387,7 @@
     function handleSearch() {
         const val = document.getElementById('search-input').value.toLowerCase();
         if (val.length < 3) return;
-        const boss = bossData.find(b => b.name.toLowerCase().includes(val) || b.note.toLowerCase().includes(val));
+        const boss = bossData.find(b => b.name.toLowerCase().includes(val));
         if (boss) focus(boss);
     }
 
@@ -359,8 +407,7 @@
         const SYNC_GAME_MIN = (17 * 60) + 36;
         const now = new Date();
         const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        const diffRealSec = nowRealSec - SYNC_REAL_SEC;
-        const diffGameMin = diffRealSec / 10;
+        const diffGameMin = (nowRealSec - SYNC_REAL_SEC) / 10;
         let totalGameMin = Math.floor(SYNC_GAME_MIN + diffGameMin);
         totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
         const h = Math.floor(totalGameMin / 60);
@@ -368,16 +415,24 @@
         document.getElementById('game-time').innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
     }
 
-    // --- ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ БЛОК УПРАВЛЕНИЯ (PC + MOBILE) ---
-    let isDrag = false;
-    let lx, ly;
-    let initialDist = 0; // Для зума на мобилках
+    function resetAllFirebase() {
+        if(confirm("Очистить ВСЕ таймеры для всех игроков?")) {
+            // Удаляем только динамические данные (время смерти и статус), сохраняя координаты
+            rbRef.once('value', snapshot => {
+                const data = snapshot.val();
+                for (let id in data) {
+                    rbRef.child(id).update({ deathTime: null, isAlive: false });
+                }
+            });
+        }
+    }
 
-    // Зум колесиком мыши
+    // Управление
+    let isDrag = false, lx, ly, initialDist = 0;
+
     viewport.addEventListener('wheel', e => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.8 : 1.2;
-        applyZoom(delta, e.clientX, e.clientY);
+        applyZoom(e.deltaY > 0 ? 0.8 : 1.2, e.clientX, e.clientY);
     }, { passive: false });
 
     function applyZoom(delta, centerX, centerY) {
@@ -388,67 +443,31 @@
         update();
     }
 
-    // --- УПРАВЛЕНИЕ МЫШЬЮ (ПК) ---
-    viewport.onmousedown = e => { 
-        if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; viewport.style.cursor = 'grabbing'; }
-    };
-    window.onmousemove = e => { 
-        if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }
-    };
-    window.onmouseup = () => { isDrag = false; viewport.style.cursor = 'grab'; };
+    viewport.onmousedown = e => { if(e.button === 0) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); } };
+    window.onmouseup = () => isDrag = false;
 
-    // --- УПРАВЛЕНИЕ ТАЧЕМ (ТЕЛЕФОН) ---
     viewport.addEventListener('touchstart', e => {
-        if (e.touches.length === 1) {
-            isDrag = true;
-            lx = e.touches[0].clientX;
-            ly = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            isDrag = false; 
-            // Считаем начальное расстояние между двумя пальцами
-            initialDist = Math.hypot(
-                e.touches[0].pageX - e.touches[1].pageX,
-                e.touches[0].pageY - e.touches[1].pageY
-            );
-        }
-    }, { passive: false });
+        if (e.touches.length === 1) { isDrag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }
+        else if (e.touches.length === 2) { initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); }
+    });
 
     viewport.addEventListener('touchmove', e => {
-        // КРИТИЧЕСКИ ВАЖНО: отключаем стандартный скролл браузера
         e.preventDefault(); 
-
         if (e.touches.length === 1 && isDrag) {
-            // Перетаскивание одним пальцем
-            posX += e.touches[0].clientX - lx;
-            posY += e.touches[0].clientY - ly;
-            lx = e.touches[0].clientX;
-            ly = e.touches[0].clientY;
-            update();
+            posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
+            lx = e.touches[0].clientX; ly = e.touches[0].clientY; update();
         } else if (e.touches.length === 2) {
-            // Зум двумя пальцами (Pinch)
-            const currentDist = Math.hypot(
-                e.touches[0].pageX - e.touches[1].pageX,
-                e.touches[0].pageY - e.touches[1].pageY
-            );
-            
-            // Центр между пальцами для точки зума
-            const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            
+            const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
             if (initialDist > 0) {
-                const delta = currentDist / initialDist;
-                applyZoom(delta, centerX, centerY);
-                initialDist = currentDist; // Обновляем дистанцию для плавности
+                applyZoom(currentDist / initialDist, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
+                initialDist = currentDist;
             }
         }
     }, { passive: false });
 
-    viewport.addEventListener('touchend', () => {
-        isDrag = false;
-        initialDist = 0;
-    });
+    window.addEventListener('touchend', () => { isDrag = false; initialDist = 0; });
 
-    // Запуск приложения
     init();
 </script>
 </body>
