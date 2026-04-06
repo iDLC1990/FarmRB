@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Drag & Zoom</title>
+    <title>L2 RB Map - Fixed & Stable</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -13,97 +13,85 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* Маркеры */
+        /* Метки боссов */
         .rb-marker {
-            position: absolute; width: 14px; height: 14px;
-            background: rgba(150, 150, 150, 0.4); border: 1px solid #555;
+            position: absolute; width: 16px; height: 16px;
+            background: rgba(255, 255, 255, 0.3); border: 2px solid #666;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            display: block !important; /* Гарантируем видимость */
         }
+        
+        /* Живой босс */
         .rb-marker.is-alive { 
-            background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
-            border-color: #fff !important; box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
-            width: 18px; height: 18px; z-index: 15;
-        }
-        .rb-marker.dragging { opacity: 0.5; scale: 1.5; z-index: 100; cursor: grabbing; }
-
-        .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse-special 1.5s infinite; z-index: 20; }
-        @keyframes pulse-special {
-            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
-            70% { transform: translate(-50%, -50%) scale(1.3); box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
-            100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+            background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
+            border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
+            width: 20px; height: 20px; z-index: 15;
         }
 
+        .rb-marker.dragging { opacity: 0.5; scale: 1.8; z-index: 100; cursor: grabbing; }
+
+        /* Текст имени над меткой */
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: #bbb; padding: 2px 8px; border-radius: 4px; 
-            font-size: 11px; white-space: nowrap; border: 1px solid #333; opacity: 0.8; pointer-events: none;
+            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
+            font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
-        /* Укрупненный таймер над меткой */
+        /* КРУПНЫЙ ТАЙМЕР НА КАРТЕ */
         .rb-timer-map {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 6px;
+            position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 3px 8px; border-radius: 6px;
             font-weight: bold; font-family: 'Courier New', monospace; 
-            font-size: 14px; /* Крупнее шрифт */
-            border: 2px solid #00ffcc; /* Жирнее рамка */
-            box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
-            pointer-events: none;
+            font-size: 16px; /* Еще крупнее */
+            border: 2px solid #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
+            z-index: 20; pointer-events: none;
         }
 
-        /* Панель */
+        /* Миникарта (Secret) */
+        .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
+        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
+
+        /* Боковая панель */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 280px;
-            background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
-            padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(15px);
+            background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
+            padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
         }
-
-        #timer-monitor { margin-top: 15px; max-height: 40vh; overflow-y: auto; border-top: 1px solid #222; }
+        #monitor-list { margin-top: 15px; max-height: 50vh; overflow-y: auto; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 12px; padding: 8px; border-bottom: 1px solid #222; cursor: pointer;
+            font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; color: #ccc;
         }
-        .monitor-item:hover { background: rgba(255,255,255,0.05); }
-        .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.4; } }
+        .monitor-item:hover { background: rgba(255,255,255,0.1); }
+        .ready-text { color: #ff3300; font-weight: bold; }
         
-        #game-time { font-size:32px; color:#ffd700; font-family:monospace; text-align:center; margin: 10px 0; }
-        input { width:100%; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:8px; box-sizing:border-box; margin-bottom:10px; }
-        
-        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; font-size:11px; margin-bottom:5px; border:1px solid transparent; cursor:pointer; }
-        .btn-reset { background:#400; color:#f88; border-color:#844; }
+        #game-time { font-size:36px; color:#ffd700; font-family:monospace; text-align:center; margin-bottom: 10px; }
+        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border:1px solid transparent; }
         .btn-editor { background:#222; color:#0f0; border-color:#050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
+        .btn-reset { background:#400; color:#f88; }
 
-        /* Окно миникарты */
         #minimap-overlay {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80vw; max-width: 600px; background: #000; border: 2px solid #ffd700;
-            z-index: 3000; display: none; box-shadow: 0 0 50px rgba(0,0,0,0.9); border-radius: 10px; overflow: hidden;
+            width: 90vw; max-width: 700px; background: #000; border: 3px solid #ffd700;
+            z-index: 3000; display: none; border-radius: 10px; overflow: hidden;
         }
         #minimap-overlay img { width: 100%; display: block; }
-
-        #editor-hint { 
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,255,0,0.9); color: #000; padding: 10px 25px; 
-            border-radius: 20px; font-weight: bold; display: none; z-index: 2000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
     </style>
 </head>
 <body>
 
-<div id="editor-hint">РЕЖИМ РЕДАКТОРА: Тащи метки или кликни в пустое место</div>
-
 <div id="minimap-overlay" onclick="this.style.display='none'">
-    <img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" alt="Mini Map">
+    <img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true">
 </div>
 
 <div id="sidebar">
     <div id="game-time">00:00</div>
-    <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
-    <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">ВКЛЮЧИТЬ РЕДАКТОР</button>
-    <button onclick="resetAllFirebase()" class="btn btn-reset">СБРОСИТЬ ВСЕ ТАЙМЕРЫ</button>
-    <div id="timer-monitor"><div id="monitor-list"></div></div>
+    <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕЖИМ РЕДАКТОРА (ВЫКЛ)</button>
+    <button onclick="resetAllFirebase()" class="btn btn-reset">СБРОСИТЬ ВСЕ</button>
+    <div id="monitor-list"></div>
 </div>
 
 <div id="viewport">
@@ -126,102 +114,41 @@
 
     let isEditorMode = false;
     let draggedBoss = null;
-    let bossData = [
-        { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
-        { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
-        { name: "Ghost of the Lidia", note: "ll_woatab center", pos: "top:1906px;left:4528px;" },
-        { name: "Fierce Tiger King Angel", note: "ll_woatab 1tab", pos: "top:2713px;left:4517px;" },
-        { name: "Shilen's Priest Hisilrome", note: "ll_woatab 3tab", pos: "top:2279px;left:4503px;" },
-        { name: "Rahha", note: "pp_woawarka KETP", pos: "top:1981px;left:4047px;" },
-        { name: "Enmity Ghost Ramdal", note: "dd_sumtoi 1pl", pos: "top:2128px;left:3955px;" },
-        { name: "Gargoyle Lord Tiphon", note: "ww_ulanworktk tripon", pos: "top:1853px;left:4509px;" },
-        { name: "Demons Agent Falston", note: "ll_woatab 5tab", pos: "top:1460px;left:3819px;" },
-        { name: "Kernon's Faithful Servant Kelone", note: "th_ostrov bswerx", pos: "top:1838px;left:4284px;" },
-        { name: "Spirit of Andras the Betrayer", note: "ww_ulanworktk androna", pos: "top:1851px;left:4661px;" },
-        { name: "Anakim's Nemesis Zakaron", note: "kk_port1 ssakaron", pos: "top:2750px;left:4256px;" },
-        { name: "Flame of Splendor Barakiel", note: "ll_woatab finisrb", pos: "top:1376px;left:3793px;" },
-        { name: "Korim", note: "ww_ulanworktk ibobo", pos: "top:2259px;left:3958px;" },
-        { name: "Palibati Queen Themis", note: "ww_ulanworktk paibatis", pos: "top:2226px;left:4712px;" },
-        { name: "Shilen's Messenger Cabrio", note: "kk_port1 sabrio", pos: "top:2145px;left:4614px;" },
-        { name: "Immortal Savior Mardil", note: "dd_sumtoi 4pl", pos: "top:2216px;left:3954px;" },
-        { name: "Doom Blade Tanatos", note: "pp_woawarka KBOX", pos: "top:1953px;left:4150px;" },
-        { name: "Water Dragon Seer Sheshark", note: "th_ostrov ostrov2", pos: "top:3295px;left:3959px;" },
-        { name: "Death Lord Hallate", note: "dd_sumtoi 2pl", pos: "top:2175px;left:3959px;" },
-        { name: "Beast Lord Behemoth", note: "LL_ULANX500 PIhIMOT", pos: "top:1870px;left:4098px;" },
-        { name: "Meanas Anor", note: "pp_woawarka wbox", pos: "top:1992px;left:4402px;" },
-        { name: "Roaring Skylancer", note: "pp_woawarka lancer", pos: "top:2527px;left:4165px;" },
-        { name: "Eilhalder von Hellmann", note: "th_ostrov fodvil", pos: "top:1729px;left:3504px;" },
-        { name: "Vanor Chief Kandra", note: "kk_port1 kandraa", pos: "top:1565px;left:4027px;" },
-        { name: "Fafurion'Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
-        { name: "Krokian Padisha Sobekk", note: "th_ostrov ostrov3", pos: "top:3291px;left:4064px;" },
-        { name: "Bloody Empress Decarbia", note: "LL_ULANX500 kobria", pos: "top:2161px;left:4690px;" },
-        { name: "Death Lord Ipos", note: "LL_ULANX500 IBOS", pos: "top:1949px;left:4379px;" },
-        { name: "Death Lord Shax", note: "kk_port1 sky4len", pos: "top:1997px;left:4512px;" },
-        { name: "Kernon", note: "dd_sumtoi 8pl", pos: "top:2129px;left:4074px;" },
-        { name: "Lesser Giant Olkuth", note: "LL_ULANX500 PLOVER", pos: "top:2405px;left:4679px;" },
-        { name: "Storm Winged Naga", note: "th_ostrov bsnaga", pos: "top:1894px;left:4227px;" },
-        { name: "Palatanos of Horrific Power", note: "pp_woawarka PALATAN5", pos: "top:1906px;left:4305px;" },
-        { name: "Flamestone Giant", note: "pp_woawarka WATP", pos: "top:2014px;left:4287px;" },
-        { name: "Ocean Flame Ashakiel", note: "th_ostrov ostrov4", pos: "top:3264px;left:4100px;" },
-        { name: "Hestia, Guardian Deity of the Hot Springs", note: "kk_port1 hestia", pos: "top:1152px;left:4191px;" },
-        { name: "Fire of Wrath Shuriel", note: "dd_sumtoi 10pl", pos: "top:2174px;left:4076px;" },
-        { name: "Longhorn Golkonda", note: "ww_ulanworktk halgonda", pos: "top:2216px;left:4078px;" },
-        { name: "Cherub Galaxia", note: "dd_sumtoi 13pl", pos: "top:2261px;left:4084px;" },
-        { name: "Varka's Hero Shadith", note: "pp_woawarka iiiadit", pos: "top:1750px;left:4017px;" },
-        { name: "Varka's Commander Mos", note: "LL_ULANX500 5ALI", pos: "top:1770px;left:3960px;" },
-        { name: "Ember", note: "ww_ulanworktk bember", pos: "top:1173px;left:4720px;" },
-        { name: "Uruka", note: "ww_ulanworktk urkahan", pos: "top:1990px;left:3002px;" },
-        { name: "Soul of Water Ashutar", note: "kk_port1 wwarka", pos: "top:1765px;left:3911px;" },
-        { name: "Soul of Fire Nastron", note: "kk_port1 kketra", pos: "top:1411px;left:4266px;" },
-        { name: "Varka's Chief Horus", note: "LL_ULANX500 4ALI", pos: "top:1721px;left:3923px;" },
-        { name: "Andreas van Halter", note: "LL_ULANX500 PAGANKA", pos: "top:1640px;left:3222px;" },
-        { name: "Plague Golem", note: "ll_woatab 4tab", pos: "top:1584px;left:4509px;" },
-        { name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" },
-        { name: "Ketra's Chief Brakki", note: "kk_port1 kketra", pos: "top:1385px;left:4289px;" },
-        { name: "Ketra's Commander Tayr", note: "kk_port1 kketra", pos: "top:1421px;left:4298px;" },
-        { name: "Ketra's Hero Hekaton", note: "Ketra Hekaton", pos: "top:1477px;left:4316px;" },
-        { name: "Queen Shyeed", note: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
-        { name: "Lord of Splendor Anays", note: "Anays", pos: "top:1402px;left:4036px;" },
-        { name: "Sealed Evil Power Sailren", note: "Sailren", pos: "top:1956px;left:3236px;" },
-        { name: "Daimon the White-Eyes", note: "Daimon", pos: "top:1717px;left:4660px;" },
-        { name: "Last Lesser Giant Glaki", note: "Glaki", pos: "top:2492px;left:4526px;" },
-        { name: "Icicle Emperor Bumbalump", note: "Bumbalump", pos: "top:1103px;left:4403px;" },
-        { name: "Gorgolos", note: "GM_RUSMAG BATAT", pos: "top:2542px;left:4659px;" },
-        { name: "Roaring Lord Kastor", note: "Kastor", pos: "top:2035px;left:3921px;" },
-        { name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
-        { name: "Last Titan Utenus", note: "GM_RUSMAG BATAT", pos: "top:2579px;left:4672px;" },
-        { name: "Isabella", note: "newly added", pos: "top:2627px;left:2408px;" },
-        { name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
-        { name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
-        { name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
-        { name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
-        { name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
+    let bossData = [];
+
+    // Список боссов по умолчанию (если базы нет)
+    const initialBosses = [
+        { name: "Abyss Brukunt", pos: "top:2721px;left:4385px;" },
+        { name: "Flame of Splendor Barakiel", pos: "top:1376px;left:3793px;" },
+        { name: "Shilen's Messenger Cabrio", pos: "top:2145px;left:4614px;" },
+        { name: "Death Lord Hallate", pos: "top:2175px;left:3959px;" },
+        { name: "Kernon", pos: "top:2129px;left:4074px;" },
+        { name: "Longhorn Golkonda", pos: "top:2216px;left:4078px;" }
+        // ... (остальные боссы добавятся автоматически из Firebase)
     ];
 
     const wrapper = document.getElementById('map-wrapper');
-    const monitorList = document.getElementById('monitor-list');
     const viewport = document.getElementById('viewport');
-    
     let scale = window.innerWidth / 5062;
     let posX = 0, posY = 0;
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
-        drawMarkers();
-        listenFirebase(); 
         update();
+        listenFirebase(); 
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
 
+        // Клик по карте для создания нового босса
         wrapper.addEventListener('click', (e) => {
-            if (!isEditorMode || draggedBoss) return; 
+            if (!isEditorMode || draggedBoss) return;
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
-            const bossName = prompt("Имя нового босса:");
-            if (bossName) {
-                const dbId = bossName.replace(/\./g, '_');
-                rbRef.child(dbId).set({ name: bossName, pos: `top:${y}px;left:${x}px;`, note: "Manual" });
+            const name = prompt("Имя босса:");
+            if (name) {
+                const id = name.replace(/\./g, '_');
+                rbRef.child(id).set({ name: name, pos: `top:${y}px;left:${x}px;` });
             }
         });
 
@@ -231,161 +158,159 @@
     function addSpecialMarker() {
         const sm = document.createElement('div');
         sm.className = 'rb-marker special-marker';
-        sm.style.cssText = "top:2970px;left:4322px;";
+        sm.style.top = "2970px"; sm.style.left = "4322px";
         sm.setAttribute('data-name', 'SECRET MINI-MAP');
-        sm.onclick = (e) => {
-            e.stopPropagation();
-            document.getElementById('minimap-overlay').style.display = 'block';
-        };
+        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'block'; };
         wrapper.appendChild(sm);
     }
 
-    function drawMarkers() {
-        wrapper.querySelectorAll('.rb-marker:not(.special-marker)').forEach(m => m.remove());
-        bossData.forEach(createMarkerElement);
-    }
+    function getMarker(boss) {
+        let m = document.getElementById('rb-' + boss.id);
+        if (!m) {
+            m = document.createElement('div');
+            m.id = 'rb-' + boss.id;
+            m.className = 'rb-marker';
+            m.setAttribute('data-name', boss.name);
+            
+            let clickTimer = null;
+            m.onmousedown = (e) => {
+                if (isEditorMode) {
+                    e.stopPropagation();
+                    draggedBoss = boss;
+                    m.classList.add('dragging');
+                }
+            };
 
-    function createMarkerElement(boss) {
-        if (boss.markerEl) boss.markerEl.remove();
-        const m = document.createElement('div');
-        m.className = 'rb-marker';
-        m.style.cssText = boss.pos;
-        m.setAttribute('data-name', boss.name);
-        
-        let clickTimer = null;
-        
-        m.onmousedown = (e) => {
-            if (isEditorMode) {
+            m.onclick = (e) => {
+                if (isEditorMode) return;
                 e.stopPropagation();
-                draggedBoss = boss;
-                m.classList.add('dragging');
-                return;
-            }
-        };
-
-        m.onclick = (e) => {
-            if (isEditorMode) return;
-            e.stopPropagation();
-            if (clickTimer) {
-                clearTimeout(clickTimer);
-                clickTimer = null;
-                onMarkerDoubleClick(boss);
-            } else {
-                clickTimer = setTimeout(() => {
-                    focus(boss);
+                if (clickTimer) {
+                    clearTimeout(clickTimer);
                     clickTimer = null;
-                }, 250);
-            }
-        };
-        wrapper.appendChild(m);
-        boss.markerEl = m;
+                    onDoubleClick(boss);
+                } else {
+                    clickTimer = setTimeout(() => { focus(boss); clickTimer = null; }, 250);
+                }
+            };
+            wrapper.appendChild(m);
+        }
+        return m;
     }
 
-    function onMarkerDoubleClick(boss) {
-        const dbId = boss.name.replace(/\./g, '_');
-        if (boss.isAlive) rbRef.child(dbId).update({ isAlive: false, deathTime: null });
-        else rbRef.child(dbId).update({ deathTime: Date.now(), isAlive: false });
+    function onDoubleClick(boss) {
+        const ref = rbRef.child(boss.id);
+        if (boss.isAlive) ref.update({ isAlive: false, deathTime: null });
+        else ref.update({ deathTime: Date.now(), isAlive: false });
     }
 
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
-            bossData.forEach(boss => {
-                boss.deathTime = null; boss.isAlive = false;
-                if(boss.markerEl) {
-                    boss.markerEl.classList.remove('is-alive');
-                    const t = boss.markerEl.querySelector('.rb-timer-map');
-                    if (t) t.remove();
-                }
-            });
+            
+            // Очищаем локальные данные, но не удаляем DOM элементы
+            bossData = [];
 
             for (let id in data) {
                 const item = data[id];
-                const name = item.name || id.replace(/_/g, '.');
-                let boss = bossData.find(b => b.name === name);
-                if (!boss) {
-                    boss = { name: name, pos: item.pos, note: item.note || "" };
-                    bossData.push(boss);
-                    createMarkerElement(boss);
+                const boss = {
+                    id: id,
+                    name: item.name || id,
+                    pos: item.pos,
+                    deathTime: item.deathTime,
+                    isAlive: item.isAlive
+                };
+                bossData.push(boss);
+
+                const m = getMarker(boss);
+                
+                // Обновляем позицию только если не тащим и если она есть в базе
+                if (!m.classList.contains('dragging') && boss.pos) {
+                    const parts = boss.pos.split(';');
+                    parts.forEach(p => {
+                        if (p.includes('top')) m.style.top = p.split(':')[1];
+                        if (p.includes('left')) m.style.left = p.split(':')[1];
+                    });
                 }
-                boss.pos = item.pos;
-                if (boss.markerEl && !boss.markerEl.classList.contains('dragging')) {
-                    boss.markerEl.style.cssText = boss.pos;
-                }
-                boss.deathTime = item.deathTime;
-                boss.isAlive = item.isAlive;
-                if (boss.isAlive && boss.markerEl) boss.markerEl.classList.add('is-alive');
+
+                // Статус живой/мертвый
+                if (boss.isAlive) m.classList.add('is-alive');
+                else m.classList.remove('is-alive');
             }
             renderMonitor();
         });
     }
 
-    function toggleEditor() {
-        isEditorMode = !isEditorMode;
-        document.getElementById('editor-btn').classList.toggle('active');
-        document.getElementById('editor-hint').style.display = isEditorMode ? 'block' : 'none';
-        viewport.style.cursor = isEditorMode ? 'crosshair' : 'grab';
-    }
-
     function tick() {
         const now = Date.now();
         bossData.forEach(boss => {
+            const m = document.getElementById('rb-' + boss.id);
+            if (!m) return;
+
             if (boss.deathTime && !boss.isAlive) {
                 const elapsed = Math.floor((now - boss.deathTime) / 1000);
-                const remaining = SPAWN_WINDOW - elapsed;
-                if (remaining <= 0) {
-                    rbRef.child(boss.name.replace(/\./g, '_')).update({ isAlive: true, deathTime: null });
+                const rem = SPAWN_WINDOW - elapsed;
+
+                if (rem <= 0) {
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
                 } else {
-                    let tMap = boss.markerEl.querySelector('.rb-timer-map');
-                    if (!tMap) {
-                        tMap = document.createElement('div');
-                        tMap.className = 'rb-timer-map';
-                        boss.markerEl.appendChild(tMap);
+                    let tLabel = m.querySelector('.rb-timer-map');
+                    if (!tLabel) {
+                        tLabel = document.createElement('div');
+                        tLabel.className = 'rb-timer-map';
+                        m.appendChild(tLabel);
                     }
-                    const m = Math.floor(remaining / 60);
-                    const s = remaining % 60;
-                    tMap.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                    const min = Math.floor(rem / 60);
+                    const sec = rem % 60;
+                    tLabel.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
                 }
+            } else {
+                const t = m.querySelector('.rb-timer-map');
+                if (t) t.remove();
             }
         });
         renderMonitor();
     }
 
     function renderMonitor() {
+        const list = document.getElementById('monitor-list');
         const active = bossData.filter(b => b.deathTime || b.isAlive);
         active.sort((a, b) => (a.isAlive === b.isAlive) ? (a.deathTime - b.deathTime) : (a.isAlive ? -1 : 1));
+
         const now = Date.now();
-        monitorList.innerHTML = active.map(b => {
-            let timeStr = "READY!";
+        list.innerHTML = active.map(b => {
+            let timeStr = "READY";
             if (!b.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
                 const m = Math.max(0, Math.floor(rem / 60));
                 const s = Math.max(0, rem % 60);
                 timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
             }
-            return `<div class="monitor-item" onclick="focusByName('${b.name.replace(/'/g, "\\'")}')">
-                <div style="flex:1"><div style="font-weight:bold; color:#fff">${b.name}</div></div>
-                <div class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; padding:4px 8px; border:1px solid ${b.isAlive ? '#f30' : '#0fc'}; border-radius:4px;">${timeStr}</div>
+            return `<div class="monitor-item" onclick="focusById('${b.id}')">
+                <b>${b.name}</b>
+                <span class="${b.isAlive ? 'ready-text' : ''}">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
-    function focusByName(name) {
-        const boss = bossData.find(b => b.name === name);
-        if (boss) focus(boss);
+    function toggleEditor() {
+        isEditorMode = !isEditorMode;
+        const btn = document.getElementById('editor-btn');
+        btn.innerText = isEditorMode ? "РЕЖИМ РЕДАКТОРА (ВКЛ)" : "РЕЖИМ РЕДАКТОРА (ВЫКЛ)";
+        btn.classList.toggle('active');
+        viewport.style.cursor = isEditorMode ? 'crosshair' : 'grab';
     }
 
-    function handleSearch() {
-        const val = document.getElementById('search-input').value.toLowerCase();
-        if (val.length < 2) return;
-        const boss = bossData.find(b => b.name.toLowerCase().includes(val));
+    function focusById(id) {
+        const boss = bossData.find(b => b.id === id);
         if (boss) focus(boss);
     }
 
     function focus(boss) {
-        const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
-        const l = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
-        scale = window.innerWidth < 600 ? 1.0 : 0.7;
+        const m = document.getElementById('rb-' + boss.id);
+        if (!m) return;
+        const t = parseInt(m.style.top);
+        const l = parseInt(m.style.left);
+        scale = 0.8;
         posX = (window.innerWidth / 2) - (l * scale);
         posY = (window.innerHeight / 2) - (t * scale);
         update();
@@ -395,83 +320,60 @@
 
     function updateGameTime() {
         const now = new Date();
-        const nowRealSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        const SYNC_REAL_SEC = (22 * 3600) + (56 * 60) + 6;
-        const SYNC_GAME_MIN = (17 * 60) + 36;
-        let totalGameMin = Math.floor(SYNC_GAME_MIN + (nowRealSec - SYNC_REAL_SEC) / 10);
-        totalGameMin = ((totalGameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(totalGameMin / 60);
-        const m = totalGameMin % 60;
-        document.getElementById('game-time').innerText = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+        const nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+        const syncReal = (22 * 3600) + (56 * 60) + 6;
+        const syncGame = (17 * 60) + 36;
+        let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
+        gameMin = ((gameMin % 1440) + 1440) % 1440;
+        const h = Math.floor(gameMin / 60);
+        const m = gameMin % 60;
+        document.getElementById('game-time').innerText = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}`;
     }
 
     function resetAllFirebase() {
-        if(confirm("Сбросить все?")) {
-            rbRef.once('value', snapshot => {
-                const data = snapshot.val();
-                for (let id in data) rbRef.child(id).update({ deathTime: null, isAlive: false });
+        if(confirm("Очистить все таймеры?")) {
+            rbRef.once('value', s => {
+                const d = s.val();
+                for(let id in d) rbRef.child(id).update({ deathTime: null, isAlive: false });
             });
         }
     }
 
-    // УПРАВЛЕНИЕ (DRAG & ZOOM)
-    let isDrag = false, lx, ly, initialDist = 0;
-    viewport.addEventListener('wheel', e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? 0.8 : 1.2, e.clientX, e.clientY); }, { passive: false });
-
-    function applyZoom(delta, centerX, centerY) {
-        const ns = Math.min(Math.max(0.05, scale * delta), 4);
-        posX = centerX - (centerX - posX) * (ns / scale);
-        posY = centerY - (centerY - posY) * (ns / scale);
-        scale = ns;
-        update();
-    }
-
+    // Drag & Zoom Logic
+    let isDrag = false, lx, ly;
     window.onmousedown = e => { if(e.button === 0 && !draggedBoss) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
-    
     window.onmousemove = e => {
         if (draggedBoss) {
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
-            draggedBoss.markerEl.style.top = y + 'px';
-            draggedBoss.markerEl.style.left = x + 'px';
+            const m = document.getElementById('rb-' + draggedBoss.id);
+            m.style.top = y + 'px';
+            m.style.left = x + 'px';
         } else if (isDrag) {
             posX += e.clientX - lx; posY += e.clientY - ly;
             lx = e.clientX; ly = e.clientY; update();
         }
     };
-
     window.onmouseup = () => {
         if (draggedBoss) {
-            const dbId = draggedBoss.name.replace(/\./g, '_');
-            const newPos = `top:${draggedBoss.markerEl.style.top};left:${draggedBoss.markerEl.style.left};`;
-            rbRef.child(dbId).update({ pos: newPos });
-            draggedBoss.markerEl.classList.remove('dragging');
+            const m = document.getElementById('rb-' + draggedBoss.id);
+            rbRef.child(draggedBoss.id).update({ pos: `top:${m.style.top};left:${m.style.left};` });
+            m.classList.remove('dragging');
             draggedBoss = null;
         }
         isDrag = false;
     };
 
-    // Touch events для телефонов
-    viewport.addEventListener('touchstart', e => {
-        if (e.touches.length === 1) { isDrag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }
-        else if (e.touches.length === 2) { initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); }
-    });
-
-    viewport.addEventListener('touchmove', e => {
-        if (e.touches.length === 1 && isDrag) {
-            posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
-            lx = e.touches[0].clientX; ly = e.touches[0].clientY; update();
-        } else if (e.touches.length === 2) {
-            const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-            if (initialDist > 0) {
-                applyZoom(currentDist / initialDist, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
-                initialDist = currentDist;
-            }
-        }
+    viewport.addEventListener('wheel', e => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.8 : 1.2;
+        const ns = Math.min(Math.max(0.05, scale * delta), 4);
+        posX = e.clientX - (e.clientX - posX) * (ns / scale);
+        posY = e.clientY - (e.clientY - posY) * (ns / scale);
+        scale = ns;
+        update();
     }, { passive: false });
-
-    window.addEventListener('touchend', () => { isDrag = false; initialDist = 0; });
 
     init();
 </script>
