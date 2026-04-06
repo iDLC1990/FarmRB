@@ -9,7 +9,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
+        body { 
+            margin: 0; padding: 0; background: #050505; color: #eee; 
+            font-family: 'Segoe UI', sans-serif; overflow: hidden; 
+            touch-action: none; 
+            user-select: none; -webkit-user-select: none; /* Запрет выделения для удобства редактора */
+        }
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
@@ -19,6 +24,7 @@
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             box-shadow: 0 0 5px rgba(0,0,0,0.8);
             display: block !important;
+            touch-action: none;
         }
         
         .rb-marker.is-alive { 
@@ -27,7 +33,15 @@
             width: 22px; height: 22px; z-index: 15;
         }
 
-        .rb-marker.dragging { opacity: 0.6; scale: 2; z-index: 1000; cursor: grabbing; }
+        /* Стиль для перетаскиваемого маркера */
+        .rb-marker.dragging { 
+            opacity: 0.7; 
+            scale: 2.5; 
+            z-index: 1000; 
+            cursor: grabbing; 
+            border-color: #0f0 !important;
+            box-shadow: 0 0 30px #0f0 !important;
+        }
 
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
@@ -211,11 +225,15 @@
         m.setAttribute('data-name', boss.name);
         
         let clickTimer = null;
-        m.onmousedown = (e) => {
+
+        // ПРАВКА: Используем pointerdown для захвата в режиме редактора
+        m.onpointerdown = (e) => {
             if (isEditorMode) {
+                e.preventDefault(); 
                 e.stopPropagation();
                 draggedBossId = boss.id;
                 m.classList.add('dragging');
+                m.setPointerCapture(e.pointerId); // Захватываем указатель
             }
         };
 
@@ -350,41 +368,52 @@
 
     function updateGameTime() {
         const now = new Date();
-        // Исправлено: используем UTC секунды для глобальной синхронизации
         const nowSec = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
-        
-        // Точка синхронизации пересчитана под UTC
         const syncReal = (19 * 3600) + (56 * 60) + 6; 
         const syncGame = (17 * 60) + 36;
-        
         let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
         gameMin = ((gameMin % 1440) + 1440) % 1440;
-        
         const h = Math.floor(gameMin / 60); 
         const m = gameMin % 60;
-        
         document.getElementById('game-time').innerText = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}`;
     }
 
+    // ЛОГИКА ПЕРЕМЕЩЕНИЯ (КАРТА И МАРКЕРЫ)
     let isDrag = false, lx, ly;
-    window.onmousedown = e => { if(e.button === 0 && !draggedBossId) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
-    window.onmousemove = e => {
+
+    window.onpointerdown = e => { 
+        if(e.button === 0 && !draggedBossId) { 
+            isDrag = true; lx = e.clientX; ly = e.clientY; 
+        } 
+    };
+
+    window.onpointermove = e => {
         if (draggedBossId) {
+            // ДВИЖЕНИЕ МАРКЕРА
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
             const m = document.getElementById('rb-' + draggedBossId);
-            m.style.top = y + 'px'; m.style.left = x + 'px';
+            if (m) {
+                m.style.top = y + 'px'; 
+                m.style.left = x + 'px';
+            }
         } else if (isDrag) {
+            // ПАНОРАМИРОВАНИЕ КАРТЫ
             posX += e.clientX - lx; posY += e.clientY - ly;
             lx = e.clientX; ly = e.clientY; update();
         }
     };
-    window.onmouseup = () => {
+
+    window.onpointerup = (e) => {
         if (draggedBossId) {
             const m = document.getElementById('rb-' + draggedBossId);
-            rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
-            m.classList.remove('dragging');
+            if (m) {
+                // Сохранение в БД
+                rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
+                m.classList.remove('dragging');
+                m.releasePointerCapture(e.pointerId);
+            }
             draggedBossId = null;
         }
         isDrag = false;
