@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - LIVE Sync & Sub-Map Editor</title>
+    <title>L2 RB Map - Full Sub-Map Support</title>
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -14,75 +13,60 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* Метки */
         .rb-marker {
-            position: absolute; width: 12px; height: 12px;
+            position: absolute; width: 14px; height: 14px;
             background: rgba(150, 150, 150, 0.4); border: 1px solid #555;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
-            transition: background 0.3s;
         }
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff3300 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 15px rgba(255, 50, 0, 0.8) !important; 
         }
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #bbb; padding: 2px 8px; border-radius: 4px; 
-            font-size: 11px; white-space: nowrap; border: 1px solid #333; pointer-events: none;
+            content: attr(data-name); position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; 
+            font-size: 11px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
-        /* Таймер на карте */
         .rb-timer-map {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 12px; border: 1px solid #00ffcc;
+            position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 1px 5px; border-radius: 4px;
+            font-weight: bold; font-family: monospace; font-size: 11px; border: 1px solid #00ffcc;
         }
 
-        /* Метка входа на подкарту */
         .submap-entrance {
-            position: absolute; width: 30px; height: 30px;
-            background: rgba(0, 255, 200, 0.2); border: 2px solid #0ff;
+            position: absolute; width: 40px; height: 40px;
+            background: rgba(0, 255, 200, 0.1); border: 2px solid #0ff;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 5; cursor: pointer;
-            box-shadow: 0 0 15px #0ff; animation: pulse 2s infinite;
+            box-shadow: 0 0 20px #0ff; animation: pulse 2s infinite;
         }
-        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.2); } 100% { transform: translate(-50%, -50%) scale(1); } }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0.5; } }
 
         /* Окно подкарты */
         #submap-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.95); z-index: 5000; justify-content: center; align-items: center;
-            backdrop-filter: blur(10px);
-        }
-        #submap-container {
-            position: relative; width: 90vw; height: 90vh; border: 2px solid #444; overflow: hidden; background: #111;
+            background: rgba(0,0,0,0.9); z-index: 5000; overflow: hidden; touch-action: none;
         }
         #submap-wrapper {
-            position: absolute; width: 2000px; height: 2000px; /* Размер 34.jpg */
-            background-repeat: no-repeat; background-size: cover; transform-origin: 0 0;
+            position: absolute; transform-origin: 0 0;
+            background-repeat: no-repeat; background-size: 100% 100%;
+            width: 1920px; height: 1334px; /* Примерные размеры 34.jpg, подстроятся сами */
         }
 
         /* Интерфейс */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 280px;
+            position: fixed; top: 15px; left: 15px; width: 260px;
             background: rgba(10, 10, 10, 0.9); border: 1px solid #333;
-            padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(15px);
+            padding: 15px; z-index: 1000; border-radius: 12px; backdrop-filter: blur(10px);
         }
-        #game-time { font-size:32px; color:#ffd700; font-family:monospace; text-align: center; margin-bottom: 10px; }
-        input { width:100%; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:8px; margin-bottom:10px; box-sizing: border-box; }
+        #game-time { font-size:28px; color:#ffd700; font-family:monospace; text-align: center; margin-bottom: 10px; }
+        input { width:100%; padding:8px; background:#222; border:1px solid #444; color:white; border-radius:6px; margin-bottom:10px; box-sizing: border-box; }
         button { width:100%; padding:8px; border-radius:5px; cursor:pointer; font-size:11px; margin-bottom: 5px; border: 1px solid #444; color: white; background: #222; }
-        #edit-mode-btn { background: #440; color: #ff0; border-color: #880; font-weight: bold; }
+        #edit-mode-btn { background: #440; color: #ff0; }
         
-        #coords-output { 
-            display:none; background:#000; color:#0f0; padding:10px; font-size:9px; 
-            font-family:monospace; margin-top:10px; max-height:100px; overflow-y:auto; border: 1px solid #333;
-        }
-        
-        .monitor-item {
-            display: flex; justify-content: space-between; align-items: center;
-            font-size: 12px; padding: 8px; border-bottom: 1px solid #222; cursor: pointer;
-        }
-        .ready-text { color: #ff3300; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.4; } }
+        #coords-output { display:none; background:#000; color:#0f0; padding:10px; font-size:9px; font-family:monospace; margin-top:10px; max-height:100px; overflow-y:auto; }
+        .monitor-item { display: flex; justify-content: space-between; padding: 6px; border-bottom: 1px solid #222; font-size: 12px; cursor: pointer; }
+        .ready-text { color: #f30; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -91,7 +75,7 @@
     <div id="game-time">--:--</div>
     <input type="text" id="search-input" placeholder="Поиск босса..." oninput="handleSearch()">
     <button id="edit-mode-btn" onclick="toggleEditMode()">КОНСТРУКТОР: OFF</button>
-    <button onclick="resetAllFirebase()" style="color:#f66;">СБРОСИТЬ ВСЕ ТАЙМЕРЫ</button>
+    <button onclick="resetAllFirebase()" style="color:#f66;">СБРОСИТЬ ВСЕ</button>
     <div id="coords-output"></div>
     <div id="monitor-list"></div>
 </div>
@@ -100,12 +84,9 @@
     <div id="map-wrapper"></div>
 </div>
 
-<!-- Оверлей подкарты -->
 <div id="submap-overlay">
-    <button onclick="closeSubMap()" style="position:fixed; top:20px; right:20px; z-index:6000; padding:10px 20px; background:#800; border-radius:5px; color:white; border:none; cursor:pointer;">ЗАКРЫТЬ КАРТУ</button>
-    <div id="submap-container" id="sub-viewport">
-        <div id="submap-wrapper"></div>
-    </div>
+    <button onclick="closeSubMap()" style="position:fixed; top:20px; right:20px; z-index:6000; padding:12px 25px; background:#800; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer; box-shadow: 0 0 15px rgba(0,0,0,0.5);">ЗАКРЫТЬ КАРТУ</button>
+    <div id="submap-wrapper"></div>
 </div>
 
 <script>
@@ -123,10 +104,15 @@
     const SUB_MAP_IMG = "https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true";
     const TIMER_SEC = 15 * 60;
 
-    let isEditMode = false;
-    let isSubMapOpen = false;
+    let isEditMode = false, isSubMapOpen = false;
+    let scale = 0.3, posX = 0, posY = 0;
+    let subScale = 0.5, subX = 0, subY = 0;
 
-    // ГЛАВНЫЙ СПИСОК БОССОВ
+    const wrapper = document.getElementById('map-wrapper');
+    const subWrapper = document.getElementById('submap-wrapper');
+    const viewport = document.getElementById('viewport');
+    const subOverlay = document.getElementById('submap-overlay');
+
     let bossData = [
         { name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -191,18 +177,18 @@
         { name: "Roaring Lord Kastor", note: "Kastor", pos: "top:2035px;left:3921px;" },
         { name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
         { name: "Last Titan Utenus", note: "GM_RUSMAG BATAT", pos: "top:2579px;left:4672px;" }
+        { name: "Isabella", note: "newly added", pos: "top:2627px;left:2408px;" },
+{ name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
+{ name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
+{ name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
+{ name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
+    { name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
     ];
 
-    // БОССЫ ДЛЯ ПОДКАРТЫ (34.jpg)
     let subBossData = [
-        { name: "Sub-Boss Example", note: "34.jpg boss", pos: "top:500px;left:500px;" }
+        { name: "Sub-Boss 1", note: "Loc 34", pos: "top:200px;left:300px;" },
+        { name: "Sub-Boss 2", note: "Loc 34", pos: "top:600px;left:800px;" }
     ];
-
-    const wrapper = document.getElementById('map-wrapper');
-    const subWrapper = document.getElementById('submap-wrapper');
-    const viewport = document.getElementById('viewport');
-    let scale = 0.3, posX = 0, posY = 0;
-    let subScale = 1.0, subX = 0, subY = 0;
 
     function init() {
         wrapper.style.backgroundImage = `url('${MAIN_MAP}')`;
@@ -215,7 +201,6 @@
         update();
     }
 
-    // Вход на подкарту
     function drawSubMapEntrance() {
         const ent = document.createElement('div');
         ent.className = 'submap-entrance';
@@ -226,29 +211,23 @@
 
     function openSubMap() {
         isSubMapOpen = true;
-        document.getElementById('submap-overlay').style.display = 'flex';
+        subOverlay.style.display = 'block';
+        // Авто-зум под размер экрана
+        subScale = Math.min(window.innerWidth / 1920, window.innerHeight / 1334) * 0.9;
+        subX = (window.innerWidth - 1920 * subScale) / 2;
+        subY = (window.innerHeight - 1334 * subScale) / 2;
         drawMarkers(subWrapper, subBossData);
+        updateSub();
     }
 
     function closeSubMap() {
         isSubMapOpen = false;
-        document.getElementById('submap-overlay').style.display = 'none';
-    }
-
-    // Режим конструктора
-    function toggleEditMode() {
-        isEditMode = !isEditMode;
-        document.body.classList.toggle('edit-mode', isEditMode);
-        document.getElementById('edit-mode-btn').innerText = isEditMode ? "КОНСТРУКТОР: ON" : "КОНСТРУКТОР: OFF";
-        document.getElementById('edit-mode-btn').style.background = isEditMode ? "#660" : "#440";
-        document.getElementById('coords-output').style.display = isEditMode ? "block" : "none";
-        generateCode();
+        subOverlay.style.display = 'none';
     }
 
     function drawMarkers(container, data) {
         container.innerHTML = '';
-        if(container === wrapper) drawSubMapEntrance(); // Не забываем вход
-        
+        if(container === wrapper) drawSubMapEntrance();
         data.forEach((boss) => {
             const m = document.createElement('div');
             m.className = 'rb-marker';
@@ -259,11 +238,11 @@
             m.onmousedown = (e) => {
                 if (!isEditMode) return;
                 e.stopPropagation();
-                const currentScale = container === wrapper ? scale : 1; 
+                const curScale = (container === wrapper) ? scale : subScale;
                 const onMove = (ev) => {
                     const rect = container.getBoundingClientRect();
-                    const x = Math.round((ev.clientX - rect.left) / currentScale);
-                    const y = Math.round((ev.clientY - rect.top) / currentScale);
+                    const x = Math.round((ev.clientX - rect.left) / curScale);
+                    const y = Math.round((ev.clientY - rect.top) / curScale);
                     boss.pos = `top:${y}px;left:${x}px;`;
                     m.style.cssText = boss.pos;
                     generateCode();
@@ -277,26 +256,72 @@
                 e.stopPropagation();
                 const now = Date.now();
                 if (now - lastTap < 300) { onMarkerClick(boss); lastTap = 0; }
-                else { if(container === wrapper) focus(boss); lastTap = now; }
+                else { lastTap = now; if(container === wrapper) focus(boss); }
             };
             container.appendChild(m);
             boss.markerEl = m;
         });
     }
 
-    function generateCode() {
-        const mainCode = bossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
-        const subCode = subBossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
-        document.getElementById('coords-output').innerText = "MAIN DATA:\n" + mainCode + "\n\nSUB DATA:\n" + subCode;
-    }
+    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+    function updateSub() { subWrapper.style.transform = `translate(${subX}px, ${subY}px) scale(${subScale})`; }
 
-    // Firebase
-    function onMarkerClick(boss) {
-        const id = boss.name.replace(/\./g, '_');
-        if (boss.isAlive) rbRef.child(id).set(null);
-        else if (!boss.deathTime) rbRef.child(id).set({ deathTime: Date.now(), isAlive: false });
-    }
+    // УПРАВЛЕНИЕ (ОСНОВНАЯ КАРТА + ПОДКАРТА)
+    let isDrag = false, lx, ly, initialDist = 0;
 
+    const handleInputStart = (e) => {
+        isDrag = true;
+        const t = e.touches ? e.touches[0] : e;
+        lx = t.clientX; ly = t.clientY;
+        if(e.touches && e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    };
+
+    const handleInputMove = (e) => {
+        if(!isDrag) return;
+        const t = e.touches ? e.touches[0] : e;
+        
+        if(!isSubMapOpen) {
+            if(e.touches && e.touches.length === 2) {
+                const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                const d = dist / initialDist;
+                const ns = Math.min(Math.max(0.05, scale * d), 4);
+                const cx = (e.touches[0].clientX + e.touches[1].clientX)/2, cy = (e.touches[0].clientY + e.touches[1].clientY)/2;
+                posX = cx - (cx - posX) * (ns / scale); posY = cy - (cy - posY) * (ns / scale);
+                scale = ns; initialDist = dist; update();
+            } else {
+                posX += t.clientX - lx; posY += t.clientY - ly;
+                lx = t.clientX; ly = t.clientY; update();
+            }
+        } else {
+            // Движение подкарты
+            subX += t.clientX - lx; subY += t.clientY - ly;
+            lx = t.clientX; ly = t.clientY; updateSub();
+        }
+    };
+
+    window.addEventListener('mousedown', handleInputStart);
+    window.addEventListener('mousemove', handleInputMove);
+    window.addEventListener('mouseup', () => isDrag = false);
+    window.addEventListener('touchstart', handleInputStart, {passive:false});
+    window.addEventListener('touchmove', (e) => { e.preventDefault(); handleInputMove(e); }, {passive:false});
+    window.addEventListener('touchend', () => isDrag = false);
+
+    window.addEventListener('wheel', (e) => {
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        if(!isSubMapOpen) {
+            const ns = Math.min(Math.max(0.05, scale * delta), 4);
+            posX = e.clientX - (e.clientX - posX) * (ns / scale);
+            posY = e.clientY - (e.clientY - posY) * (ns / scale);
+            scale = ns; update();
+        } else {
+            const ns = Math.min(Math.max(0.1, subScale * delta), 5);
+            subX = e.clientX - (e.clientX - subX) * (ns / subScale);
+            subY = e.clientY - (e.clientY - subY) * (ns / subScale);
+            subScale = ns; updateSub();
+        }
+    }, {passive:false});
+
+    // ОСТАЛЬНАЯ ЛОГИКА (FIREBASE, ТАЙМЕРЫ И Т.Д.)
     function listenFirebase() {
         rbRef.on('value', (s) => {
             const data = s.val() || {};
@@ -304,11 +329,7 @@
                 const node = data[boss.name.replace(/\./g, '_')];
                 boss.deathTime = node ? node.deathTime : null;
                 boss.isAlive = node ? node.isAlive : false;
-                if(boss.markerEl) {
-                    boss.markerEl.classList.toggle('is-alive', boss.isAlive);
-                    const oldT = boss.markerEl.querySelector('.rb-timer-map');
-                    if(oldT) oldT.remove();
-                }
+                if(boss.markerEl) boss.markerEl.classList.toggle('is-alive', boss.isAlive);
             });
             renderMonitor();
         });
@@ -325,8 +346,30 @@
                     const m = Math.floor(rem/60), s = rem%60;
                     tMap.innerText = `${m}:${s<10?'0':''}${s}`;
                 }
+            } else if(boss.markerEl) {
+                const tMap = boss.markerEl.querySelector('.rb-timer-map');
+                if(tMap) tMap.remove();
             }
         });
+    }
+
+    function onMarkerClick(boss) {
+        const id = boss.name.replace(/\./g, '_');
+        if (boss.isAlive) rbRef.child(id).set(null);
+        else if (!boss.deathTime) rbRef.child(id).set({ deathTime: Date.now(), isAlive: false });
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        document.getElementById('edit-mode-btn').innerText = isEditMode ? "КОНСТРУКТОР: ON" : "КОНСТРУКТОР: OFF";
+        document.getElementById('coords-output').style.display = isEditMode ? "block" : "none";
+        if(isEditMode) generateCode();
+    }
+
+    function generateCode() {
+        const mainCode = bossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
+        const subCode = subBossData.map(b => `{ name: "${b.name}", note: "${b.note}", pos: "${b.pos}" }`).join(",\n");
+        document.getElementById('coords-output').innerText = "MAIN:\n" + mainCode + "\n\nSUB:\n" + subCode;
     }
 
     function renderMonitor() {
@@ -342,25 +385,15 @@
         }).join('');
     }
 
-    function resetAllFirebase() { if(confirm("Сбросить?")) rbRef.set(null); }
-
-    // Камера
-    function focus(b) {
-        const t = parseInt(b.pos.match(/top:(\d+)/)[1]), l = parseInt(b.pos.match(/left:(\d+)/)[1]);
-        scale = 0.8; posX = window.innerWidth/2 - l*scale; posY = window.innerHeight/2 - t*scale;
-        update();
-    }
     function focusByName(n) { 
         if(isSubMapOpen) return;
         const b = bossData.find(x => x.name === n); 
         if(b) focus(b); 
     }
-    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
-
-    function handleSearch() {
-        const v = document.getElementById('search-input').value.toLowerCase();
-        const b = bossData.find(x => x.name.toLowerCase().includes(v));
-        if(b && v.length > 2) focus(b);
+    function focus(b) {
+        const t = parseInt(b.pos.match(/top:(\d+)/)[1]), l = parseInt(b.pos.match(/left:(\d+)/)[1]);
+        scale = 0.8; posX = window.innerWidth/2 - l*scale; posY = window.innerHeight/2 - t*scale;
+        update();
     }
 
     function updateGameTime() {
@@ -370,44 +403,12 @@
         document.getElementById('game-time').innerText = `${h<10?'0'+h:h}:${m<10?'0'+m:m}`;
     }
 
-    // Zoom & Pan
-    let isDrag = false, lx, ly, initialDist = 0;
-    viewport.onmousedown = e => { if(e.button===0){isDrag=true; lx=e.clientX; ly=e.clientY;}};
-    window.onmousemove = e => { if(isDrag && !isSubMapOpen){posX+=e.clientX-lx; posY+=e.clientY-ly; lx=e.clientX; ly=e.clientY; update();}};
-    window.onmouseup = () => isDrag = false;
-
-    viewport.addEventListener('wheel', e => {
-        if(isSubMapOpen) return;
-        e.preventDefault();
-        const d = e.deltaY > 0 ? 0.8 : 1.2;
-        const ns = Math.min(Math.max(0.05, scale * d), 4);
-        posX = e.clientX - (e.clientX - posX) * (ns / scale);
-        posY = e.clientY - (e.clientY - posY) * (ns / scale);
-        scale = ns; update();
-    }, {passive: false});
-
-    viewport.addEventListener('touchstart', e => {
-        if(isSubMapOpen) return;
-        if(e.touches.length === 1){ isDrag=true; lx=e.touches[0].clientX; ly=e.touches[0].clientY; }
-        if(e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    }, {passive: false});
-
-    viewport.addEventListener('touchmove', e => {
-        if(isSubMapOpen) return;
-        e.preventDefault();
-        if(e.touches.length === 1 && isDrag){
-            posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
-            lx = e.touches[0].clientX; ly = e.touches[0].clientY; update();
-        }
-        if(e.touches.length === 2){
-            const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-            const d = dist / initialDist;
-            const ns = Math.min(Math.max(0.05, scale * d), 4);
-            const cx = (e.touches[0].clientX + e.touches[1].clientX)/2, cy = (e.touches[0].clientY + e.touches[1].clientY)/2;
-            posX = cx - (cx - posX) * (ns / scale); posY = cy - (cy - posY) * (ns / scale);
-            scale = ns; initialDist = dist; update();
-        }
-    }, {passive: false});
+    function resetAllFirebase() { if(confirm("Сбросить?")) rbRef.set(null); }
+    function handleSearch() {
+        const v = document.getElementById('search-input').value.toLowerCase();
+        const b = bossData.find(x => x.name.toLowerCase().includes(v));
+        if(b && v.length > 2) focus(b);
+    }
 
     init();
 </script>
