@@ -34,12 +34,8 @@
         }
 
         .rb-marker.dragging { 
-            opacity: 0.7; 
-            scale: 2.5; 
-            z-index: 1000; 
-            cursor: grabbing; 
-            border-color: #0f0 !important;
-            box-shadow: 0 0 30px #0f0 !important;
+            opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; 
+            border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important;
         }
 
         .rb-marker::after {
@@ -197,7 +193,6 @@
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
-        // Мы не вызываем отрисовку вручную здесь, так как listenFirebase сделает это при загрузке
         addSpecialMarker();
         update();
         listenFirebase(); 
@@ -210,29 +205,30 @@
         sm.className = 'rb-marker special-marker';
         sm.style.top = "2970px"; sm.style.left = "4322px";
         sm.setAttribute('data-name', 'SECRET MINI-MAP');
-        sm.onclick = (e) => { 
-            e.stopPropagation(); 
-            document.getElementById('minimap-overlay').style.display = 'block'; 
-        };
+        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'block'; };
         wrapper.appendChild(sm);
     }
 
     function createMarker(boss) {
-        if (document.getElementById('rb-' + boss.id)) return; // Предотвращаем дубликаты
+        // ЗАЩИТА: Если нет позиции или ID, не рисуем ничего
+        if (!boss || !boss.id || !boss.pos) return;
+        if (document.getElementById('rb-' + boss.id)) return;
 
         let m = document.createElement('div');
         m.id = 'rb-' + boss.id;
         m.className = 'rb-marker';
-        const p = boss.pos.split(';');
-        m.style.top = p[0].split(':')[1];
-        m.style.left = p[1].split(':')[1];
+        
+        try {
+            const p = boss.pos.split(';');
+            m.style.top = p[0].split(':')[1];
+            m.style.left = p[1].split(':')[1];
+        } catch(e) { console.error("Ошибка координат босса:", boss.id); return; }
+
         m.setAttribute('data-name', boss.name);
         
         let clickTimer = null;
-
         m.onpointerdown = (e) => {
             if (isEditorMode) {
-                e.preventDefault(); 
                 e.stopPropagation();
                 draggedBossId = boss.id;
                 m.classList.add('dragging');
@@ -254,8 +250,7 @@
     }
 
     function onDoubleClick(boss) {
-        const b = bossData.find(x => x.id === boss.id);
-        if (b.isAlive) rbRef.child(boss.id).update({ isAlive: false, deathTime: null });
+        if (boss.isAlive) rbRef.child(boss.id).update({ isAlive: false, deathTime: null });
         else rbRef.child(boss.id).update({ deathTime: Date.now(), isAlive: false });
     }
 
@@ -263,12 +258,11 @@
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
             
-            // Обрабатываем всех боссов из БД
             Object.keys(data).forEach(id => {
                 const item = data[id];
+                if(!item || !item.pos) return; // Пропускаем кривые данные
+
                 let boss = bossData.find(b => b.id === id);
-                
-                // Если босса нет в локальном списке (добавлен через редактор)
                 if (!boss) {
                     boss = { id: id, name: item.name, note: item.note, pos: item.pos };
                     bossData.push(boss);
@@ -276,9 +270,8 @@
 
                 boss.deathTime = item.deathTime || null;
                 boss.isAlive = item.isAlive || false;
-                boss.pos = item.pos || boss.pos;
+                boss.pos = item.pos;
 
-                // Создаем маркер если его нет
                 createMarker(boss);
                 
                 const m = document.getElementById('rb-' + id);
@@ -291,9 +284,8 @@
                 }
             });
 
-            // Первичная отрисовка маркеров из статического списка, если их нет в БД
-            bossData.forEach(boss => createMarker(boss));
-            
+            // Отрисовываем тех, кто остался только в коде
+            bossData.forEach(createMarker);
             renderMonitor();
         });
     }
@@ -322,64 +314,61 @@
 
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
-        const active = bossData.filter(b => b.deathTime || b.isAlive);
-        active.sort((a, b) => (a.isAlive === b.isAlive) ? (a.deathTime - b.deathTime) : (a.isAlive ? -1 : 1));
+        // Показываем ВСЕХ боссов, чтобы список не пустел
+        const sorted = [...bossData].sort((a, b) => {
+            if (a.isAlive !== b.isAlive) return a.isAlive ? -1 : 1;
+            return (a.deathTime || 0) - (b.deathTime || 0);
+        });
+
         const now = Date.now();
-        list.innerHTML = active.map(b => {
-            let timeStr = "READY";
-            if (!b.isAlive) {
+        list.innerHTML = sorted.map(b => {
+            let timeStr = b.isAlive ? "READY" : "WAIT";
+            if (!b.isAlive && b.deathTime) {
                 const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
-                const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60);
-                timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
+                if(rem > 0) {
+                    const m = Math.floor(rem / 60); const s = rem % 60;
+                    timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
+                } else { timeStr = "READY"; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div>
                     <div style="font-weight:bold">${b.name}</div>
                     <div class="rb-note-text">${b.note || ""}</div>
                 </div>
-                <span class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid; padding:2px 5px; border-radius:4px">${timeStr}</span>
+                <span class="${b.isAlive || timeStr === 'READY' ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid; padding:2px 5px; border-radius:4px">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
     function resetTimers() {
-        if(confirm("Очистить все таймеры и статусы боссов?")) {
+        if(confirm("Очистить все таймеры?")) {
             const updates = {};
-            bossData.forEach(b => {
-                updates[`${b.id}/deathTime`] = null;
-                updates[`${b.id}/isAlive`] = false;
-            });
+            bossData.forEach(b => { updates[`${b.id}/deathTime`] = null; updates[`${b.id}/isAlive`] = false; });
             rbRef.update(updates);
         }
     }
 
     function toggleEditor() {
         if (!isEditorMode) {
-            const pass = prompt("Введите пароль для входа в режим редактора:");
-            if (pass === "D36rk43mgm") {
-                isEditorMode = true;
-            } else {
-                alert("Неверный пароль!");
-                return;
-            }
-        } else {
-            isEditorMode = false;
-            isAddingMode = false;
-        }
+            if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true;
+            else return alert("Неверно!");
+        } else isEditorMode = false;
         
-        const btn = document.getElementById('editor-btn');
-        const addBtn = document.getElementById('add-boss-btn');
-        btn.innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
-        btn.classList.toggle('active');
-        addBtn.style.display = isEditorMode ? "block" : "none";
+        document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
+        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
+        document.getElementById('add-boss-btn').style.display = isEditorMode ? "block" : "none";
     }
 
     function startAddingBoss() {
         isAddingMode = true;
-        alert("Режим добавления: Нажмите в ЛЮБОЕ МЕСТО НА КАРТЕ, чтобы создать там нового босса.");
+        alert("Кликни на карту для установки РБ");
     }
 
-    function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
+    function focusById(id) { 
+        const b = bossData.find(x => x.id === id); 
+        if (b) focus(b); 
+    }
+    
     function focus(boss) {
         const m = document.getElementById('rb-' + boss.id);
         if(!m) return;
@@ -387,6 +376,7 @@
         scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale);
         update();
     }
+
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     function updateGameTime() {
@@ -396,29 +386,19 @@
         const syncGame = (17 * 60) + 36;
         let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
         gameMin = ((gameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(gameMin / 60); 
-        const m = gameMin % 60;
+        const h = Math.floor(gameMin / 60); const m = gameMin % 60;
         document.getElementById('game-time').innerText = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}`;
     }
 
     let isDrag = false, lx, ly;
-
-    window.onpointerdown = e => { 
-        if(e.button === 0 && !draggedBossId) { 
-            isDrag = true; lx = e.clientX; ly = e.clientY; 
-        } 
-    };
-
+    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
         if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
             const m = document.getElementById('rb-' + draggedBossId);
-            if (m) {
-                m.style.top = y + 'px'; 
-                m.style.left = x + 'px';
-            }
+            if (m) { m.style.top = y + 'px'; m.style.left = x + 'px'; }
         } else if (isDrag) {
             posX += e.clientX - lx; posY += e.clientY - ly;
             lx = e.clientX; ly = e.clientY; update();
@@ -426,35 +406,20 @@
     };
 
     window.onpointerup = (e) => {
-        // Логика добавления нового РБ
         if (isAddingMode && isEditorMode && !draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
-            
-            const name = prompt("Введите имя нового Raid Boss:");
+            const name = prompt("Имя РБ:");
             if (name) {
-                const note = prompt("Введите заметку (например, точку ТП):", "");
-                const id = name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') + "_" + Date.now();
-                
-                rbRef.child(id).set({
-                    name: name,
-                    note: note,
-                    pos: `top:${y}px;left:${x}px;`,
-                    isAlive: false,
-                    deathTime: null
-                });
+                const id = "rb_" + Date.now();
+                rbRef.child(id).set({ name: name, pos: `top:${y}px;left:${x}px;`, isAlive: false, deathTime: null });
             }
             isAddingMode = false;
         }
-
         if (draggedBossId) {
             const m = document.getElementById('rb-' + draggedBossId);
-            if (m) {
-                rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
-                m.classList.remove('dragging');
-                m.releasePointerCapture(e.pointerId);
-            }
+            if (m) { rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` }); m.classList.remove('dragging'); }
             draggedBossId = null;
         }
         isDrag = false;
