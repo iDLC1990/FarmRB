@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Global Time Sync</title>
+    <title>L2 RB Map - Active Only</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -210,7 +210,6 @@
     }
 
     function createMarker(boss) {
-        // ЗАЩИТА: Если нет позиции или ID, не рисуем ничего
         if (!boss || !boss.id || !boss.pos) return;
         if (document.getElementById('rb-' + boss.id)) return;
 
@@ -222,7 +221,7 @@
             const p = boss.pos.split(';');
             m.style.top = p[0].split(':')[1];
             m.style.left = p[1].split(':')[1];
-        } catch(e) { console.error("Ошибка координат босса:", boss.id); return; }
+        } catch(e) { return; }
 
         m.setAttribute('data-name', boss.name);
         
@@ -240,8 +239,9 @@
             if (isEditorMode) return;
             e.stopPropagation();
             if (clickTimer) {
-                clearTimeout(clickTimer); clickTimer = null;
-                onDoubleClick(boss);
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                onDoubleClickAction(boss.id); // Исправлено: вызываем действие
             } else {
                 clickTimer = setTimeout(() => { focus(boss); clickTimer = null; }, 250);
             }
@@ -249,9 +249,16 @@
         wrapper.appendChild(m);
     }
 
-    function onDoubleClick(boss) {
-        if (boss.isAlive) rbRef.child(boss.id).update({ isAlive: false, deathTime: null });
-        else rbRef.child(boss.id).update({ deathTime: Date.now(), isAlive: false });
+    // Отдельная функция для обработки логики переключения
+    function onDoubleClickAction(bossId) {
+        const b = bossData.find(x => x.id === bossId);
+        if (!b) return;
+        
+        if (b.isAlive) {
+            rbRef.child(bossId).update({ isAlive: false, deathTime: null });
+        } else {
+            rbRef.child(bossId).update({ deathTime: Date.now(), isAlive: false });
+        }
     }
 
     function listenFirebase() {
@@ -260,7 +267,7 @@
             
             Object.keys(data).forEach(id => {
                 const item = data[id];
-                if(!item || !item.pos) return; // Пропускаем кривые данные
+                if(!item || !item.pos) return;
 
                 let boss = bossData.find(b => b.id === id);
                 if (!boss) {
@@ -284,7 +291,6 @@
                 }
             });
 
-            // Отрисовываем тех, кто остался только в коде
             bossData.forEach(createMarker);
             renderMonitor();
         });
@@ -292,13 +298,17 @@
 
     function tick() {
         const now = Date.now();
+        let listChanged = false;
+
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
+
             if (boss.deathTime && !boss.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
                 if (rem <= 0) {
                     rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
+                    listChanged = true;
                 } else {
                     let t = m.querySelector('.rb-timer-map');
                     if (!t) { t = document.createElement('div'); t.className = 'rb-timer-map'; m.appendChild(t); }
@@ -309,39 +319,41 @@
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
             }
         });
+        
         renderMonitor();
     }
 
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
-        // Показываем ВСЕХ боссов, чтобы список не пустел
-        const sorted = [...bossData].sort((a, b) => {
+        const now = Date.now();
+
+        // ФИЛЬТР: Только те, кто живы ИЛИ у кого идет таймер
+        const activeBosses = bossData.filter(b => b.isAlive || (b.deathTime && (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000) > 0)));
+
+        activeBosses.sort((a, b) => {
             if (a.isAlive !== b.isAlive) return a.isAlive ? -1 : 1;
             return (a.deathTime || 0) - (b.deathTime || 0);
         });
 
-        const now = Date.now();
-        list.innerHTML = sorted.map(b => {
-            let timeStr = b.isAlive ? "READY" : "WAIT";
+        list.innerHTML = activeBosses.map(b => {
+            let timeStr = b.isAlive ? "READY" : "";
             if (!b.isAlive && b.deathTime) {
                 const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
-                if(rem > 0) {
-                    const m = Math.floor(rem / 60); const s = rem % 60;
-                    timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
-                } else { timeStr = "READY"; }
+                const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60);
+                timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div>
                     <div style="font-weight:bold">${b.name}</div>
                     <div class="rb-note-text">${b.note || ""}</div>
                 </div>
-                <span class="${b.isAlive || timeStr === 'READY' ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid; padding:2px 5px; border-radius:4px">${timeStr}</span>
+                <span class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid; padding:2px 5px; border-radius:4px">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
     function resetTimers() {
-        if(confirm("Очистить все таймеры?")) {
+        if(confirm("Очистить активные таймеры?")) {
             const updates = {};
             bossData.forEach(b => { updates[`${b.id}/deathTime`] = null; updates[`${b.id}/isAlive`] = false; });
             rbRef.update(updates);
