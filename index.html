@@ -26,7 +26,7 @@
             width: 16px; height: 16px; z-index: 15;
         }
 
-        /* Специальная мигающая метка */
+        /* Мигающая метка миникарты */
         .special-marker {
             background: #ffd700 !important; border: 2px solid #fff !important;
             animation: pulse-special 1.5s infinite; z-index: 20;
@@ -42,7 +42,6 @@
             background: rgba(0,0,0,0.85); color: #bbb; padding: 2px 8px; border-radius: 4px; 
             font-size: 11px; white-space: nowrap; border: 1px solid #333; opacity: 0.8; pointer-events: none;
         }
-        .rb-marker:hover::after { opacity: 1; color: #fff; font-size: 14px; background: #000; z-index: 100; }
 
         .rb-timer-map {
             position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
@@ -73,7 +72,19 @@
         .btn-reset { background:#400; color:#f88; border-color:#844; }
         .btn-editor { background:#222; color:#0f0; border-color:#050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 10px #0f0; }
-        
+
+        /* Окно миникарты */
+        #minimap-overlay {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80vw; max-width: 600px; background: #000; border: 2px solid #ffd700;
+            z-index: 3000; display: none; box-shadow: 0 0 50px rgba(0,0,0,0.9); border-radius: 10px; overflow: hidden;
+        }
+        #minimap-overlay img { width: 100%; display: block; }
+        #minimap-overlay .close-btn { 
+            position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); 
+            color: #fff; border: 1px solid #fff; padding: 5px 10px; cursor: pointer; border-radius: 5px;
+        }
+
         #editor-hint { 
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             background: rgba(0,255,0,0.8); color: #000; padding: 10px 20px; 
@@ -84,6 +95,11 @@
 <body>
 
 <div id="editor-hint">РЕЖИМ РЕДАКТОРА: Кликни на карту, чтобы поставить метку</div>
+
+<div id="minimap-overlay" onclick="this.style.display='none'">
+    <div class="close-btn">ЗАКРЫТЬ</div>
+    <img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" alt="Mini Map">
+</div>
 
 <div id="sidebar">
     <div style="text-align:center; color:#888; font-size:10px; letter-spacing:1px;">L2 GAME TIME</div>
@@ -205,26 +221,18 @@
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
 
-        // Клик по обертке (для режима редактора)
         wrapper.addEventListener('click', (e) => {
             if (!isEditorMode) return;
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
-            
             const bossName = prompt("Введите имя нового босса:");
             if (bossName) {
                 const dbId = bossName.replace(/\./g, '_');
-                rbRef.child(dbId).set({
-                    name: bossName,
-                    pos: `top:${y}px;left:${x}px;`,
-                    note: "Добавлено вручную",
-                    isCustom: true
-                });
+                rbRef.child(dbId).set({ name: bossName, pos: `top:${y}px;left:${x}px;`, note: "Добавлено вручную" });
             }
         });
 
-        // Добавляем секретную метку
         addSpecialMarker();
     }
 
@@ -232,48 +240,41 @@
         const sm = document.createElement('div');
         sm.className = 'rb-marker special-marker';
         sm.style.cssText = "top:2970px;left:4322px;";
-        sm.setAttribute('data-name', 'SECRET IMAGE');
+        sm.setAttribute('data-name', 'SECRET MINI-MAP');
         sm.onclick = (e) => {
             e.stopPropagation();
-            window.open('https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true', '_blank');
+            document.getElementById('minimap-overlay').style.display = 'block';
         };
         wrapper.appendChild(sm);
     }
 
     function drawMarkers() {
-        // Очищаем только тех, кого нет в bossData
         wrapper.querySelectorAll('.rb-marker:not(.special-marker)').forEach(m => m.remove());
         bossData.forEach(createMarkerElement);
     }
 
     function createMarkerElement(boss) {
         if (boss.markerEl) boss.markerEl.remove();
-        
         const m = document.createElement('div');
         m.className = 'rb-marker';
         m.style.cssText = boss.pos;
         m.setAttribute('data-name', boss.name);
         
         let clickTimer = null;
-
         m.onclick = (e) => {
             if (isEditorMode) return;
             e.stopPropagation();
-
             if (clickTimer) {
-                // ДВОЙНОЙ КЛИК
                 clearTimeout(clickTimer);
                 clickTimer = null;
                 onMarkerDoubleClick(boss);
             } else {
-                // ОДИНОЧНЫЙ КЛИК (ждем, не будет ли второго)
                 clickTimer = setTimeout(() => {
                     focus(boss);
                     clickTimer = null;
                 }, 250);
             }
         };
-
         wrapper.appendChild(m);
         boss.markerEl = m;
     }
@@ -290,29 +291,20 @@
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
-            
-            // Сброс состояний
             bossData.forEach(boss => {
                 boss.deathTime = null; boss.isAlive = false;
-                if(boss.markerEl) {
-                    boss.markerEl.classList.remove('is-alive');
-                    const t = boss.markerEl.querySelector('.rb-timer-map');
-                    if(t) t.remove();
-                }
+                if(boss.markerEl) boss.markerEl.classList.remove('is-alive');
             });
 
             for (let id in data) {
                 const item = data[id];
                 const name = item.name || id.replace(/_/g, '.');
                 let boss = bossData.find(b => b.name === name);
-                
-                // Если босс новый (из редактора)
                 if (!boss) {
                     boss = { name: name, pos: item.pos, note: item.note || "" };
                     bossData.push(boss);
                     createMarkerElement(boss);
                 }
-
                 boss.deathTime = item.deathTime;
                 boss.isAlive = item.isAlive;
                 if (boss.isAlive && boss.markerEl) boss.markerEl.classList.add('is-alive');
@@ -348,8 +340,13 @@
                     const s = remaining % 60;
                     tMap.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
                 }
+            } else if (boss.markerEl) {
+                const t = boss.markerEl.querySelector('.rb-timer-map');
+                if (t) t.remove();
             }
         });
+        // ОБНОВЛЯЕМ СПИСОК КАЖДУЮ СЕКУНДУ
+        renderMonitor();
     }
 
     function renderMonitor() {
@@ -357,7 +354,7 @@
         active.sort((a, b) => (a.isAlive === b.isAlive) ? (a.deathTime - b.deathTime) : (a.isAlive ? -1 : 1));
 
         const now = Date.now();
-        monitorList.innerHTML = active.map(b => {
+        const html = active.map(b => {
             let timeStr = "READY!";
             if (!b.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
@@ -377,6 +374,9 @@
                 </div>
             `;
         }).join('');
+        
+        // Используем проверку, чтобы не перерисовывать DOM если ничего не изменилось (опционально)
+        monitorList.innerHTML = html;
     }
 
     function focusByName(name) {
@@ -386,7 +386,7 @@
 
     function handleSearch() {
         const val = document.getElementById('search-input').value.toLowerCase();
-        if (val.length < 3) return;
+        if (val.length < 2) return;
         const boss = bossData.find(b => b.name.toLowerCase().includes(val));
         if (boss) focus(boss);
     }
@@ -394,7 +394,7 @@
     function focus(boss) {
         const t = parseInt(boss.pos.match(/top:(\d+)px/)[1]);
         const l = parseInt(boss.pos.match(/left:(\d+)px/)[1]);
-        scale = window.innerWidth < 600 ? 1.2 : 0.8;
+        scale = window.innerWidth < 600 ? 1.1 : 0.7;
         posX = (window.innerWidth / 2) - (l * scale);
         posY = (window.innerHeight / 2) - (t * scale);
         update();
@@ -416,20 +416,15 @@
     }
 
     function resetAllFirebase() {
-        if(confirm("Очистить ВСЕ таймеры для всех игроков?")) {
-            // Удаляем только динамические данные (время смерти и статус), сохраняя координаты
+        if(confirm("Очистить таймеры?")) {
             rbRef.once('value', snapshot => {
                 const data = snapshot.val();
-                for (let id in data) {
-                    rbRef.child(id).update({ deathTime: null, isAlive: false });
-                }
+                for (let id in data) rbRef.child(id).update({ deathTime: null, isAlive: false });
             });
         }
     }
 
-    // Управление
     let isDrag = false, lx, ly, initialDist = 0;
-
     viewport.addEventListener('wheel', e => {
         e.preventDefault();
         applyZoom(e.deltaY > 0 ? 0.8 : 1.2, e.clientX, e.clientY);
@@ -453,7 +448,6 @@
     });
 
     viewport.addEventListener('touchmove', e => {
-        e.preventDefault(); 
         if (e.touches.length === 1 && isDrag) {
             posX += e.touches[0].clientX - lx; posY += e.touches[0].clientY - ly;
             lx = e.touches[0].clientX; ly = e.touches[0].clientY; update();
