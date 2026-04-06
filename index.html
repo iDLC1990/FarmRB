@@ -188,7 +188,27 @@
             m.className = 'rb-marker';
             m.style.cssText = boss.pos;
             m.setAttribute('data-name', boss.name);
-            m.onclick = (e) => { e.stopPropagation(); onMarkerClick(boss); };
+            
+            // Переменная для хранения времени последнего клика по ЭТОМУ маркеру
+            let lastClickTime = 0;
+
+            m.onclick = (e) => {
+                e.stopPropagation();
+                const currentTime = Date.now();
+                const diff = currentTime - lastClickTime;
+
+                if (diff < 300) { 
+                    // МЕНЬШЕ 300мс — ЭТО ДВОЙНОЙ КЛИК
+                    console.log("Двойной клик по: " + boss.name);
+                    onMarkerClick(boss); // Активируем таймер в Firebase
+                    lastClickTime = 0;   // Сбрасываем, чтобы не сработало трижды
+                } else {
+                    // ОДИНОЧНЫЙ КЛИК — ПРОСТО ФОКУСИРУЕМ КАМЕРУ
+                    focus(boss);
+                    lastClickTime = currentTime;
+                }
+            };
+
             wrapper.appendChild(m);
             boss.markerEl = m;
         });
