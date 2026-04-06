@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Notes Restored</title>
+    <title>L2 RB Map - Reset Function</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -13,7 +13,6 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        /* Метки боссов */
         .rb-marker {
             position: absolute; width: 18px; height: 18px;
             background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
@@ -36,38 +35,36 @@
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
-        /* КРУПНЫЙ ТАЙМЕР */
         .rb-timer-map {
             position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 4px 10px; border-radius: 6px;
             font-weight: bold; font-family: 'Courier New', monospace; 
-            font-size: 18px; 
-            border: 2px solid #00ffcc;
+            font-size: 18px; border: 2px solid #00ffcc;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.7);
             z-index: 100; pointer-events: none;
         }
 
-        /* Боковая панель */
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 290px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
         }
-        #monitor-list { margin-top: 15px; max-height: 55vh; overflow-y: auto; }
+        #monitor-list { margin-top: 15px; max-height: 50vh; overflow-y: auto; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
             font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
         }
         .monitor-item:hover { background: rgba(255,255,255,0.1); }
-        
-        /* Стили для приписки (note) */
         .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
-        
         .ready-text { color: #ff3300; font-weight: bold; }
+        
         #game-time { font-size:36px; color:#ffd700; font-family:monospace; text-align:center; margin-bottom: 10px; }
-        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; }
+        
+        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
+        .btn-reset { background: #441111; color: #ff6666; border: 1px solid #662222; margin-top: 5px; }
+        .btn-reset:hover { background: #662222; color: #fff; }
 
         #minimap-overlay {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -84,6 +81,7 @@
 <div id="sidebar">
     <div id="game-time">00:00</div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
+    <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ ТАЙМЕРЫ</button>
     <div id="monitor-list"></div>
 </div>
 
@@ -100,11 +98,9 @@
     const rbRef = db.ref('bosses');
 
     const SPAWN_WINDOW = 15 * 60; 
-
     let isEditorMode = false;
     let draggedBossId = null;
 
-    // ВОЗВРАЩЕННЫЙ СПИСОК С ПРИПИСКАМИ (note)
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -234,8 +230,8 @@
             bossData.forEach(boss => {
                 const item = data[boss.id];
                 if (item) {
-                    boss.deathTime = item.deathTime;
-                    boss.isAlive = item.isAlive;
+                    boss.deathTime = item.deathTime || null;
+                    boss.isAlive = item.isAlive || false;
                     if (item.pos) {
                         boss.pos = item.pos;
                         const m = document.getElementById('rb-' + boss.id);
@@ -245,6 +241,9 @@
                             m.style.left = p[1].split(':')[1];
                         }
                     }
+                } else {
+                    boss.deathTime = null;
+                    boss.isAlive = false;
                 }
                 const m = document.getElementById('rb-' + boss.id);
                 if (m) {
@@ -298,6 +297,17 @@
                 <span class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid; padding:2px 5px; border-radius:4px">${timeStr}</span>
             </div>`;
         }).join('');
+    }
+
+    function resetTimers() {
+        if(confirm("Очистить все таймеры и статусы боссов?")) {
+            const updates = {};
+            bossData.forEach(b => {
+                updates[`${b.id}/deathTime`] = null;
+                updates[`${b.id}/isAlive`] = false;
+            });
+            rbRef.update(updates);
+        }
     }
 
     function toggleEditor() {
