@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Fixed & Stable</title>
+    <title>L2 RB Map - Ultimate Fix</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -15,41 +15,38 @@
 
         /* Метки боссов */
         .rb-marker {
-            position: absolute; width: 16px; height: 16px;
-            background: rgba(255, 255, 255, 0.3); border: 2px solid #666;
+            position: absolute; width: 18px; height: 18px;
+            background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
-            display: block !important; /* Гарантируем видимость */
+            box-shadow: 0 0 5px rgba(0,0,0,0.8);
+            display: block !important;
         }
         
-        /* Живой босс */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
-            width: 20px; height: 20px; z-index: 15;
+            width: 22px; height: 22px; z-index: 15;
         }
 
-        .rb-marker.dragging { opacity: 0.5; scale: 1.8; z-index: 100; cursor: grabbing; }
+        .rb-marker.dragging { opacity: 0.6; scale: 2; z-index: 1000; cursor: grabbing; }
 
-        /* Текст имени над меткой */
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
-        /* КРУПНЫЙ ТАЙМЕР НА КАРТЕ */
+        /* КРУПНЫЙ ТАЙМЕР */
         .rb-timer-map {
-            position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 3px 8px; border-radius: 6px;
+            position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 4px 10px; border-radius: 6px;
             font-weight: bold; font-family: 'Courier New', monospace; 
-            font-size: 16px; /* Еще крупнее */
+            font-size: 18px; 
             border: 2px solid #00ffcc;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
-            z-index: 20; pointer-events: none;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.7);
+            z-index: 100; pointer-events: none;
         }
 
-        /* Миникарта (Secret) */
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
@@ -62,16 +59,15 @@
         #monitor-list { margin-top: 15px; max-height: 50vh; overflow-y: auto; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; color: #ccc;
+            font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
         }
         .monitor-item:hover { background: rgba(255,255,255,0.1); }
         .ready-text { color: #ff3300; font-weight: bold; }
         
         #game-time { font-size:36px; color:#ffd700; font-family:monospace; text-align:center; margin-bottom: 10px; }
-        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border:1px solid transparent; }
-        .btn-editor { background:#222; color:#0f0; border-color:#050; }
+        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; }
+        .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
-        .btn-reset { background:#400; color:#f88; }
 
         #minimap-overlay {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -83,20 +79,15 @@
 </head>
 <body>
 
-<div id="minimap-overlay" onclick="this.style.display='none'">
-    <img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true">
-</div>
+<div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true"></div>
 
 <div id="sidebar">
     <div id="game-time">00:00</div>
-    <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕЖИМ РЕДАКТОРА (ВЫКЛ)</button>
-    <button onclick="resetAllFirebase()" class="btn btn-reset">СБРОСИТЬ ВСЕ</button>
+    <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <div id="monitor-list"></div>
 </div>
 
-<div id="viewport">
-    <div id="map-wrapper"></div>
-</div>
+<div id="viewport"><div id="map-wrapper"></div></div>
 
 <script>
     const firebaseConfig = {
@@ -104,7 +95,6 @@
         projectId: "l2-rb-map",
         databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app",
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const rbRef = db.ref('bosses');
@@ -113,18 +103,79 @@
     const SPAWN_WINDOW = 15 * 60; 
 
     let isEditorMode = false;
-    let draggedBoss = null;
-    let bossData = [];
+    let draggedBossId = null;
 
-    // Список боссов по умолчанию (если базы нет)
-    const initialBosses = [
-        { name: "Abyss Brukunt", pos: "top:2721px;left:4385px;" },
-        { name: "Flame of Splendor Barakiel", pos: "top:1376px;left:3793px;" },
-        { name: "Shilen's Messenger Cabrio", pos: "top:2145px;left:4614px;" },
-        { name: "Death Lord Hallate", pos: "top:2175px;left:3959px;" },
-        { name: "Kernon", pos: "top:2129px;left:4074px;" },
-        { name: "Longhorn Golkonda", pos: "top:2216px;left:4078px;" }
-        // ... (остальные боссы добавятся автоматически из Firebase)
+    // ПОЛНЫЙ СПИСОК БОССОВ (Всегда подгружается первым)
+    let bossData = [
+        { id: "Abyss_Brukunt", name: "Abyss Brukunt", pos: "top:2721px;left:4385px;" },
+        { id: "Demon_Kurikups", name: "Demon Kurikups", pos: "top:3725px;left:3430px;" },
+        { id: "Ghost_of_the_Lidia", name: "Ghost of the Lidia", pos: "top:1906px;left:4528px;" },
+        { id: "Fierce_Tiger_King_Angel", name: "Fierce Tiger King Angel", pos: "top:2713px;left:4517px;" },
+        { id: "Shilen_Priest_Hisilrome", name: "Shilen's Priest Hisilrome", pos: "top:2279px;left:4503px;" },
+        { id: "Rahha", name: "Rahha", pos: "top:1981px;left:4047px;" },
+        { id: "Enmity_Ghost_Ramdal", name: "Enmity Ghost Ramdal", pos: "top:2128px;left:3955px;" },
+        { id: "Gargoyle_Lord_Tiphon", name: "Gargoyle Lord Tiphon", pos: "top:1853px;left:4509px;" },
+        { id: "Demons_Agent_Falston", name: "Demons Agent Falston", pos: "top:1460px;left:3819px;" },
+        { id: "Kernon_Faithful_Kelone", name: "Kernon's Faithful Kelone", pos: "top:1838px;left:4284px;" },
+        { id: "Spirit_of_Andras", name: "Spirit of Andras", pos: "top:1851px;left:4661px;" },
+        { id: "Anakim_Nemesis_Zakaron", name: "Anakim's Nemesis Zakaron", pos: "top:2750px;left:4256px;" },
+        { id: "Barakiel", name: "Flame of Splendor Barakiel", pos: "top:1376px;left:3793px;" },
+        { id: "Korim", name: "Korim", pos: "top:2259px;left:3958px;" },
+        { id: "Queen_Themis", name: "Palibati Queen Themis", pos: "top:2226px;left:4712px;" },
+        { id: "Cabrio", name: "Shilen's Messenger Cabrio", pos: "top:2145px;left:4614px;" },
+        { id: "Savior_Mardil", name: "Immortal Savior Mardil", pos: "top:2216px;left:3954px;" },
+        { id: "Tanatos", name: "Doom Blade Tanatos", pos: "top:1953px;left:4150px;" },
+        { id: "Sheshark", name: "Water Dragon Seer Sheshark", pos: "top:3295px;left:3959px;" },
+        { id: "Hallate", name: "Death Lord Hallate", pos: "top:2175px;left:3959px;" },
+        { id: "Behemoth", name: "Beast Lord Behemoth", pos: "top:1870px;left:4098px;" },
+        { id: "Meanas_Anor", name: "Meanas Anor", pos: "top:1992px;left:4402px;" },
+        { id: "Skylancer", name: "Roaring Skylancer", pos: "top:2527px;left:4165px;" },
+        { id: "Hellmann", name: "Eilhalder von Hellmann", pos: "top:1729px;left:3504px;" },
+        { id: "Kandra", name: "Vanor Chief Kandra", pos: "top:1565px;left:4027px;" },
+        { id: "Lokness", name: "Fafurion'Herald Lokness", pos: "top:3295px;left:3910px;" },
+        { id: "Sobekk", name: "Krokian Padisha Sobekk", pos: "top:3291px;left:4064px;" },
+        { id: "Decarbia", name: "Bloody Empress Decarbia", pos: "top:2161px;left:4690px;" },
+        { id: "Ipos", name: "Death Lord Ipos", pos: "top:1949px;left:4379px;" },
+        { id: "Shax", name: "Death Lord Shax", pos: "top:1997px;left:4512px;" },
+        { id: "Kernon", name: "Kernon", pos: "top:2129px;left:4074px;" },
+        { id: "Olkuth", name: "Lesser Giant Olkuth", pos: "top:2405px;left:4679px;" },
+        { id: "Naga", name: "Storm Winged Naga", pos: "top:1894px;left:4227px;" },
+        { id: "Palatanos", name: "Palatanos of Horrific Power", pos: "top:1906px;left:4305px;" },
+        { id: "Flamestone_Giant", name: "Flamestone Giant", pos: "top:2014px;left:4287px;" },
+        { id: "Ashakiel", name: "Ocean Flame Ashakiel", pos: "top:3264px;left:4100px;" },
+        { id: "Hestia", name: "Hestia", pos: "top:1152px;left:4191px;" },
+        { id: "Shuriel", name: "Fire of Wrath Shuriel", pos: "top:2174px;left:4076px;" },
+        { id: "Golkonda", name: "Longhorn Golkonda", pos: "top:2216px;left:4078px;" },
+        { id: "Galaxia", name: "Cherub Galaxia", pos: "top:2261px;left:4084px;" },
+        { id: "Shadith", name: "Varka's Hero Shadith", pos: "top:1750px;left:4017px;" },
+        { id: "Mos", name: "Varka's Commander Mos", pos: "top:1770px;left:3960px;" },
+        { id: "Ember", name: "Ember", pos: "top:1173px;left:4720px;" },
+        { id: "Uruka", name: "Uruka", pos: "top:1990px;left:3002px;" },
+        { id: "Ashutar", name: "Soul of Water Ashutar", pos: "top:1765px;left:3911px;" },
+        { id: "Nastron", name: "Soul of Fire Nastron", pos: "top:1411px;left:4266px;" },
+        { id: "Horus", name: "Varka's Chief Horus", pos: "top:1721px;left:3923px;" },
+        { id: "Halter", name: "Andreas van Halter", pos: "top:1640px;left:3222px;" },
+        { id: "Plague_Golem", name: "Plague Golem", pos: "top:1584px;left:4509px;" },
+        { id: "MILENU", name: "MILENU", pos: "top:3972px;left:3737px;" },
+        { id: "Brakki", name: "Ketra's Chief Brakki", pos: "top:1385px;left:4289px;" },
+        { id: "Tayr", name: "Ketra's Commander Tayr", pos: "top:1421px;left:4298px;" },
+        { id: "Hekaton", name: "Ketra's Hero Hekaton", pos: "top:1477px;left:4316px;" },
+        { id: "Queen_Shyeed", name: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
+        { id: "Anays", name: "Lord of Splendor Anays", pos: "top:1402px;left:4036px;" },
+        { id: "Sailren", name: "Sailren", pos: "top:1956px;left:3236px;" },
+        { id: "Daimon", name: "Daimon the White-Eyes", pos: "top:1717px;left:4660px;" },
+        { id: "Glaki", name: "Last Lesser Giant Glaki", pos: "top:2492px;left:4526px;" },
+        { id: "Bumbalump", name: "Icicle Emperor Bumbalump", pos: "top:1103px;left:4403px;" },
+        { id: "Gorgolos", name: "Gorgolos", pos: "top:2542px;left:4659px;" },
+        { id: "Kastor", name: "Roaring Lord Kastor", pos: "top:2035px;left:3921px;" },
+        { id: "Hekaton_Prime", name: "Hekaton Prime", pos: "top:2606px;left:4688px;" },
+        { id: "Utenus", name: "Last Titan Utenus", pos: "top:2579px;left:4672px;" },
+        { id: "Isabella", name: "Isabella", pos: "top:2627px;left:2408px;" },
+        { id: "Sharpshooter", name: "Royal Sharpshooter", pos: "top:2638px;left:3712px;" },
+        { id: "Mimir", name: "Enchanced Mimir", pos: "top:2937px;left:4001px;" },
+        { id: "Makkum", name: "Abyssal Makkum", pos: "top:2567px;left:3804px;" },
+        { id: "gordon", name: "gordon", pos: "top:1577px;left:4400px;" },
+        { id: "Typhoon", name: "Typhoon", pos: "top:4008px;left:2830px;" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
@@ -135,23 +186,12 @@
     function init() {
         wrapper.style.backgroundImage = `url('${MAP_IMAGE}')`;
         update();
+        // Сначала рисуем все метки из кода
+        bossData.forEach(createMarker);
+        // Потом подключаем Firebase для обновления статусов
         listenFirebase(); 
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
-
-        // Клик по карте для создания нового босса
-        wrapper.addEventListener('click', (e) => {
-            if (!isEditorMode || draggedBoss) return;
-            const rect = wrapper.getBoundingClientRect();
-            const x = Math.round((e.clientX - rect.left) / scale);
-            const y = Math.round((e.clientY - rect.top) / scale);
-            const name = prompt("Имя босса:");
-            if (name) {
-                const id = name.replace(/\./g, '_');
-                rbRef.child(id).set({ name: name, pos: `top:${y}px;left:${x}px;` });
-            }
-        });
-
         addSpecialMarker();
     }
 
@@ -164,78 +204,65 @@
         wrapper.appendChild(sm);
     }
 
-    function getMarker(boss) {
-        let m = document.getElementById('rb-' + boss.id);
-        if (!m) {
-            m = document.createElement('div');
-            m.id = 'rb-' + boss.id;
-            m.className = 'rb-marker';
-            m.setAttribute('data-name', boss.name);
-            
-            let clickTimer = null;
-            m.onmousedown = (e) => {
-                if (isEditorMode) {
-                    e.stopPropagation();
-                    draggedBoss = boss;
-                    m.classList.add('dragging');
-                }
-            };
-
-            m.onclick = (e) => {
-                if (isEditorMode) return;
+    function createMarker(boss) {
+        let m = document.createElement('div');
+        m.id = 'rb-' + boss.id;
+        m.className = 'rb-marker';
+        m.style.top = boss.pos.split(';')[0].split(':')[1];
+        m.style.left = boss.pos.split(';')[1].split(':')[1];
+        m.setAttribute('data-name', boss.name);
+        
+        let clickTimer = null;
+        m.onmousedown = (e) => {
+            if (isEditorMode) {
                 e.stopPropagation();
-                if (clickTimer) {
-                    clearTimeout(clickTimer);
-                    clickTimer = null;
-                    onDoubleClick(boss);
-                } else {
-                    clickTimer = setTimeout(() => { focus(boss); clickTimer = null; }, 250);
-                }
-            };
-            wrapper.appendChild(m);
-        }
-        return m;
+                draggedBossId = boss.id;
+                m.classList.add('dragging');
+            }
+        };
+
+        m.onclick = (e) => {
+            if (isEditorMode) return;
+            e.stopPropagation();
+            if (clickTimer) {
+                clearTimeout(clickTimer); clickTimer = null;
+                onDoubleClick(boss);
+            } else {
+                clickTimer = setTimeout(() => { focus(boss); clickTimer = null; }, 250);
+            }
+        };
+        wrapper.appendChild(m);
     }
 
     function onDoubleClick(boss) {
-        const ref = rbRef.child(boss.id);
-        if (boss.isAlive) ref.update({ isAlive: false, deathTime: null });
-        else ref.update({ deathTime: Date.now(), isAlive: false });
+        const b = bossData.find(x => x.id === boss.id);
+        if (b.isAlive) rbRef.child(boss.id).update({ isAlive: false, deathTime: null });
+        else rbRef.child(boss.id).update({ deathTime: Date.now(), isAlive: false });
     }
 
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
-            
-            // Очищаем локальные данные, но не удаляем DOM элементы
-            bossData = [];
-
-            for (let id in data) {
-                const item = data[id];
-                const boss = {
-                    id: id,
-                    name: item.name || id,
-                    pos: item.pos,
-                    deathTime: item.deathTime,
-                    isAlive: item.isAlive
-                };
-                bossData.push(boss);
-
-                const m = getMarker(boss);
-                
-                // Обновляем позицию только если не тащим и если она есть в базе
-                if (!m.classList.contains('dragging') && boss.pos) {
-                    const parts = boss.pos.split(';');
-                    parts.forEach(p => {
-                        if (p.includes('top')) m.style.top = p.split(':')[1];
-                        if (p.includes('left')) m.style.left = p.split(':')[1];
-                    });
+            bossData.forEach(boss => {
+                const item = data[boss.id];
+                if (item) {
+                    boss.deathTime = item.deathTime;
+                    boss.isAlive = item.isAlive;
+                    if (item.pos) {
+                        boss.pos = item.pos;
+                        const m = document.getElementById('rb-' + boss.id);
+                        if (m && !m.classList.contains('dragging')) {
+                            m.style.top = item.pos.split(';')[0].split(':')[1];
+                            m.style.left = item.pos.split(';')[1].split(':')[1];
+                        }
+                    }
                 }
-
-                // Статус живой/мертвый
-                if (boss.isAlive) m.classList.add('is-alive');
-                else m.classList.remove('is-alive');
-            }
+                const m = document.getElementById('rb-' + boss.id);
+                if (m) {
+                    if (boss.isAlive) m.classList.add('is-alive');
+                    else m.classList.remove('is-alive');
+                }
+            });
             renderMonitor();
         });
     }
@@ -245,27 +272,18 @@
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
-
             if (boss.deathTime && !boss.isAlive) {
-                const elapsed = Math.floor((now - boss.deathTime) / 1000);
-                const rem = SPAWN_WINDOW - elapsed;
-
+                const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
                 if (rem <= 0) {
                     rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
                 } else {
-                    let tLabel = m.querySelector('.rb-timer-map');
-                    if (!tLabel) {
-                        tLabel = document.createElement('div');
-                        tLabel.className = 'rb-timer-map';
-                        m.appendChild(tLabel);
-                    }
-                    const min = Math.floor(rem / 60);
-                    const sec = rem % 60;
-                    tLabel.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+                    let t = m.querySelector('.rb-timer-map');
+                    if (!t) { t = document.createElement('div'); t.className = 'rb-timer-map'; m.appendChild(t); }
+                    const min = Math.floor(rem / 60); const sec = rem % 60;
+                    t.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
                 }
             } else {
-                const t = m.querySelector('.rb-timer-map');
-                if (t) t.remove();
+                const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
             }
         });
         renderMonitor();
@@ -275,47 +293,33 @@
         const list = document.getElementById('monitor-list');
         const active = bossData.filter(b => b.deathTime || b.isAlive);
         active.sort((a, b) => (a.isAlive === b.isAlive) ? (a.deathTime - b.deathTime) : (a.isAlive ? -1 : 1));
-
         const now = Date.now();
         list.innerHTML = active.map(b => {
             let timeStr = "READY";
             if (!b.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
-                const m = Math.max(0, Math.floor(rem / 60));
-                const s = Math.max(0, rem % 60);
+                const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60);
                 timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <b>${b.name}</b>
-                <span class="${b.isAlive ? 'ready-text' : ''}">${timeStr}</span>
+                <b>${b.name}</b> <span class="${b.isAlive ? 'ready-text' : ''}">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
     function toggleEditor() {
         isEditorMode = !isEditorMode;
-        const btn = document.getElementById('editor-btn');
-        btn.innerText = isEditorMode ? "РЕЖИМ РЕДАКТОРА (ВКЛ)" : "РЕЖИМ РЕДАКТОРА (ВЫКЛ)";
-        btn.classList.toggle('active');
-        viewport.style.cursor = isEditorMode ? 'crosshair' : 'grab';
+        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
+        document.getElementById('editor-btn').classList.toggle('active');
     }
 
-    function focusById(id) {
-        const boss = bossData.find(b => b.id === id);
-        if (boss) focus(boss);
-    }
-
+    function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
     function focus(boss) {
         const m = document.getElementById('rb-' + boss.id);
-        if (!m) return;
-        const t = parseInt(m.style.top);
-        const l = parseInt(m.style.left);
-        scale = 0.8;
-        posX = (window.innerWidth / 2) - (l * scale);
-        posY = (window.innerHeight / 2) - (t * scale);
+        const t = parseInt(m.style.top); const l = parseInt(m.style.left);
+        scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale);
         update();
     }
-
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     function updateGameTime() {
@@ -325,42 +329,30 @@
         const syncGame = (17 * 60) + 36;
         let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
         gameMin = ((gameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(gameMin / 60);
-        const m = gameMin % 60;
+        const h = Math.floor(gameMin / 60); const m = gameMin % 60;
         document.getElementById('game-time').innerText = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}`;
     }
 
-    function resetAllFirebase() {
-        if(confirm("Очистить все таймеры?")) {
-            rbRef.once('value', s => {
-                const d = s.val();
-                for(let id in d) rbRef.child(id).update({ deathTime: null, isAlive: false });
-            });
-        }
-    }
-
-    // Drag & Zoom Logic
     let isDrag = false, lx, ly;
-    window.onmousedown = e => { if(e.button === 0 && !draggedBoss) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onmousedown = e => { if(e.button === 0 && !draggedBossId) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onmousemove = e => {
-        if (draggedBoss) {
+        if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
-            const m = document.getElementById('rb-' + draggedBoss.id);
-            m.style.top = y + 'px';
-            m.style.left = x + 'px';
+            const m = document.getElementById('rb-' + draggedBossId);
+            m.style.top = y + 'px'; m.style.left = x + 'px';
         } else if (isDrag) {
             posX += e.clientX - lx; posY += e.clientY - ly;
             lx = e.clientX; ly = e.clientY; update();
         }
     };
     window.onmouseup = () => {
-        if (draggedBoss) {
-            const m = document.getElementById('rb-' + draggedBoss.id);
-            rbRef.child(draggedBoss.id).update({ pos: `top:${m.style.top};left:${m.style.left};` });
+        if (draggedBossId) {
+            const m = document.getElementById('rb-' + draggedBossId);
+            rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
             m.classList.remove('dragging');
-            draggedBoss = null;
+            draggedBossId = null;
         }
         isDrag = false;
     };
@@ -371,8 +363,7 @@
         const ns = Math.min(Math.max(0.05, scale * delta), 4);
         posX = e.clientX - (e.clientX - posX) * (ns / scale);
         posY = e.clientY - (e.clientY - posY) * (ns / scale);
-        scale = ns;
-        update();
+        scale = ns; update();
     }, { passive: false });
 
     init();
