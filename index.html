@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Sidebar FAQ</title>
+    <title>L2 RB Map - Sidebar FAQ Text</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -75,17 +75,18 @@
         
         /* Блок времени и FAQ */
         .time-container { 
-            display: flex; align-items: center; justify-content: center; 
-            gap: 15px; margin-bottom: 10px; position: relative;
+            display: flex; align-items: center; justify-content: space-between; 
+            gap: 10px; margin-bottom: 15px; padding: 0 5px;
         }
         #game-time { font-size: 38px; color: #ffd700; font-family: monospace; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+        
         .faq-trigger { 
-            width: 30px; height: 30px; background: #ffd700; color: #000; 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; cursor: pointer; font-size: 18px; transition: 0.3s;
-            box-shadow: 0 0 10px rgba(255,215,0,0.5);
+            height: 30px; min-width: 50px; background: #ffd700; color: #000; 
+            border-radius: 15px; display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.3s;
+            box-shadow: 0 0 10px rgba(255,215,0,0.5); padding: 0 10px;
         }
-        .faq-trigger:hover { transform: scale(1.1); background: #fff; }
+        .faq-trigger:hover { transform: scale(1.05); background: #fff; }
 
         #monitor-list { margin-top: 15px; max-height: 50vh; overflow-y: auto; }
         .monitor-item {
@@ -123,7 +124,7 @@
 <div id="sidebar">
     <div class="time-container">
         <div id="game-time">00:00</div>
-        <div class="faq-trigger" onclick="document.getElementById('faq-overlay').style.display='block'">?</div>
+        <div class="faq-trigger" onclick="document.getElementById('faq-overlay').style.display='block'">FAQ</div>
     </div>
     
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
@@ -180,7 +181,7 @@
     let isAddingMode = false;
     let draggedBossId = null;
 
-    // (Тут твой массив bossData без изменений)
+    // Массив данных о боссах
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -276,7 +277,6 @@
         wrapper.appendChild(sm);
     }
 
-    // --- Остальная логика без изменений ---
     function createMarker(boss) {
         if (!boss || !boss.id || !boss.pos) return;
         if (document.getElementById('rb-' + boss.id)) return;
