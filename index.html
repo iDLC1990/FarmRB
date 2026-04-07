@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Fixed Auto-Ready</title>
+    <title>L2 RB Map - Full Fixed</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -23,12 +23,15 @@
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             box-shadow: 0 0 5px rgba(0,0,0,0.8); display: block !important; touch-action: none;
         }
+        
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
+
         .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
+
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
@@ -43,90 +46,54 @@
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.7); z-index: 100; pointer-events: none;
         }
 
-        #minimap-overlay, #faq-overlay {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90vw; max-width: 600px; background: rgba(10, 10, 10, 0.98); border: 2px solid #ffd700;
-            z-index: 3000; display: none; border-radius: 15px; padding: 20px;
-            box-shadow: 0 0 50px rgba(0,0,0,1); color: #ccc; max-height: 80vh; overflow-y: auto;
-        }
-        #minimap-overlay img { width: 100%; display: block; border-radius: 8px; }
-
-        .faq-lang-switcher { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .lang-btn { background: #222; border: 1px solid #444; color: #fff; padding: 5px 15px; cursor: pointer; border-radius: 5px; font-size: 12px; }
-        .lang-btn.active { background: #ffd700; color: #000; font-weight: bold; }
-        .faq-content h2 { color: #ffd700; margin-top: 0; font-size: 20px; }
-        .faq-content p { line-height: 1.5; font-size: 14px; margin-bottom: 10px; color: #bbb; }
-        .faq-close { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #777; }
+        .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
+        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
         #sidebar {
             position: fixed; top: 15px; left: 15px; width: 290px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
         }
-        
-        .time-container { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; padding: 0 5px; }
-        #game-time { font-size: 38px; color: #ffd700; font-family: monospace; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
-        
-        .faq-trigger { 
-            height: 30px; min-width: 50px; background: #ffd700; color: #000; 
-            border-radius: 15px; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.3s;
-            box-shadow: 0 0 10px rgba(255,215,0,0.5); padding: 0 10px;
-        }
-
         #monitor-list { margin-top: 15px; max-height: 50vh; overflow-y: auto; }
-        .monitor-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; }
+        .monitor-item {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
+        }
         .monitor-item:hover { background: rgba(255,255,255,0.1); }
         .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
         .ready-text { color: #ff3300; font-weight: bold; }
+        
+        #game-time { font-size:36px; color:#ffd700; font-family:monospace; text-align:center; margin-bottom: 10px; }
         
         .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
         .btn-add { background:#004488; color:#fff; border: 1px solid #0066cc; display: none; }
         .btn-reset { background: #441111; color: #ff6666; border: 1px solid #662222; margin-top: 5px; }
+
+        #minimap-overlay {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90vw; max-width: 700px; background: #000; border: 3px solid #ffd700;
+            z-index: 3000; display: none; border-radius: 10px; overflow: hidden;
+        }
+        #minimap-overlay img { width: 100%; display: block; }
     </style>
 </head>
 <body>
 
-<div id="faq-overlay">
-    <span class="faq-close" onclick="document.getElementById('faq-overlay').style.display='none'">&times;</span>
-    <div class="faq-lang-switcher">
-        <button class="lang-btn active" onclick="switchLang('ru')">RU</button>
-        <button class="lang-btn" onclick="switchLang('en')">EN</button>
-    </div>
-    <div id="faq-text" class="faq-content"></div>
-</div>
-
-<div id="minimap-overlay" onclick="this.style.display='none'">
-    <img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true">
-</div>
+<div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true"></div>
 
 <div id="sidebar">
-    <div class="time-container">
-        <div id="game-time">00:00</div>
-        <div class="faq-trigger" onclick="document.getElementById('faq-overlay').style.display='block'">FAQ</div>
-    </div>
-    
+    <div id="game-time">00:00</div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <button onclick="startAddingBoss()" id="add-boss-btn" class="btn btn-add">+ ДОБАВИТЬ РБ</button>
-    <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ READY</button>
+    <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ ТАЙМЕРЫ</button>
     <div id="monitor-list"></div>
 </div>
 
 <div id="viewport"><div id="map-wrapper"></div></div>
 
 <script>
-    const faqData = {
-        ru: { title: "Справка", content: "<p><b>💀 Двойной клик:</b> Смерть РБ (запуск таймера).</p><p><b>🎯 Клик:</b> Фокус на карте.</p><p><b>⏳ READY:</b> Появляется после завершения таймера.</p>" },
-        en: { title: "FAQ", content: "<p><b>💀 Double Click:</b> Mark death.</p><p><b>🎯 Click:</b> Focus on map.</p>" }
-    };
-
-    function switchLang(lang) {
-        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === lang));
-        document.getElementById('faq-text').innerHTML = `<h2>${faqData[lang].title}</h2>${faqData[lang].content}`;
-    }
-
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
@@ -219,76 +186,123 @@
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
+        addSpecialMarker();
         listenFirebase(); 
-        switchLang('ru');
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
         update();
     }
 
+    function addSpecialMarker() {
+        const sm = document.createElement('div');
+        sm.className = 'rb-marker special-marker';
+        sm.style.top = "2970px"; sm.style.left = "4322px";
+        sm.setAttribute('data-name', 'SECRET MINI-MAP');
+        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'block'; };
+        wrapper.appendChild(sm);
+    }
+
+    function createMarker(boss) {
+        if (!boss || !boss.id || !boss.pos) return;
+        if (document.getElementById('rb-' + boss.id)) return;
+
+        let m = document.createElement('div');
+        m.id = 'rb-' + boss.id;
+        m.className = 'rb-marker';
+        
+        try {
+            const p = boss.pos.split(';');
+            m.style.top = p[0].split(':')[1];
+            m.style.left = p[1].split(':')[1];
+        } catch(e) { return; }
+
+        m.setAttribute('data-name', boss.name);
+        
+        let lastClick = 0;
+
+        m.addEventListener('pointerdown', (e) => {
+            if (isEditorMode) {
+                e.stopPropagation();
+                draggedBossId = boss.id;
+                m.classList.add('dragging');
+                m.setPointerCapture(e.pointerId);
+            }
+        });
+
+        m.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isEditorMode) return;
+
+            const now = Date.now();
+            if (now - lastClick < 400) { 
+                lastClick = 0;
+                toggleBossStatus(boss.id);
+            } else {
+                lastClick = now;
+                setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400);
+            }
+        });
+
+        wrapper.appendChild(m);
+    }
+
+    function toggleBossStatus(id) {
+        const b = bossData.find(x => x.id === id);
+        if (!b) return;
+
+        let updates = {};
+        if (b.isAlive || b.deathTime) {
+            updates = { isAlive: false, deathTime: null };
+            b.isAlive = false; b.deathTime = null;
+        } else {
+            const now = Date.now();
+            updates = { isAlive: false, deathTime: now };
+            b.isAlive = false; b.deathTime = now;
+        }
+
+        rbRef.child(id).update(updates).then(() => renderMonitor());
+    }
+
     function listenFirebase() {
-        rbRef.on('value', (s) => {
-            const data = s.val() || {};
-            bossData.forEach(b => {
-                const remote = data[b.id];
-                if (remote) {
-                    b.isAlive = remote.isAlive || false;
-                    b.deathTime = remote.deathTime || null;
-                    if (remote.pos) b.pos = remote.pos;
+        rbRef.on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            Object.keys(data).forEach(id => {
+                const item = data[id];
+                let boss = bossData.find(b => b.id === id);
+                if (!boss) {
+                    boss = { id, ...item };
+                    bossData.push(boss);
                 } else {
-                    b.isAlive = false; b.deathTime = null;
+                    Object.assign(boss, item);
                 }
-                updateMarkerVisual(b);
+                createMarker(boss);
+                const m = document.getElementById('rb-' + id);
+                if (m && !m.classList.contains('dragging')) {
+                    const p = boss.pos.split(';');
+                    m.style.top = p[0].split(':')[1];
+                    m.style.left = p[1].split(':')[1];
+                    boss.isAlive ? m.classList.add('is-alive') : m.classList.remove('is-alive');
+                }
             });
             renderMonitor();
         });
     }
 
-    function updateMarkerVisual(b) {
-        let m = document.getElementById('rb-' + b.id);
-        if (!m) { createMarker(b); m = document.getElementById('rb-' + b.id); }
-        if (m && !m.classList.contains('dragging')) {
-            const p = b.pos.split(';'); m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
-            b.isAlive ? m.classList.add('is-alive') : m.classList.remove('is-alive');
-        }
-    }
-
-    function createMarker(boss) {
-        let m = document.createElement('div');
-        m.id = 'rb-' + boss.id; m.className = 'rb-marker';
-        m.setAttribute('data-name', boss.name);
-        let lastClick = 0;
-        m.addEventListener('pointerdown', (e) => {
-            if (isEditorMode) { e.stopPropagation(); draggedBossId = boss.id; m.classList.add('dragging'); m.setPointerCapture(e.pointerId); }
-        });
-        m.addEventListener('click', (e) => {
-            e.stopPropagation(); if (isEditorMode) return;
-            const now = Date.now();
-            if (now - lastClick < 400) { lastClick = 0; toggleDeath(boss.id); }
-            else { lastClick = now; setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400); }
-        });
-        wrapper.appendChild(m);
-    }
-
-    function toggleDeath(id) {
-        // Установка метки смерти (запуск таймера)
-        rbRef.child(id).update({ isAlive: false, deathTime: Date.now() });
-    }
-
-    // --- ГЛАВНАЯ ПРАВКА ---
     function tick() {
         const now = Date.now();
-        bossData.forEach(b => {
-            const m = document.getElementById('rb-' + b.id); if (!m) return;
-            if (b.deathTime && !b.isAlive) {
-                const rem = SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000);
+        bossData.forEach(boss => {
+            const m = document.getElementById('rb-' + boss.id);
+            if (!m) return;
+            if (boss.deathTime && !boss.isAlive) {
+                const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
                 if (rem <= 0) {
-                    // Время вышло: Переводим в READY, но НЕ перезапускаем цикл таймера автоматически
-                    rbRef.child(b.id).update({ isAlive: true, deathTime: null });
+                    boss.isAlive = true; boss.deathTime = null;
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
                 } else {
-                    let t = m.querySelector('.rb-timer-map') || document.createElement('div');
-                    t.className = 'rb-timer-map'; if (!t.parentNode) m.appendChild(t);
-                    t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
+                    let t = m.querySelector('.rb-timer-map');
+                    if (!t) { t = document.createElement('div'); t.className = 'rb-timer-map'; m.appendChild(t); }
+                    const min = Math.floor(rem / 60); const sec = rem % 60;
+                    t.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
                 }
             } else {
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
@@ -298,12 +312,17 @@
     }
 
     function renderMonitor() {
-        const list = document.getElementById('monitor-list'); const now = Date.now();
+        const list = document.getElementById('monitor-list');
+        const now = Date.now();
         const active = bossData.filter(b => b.isAlive || (b.deathTime && (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000) > 0)));
+
         active.sort((a, b) => (a.isAlive === b.isAlive) ? (a.deathTime - b.deathTime) : (a.isAlive ? -1 : 1));
-        
-        if (active.length === 0) { list.innerHTML = '<div style="text-align:center;color:#555;padding:20px;">Монитор пуст</div>'; return; }
-        
+
+        if (active.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#555; padding:20px;">Нет активных боссов</div>';
+            return;
+        }
+
         list.innerHTML = active.map(b => {
             let timeStr = b.isAlive ? "READY" : "";
             if (b.deathTime && !b.isAlive) {
@@ -312,29 +331,18 @@
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div><b>${b.name}</b><span class="rb-note-text">${b.note || ""}</span></div>
-                <span class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace;border:1px solid #444;padding:2px 5px;border-radius:4px">${timeStr}</span>
+                <span class="${b.isAlive ? 'ready-text' : ''}" style="font-family:monospace; border:1px solid #444; padding:2px 5px; border-radius:4px">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
-    function resetTimers() {
-        if(confirm("Убрать всех READY из списка?")) {
-            const updates = {};
-            bossData.forEach(b => {
-                if (b.isAlive) {
-                    updates[b.id + '/isAlive'] = false;
-                    updates[b.id + '/deathTime'] = null;
-                }
-            });
-            rbRef.update(updates);
-        }
-    }
-
     function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
     function focus(boss) {
-        const m = document.getElementById('rb-' + boss.id); if(!m) return;
+        const m = document.getElementById('rb-' + boss.id);
+        if(!m) return;
         const t = parseInt(m.style.top); const l = parseInt(m.style.left);
-        scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale); update();
+        scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale);
+        update();
     }
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
@@ -342,6 +350,23 @@
         if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
         document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
+        document.getElementById('add-boss-btn').style.display = isEditorMode ? "block" : "none";
+    }
+
+    function startAddingBoss() { isAddingMode = true; alert("Кликни на карту"); }
+
+    function resetTimers() {
+        if(confirm("Сбросить READY-статусы? (Метки исчезнут из списка до следующей смерти)")) {
+            bossData.forEach(b => {
+                // Проверяем: если босс УЖЕ живой (READY), сбрасываем его в дефолтное состояние
+                if (b.isAlive) { 
+                    rbRef.child(b.id).update({ 
+                        isAlive: false, 
+                        deathTime: null 
+                    });
+                }
+            });
+        }
     }
 
     function updateGameTime() {
@@ -354,6 +379,7 @@
         document.getElementById('game-time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     }
 
+    // Drag & Zoom
     let isDrag = false, lx, ly;
     window.onpointerdown = e => { if(e.button === 0 && !draggedBossId) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
@@ -363,9 +389,20 @@
             const y = Math.round((e.clientY - rect.top) / scale);
             const m = document.getElementById('rb-' + draggedBossId);
             if (m) { m.style.top = y + 'px'; m.style.left = x + 'px'; }
-        } else if (isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); }
+        } else if (isDrag) {
+            posX += e.clientX - lx; posY += e.clientY - ly;
+            lx = e.clientX; ly = e.clientY; update();
+        }
     };
     window.onpointerup = (e) => {
+        if (isAddingMode && isEditorMode && !draggedBossId) {
+            const rect = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / scale);
+            const y = Math.round((e.clientY - rect.top) / scale);
+            const name = prompt("Имя:");
+            if (name) rbRef.child("rb_"+Date.now()).set({ name, pos: `top:${y}px;left:${x}px;`, isAlive: false, deathTime: null });
+            isAddingMode = false;
+        }
         if (draggedBossId) {
             const m = document.getElementById('rb-' + draggedBossId);
             if (m) rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
@@ -375,7 +412,8 @@
     };
     viewport.addEventListener('wheel', e => {
         e.preventDefault();
-        const ns = Math.min(Math.max(0.05, scale * (e.deltaY > 0 ? 0.8 : 1.2)), 4);
+        const delta = e.deltaY > 0 ? 0.8 : 1.2;
+        const ns = Math.min(Math.max(0.05, scale * delta), 4);
         posX = e.clientX - (e.clientX - posX) * (ns / scale);
         posY = e.clientY - (e.clientY - posY) * (ns / scale);
         scale = ns; update();
