@@ -369,13 +369,26 @@
     }
 
     function resetTimers() {
-        if(confirm("Очистить все статусы READY и таймеры?")) {
+        if(confirm("Убрать из списка только боссов со статусом READY?")) {
             const updates = {};
+            let count = 0;
+
             bossData.forEach(b => {
-                updates[b.id + '/isAlive'] = false;
-                updates[b.id + '/deathTime'] = null;
+                // Проверяем: если босс живой (READY), то сбрасываем его
+                if (b.isAlive) {
+                    updates[b.id + '/isAlive'] = false;
+                    updates[b.id + '/deathTime'] = null;
+                    count++;
+                }
             });
-            rbRef.update(updates);
+
+            if (count > 0) {
+                rbRef.update(updates).then(() => {
+                    console.log(`Сброшено боссов: ${count}`);
+                });
+            } else {
+                alert("В списке нет боссов со статусом READY");
+            }
         }
     }
 
