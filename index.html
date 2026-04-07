@@ -63,13 +63,36 @@
         .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
         .ready-text { color: #ff3300; font-weight: bold; }
         
-        #game-time { font-size:36px; color:#ffd700; font-family:monospace; text-align:center; margin-bottom: 10px; }
-        
+        /* Стили для контейнера времени и кнопки FAQ */
+        .time-container { display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 10px; }
+        #game-time { font-size:36px; color:#ffd700; font-family:monospace; margin-right: 10px; }
+        .faq-btn { 
+            width: 30px; height: 30px; border-radius: 50%; background: #444; color: #fff; 
+            border: 1px solid #666; cursor: pointer; font-weight: bold; font-size: 18px;
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+        }
+        .faq-btn:hover { background: #ffd700; color: #000; border-color: #fff; }
+
         .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
         .btn-add { background:#004488; color:#fff; border: 1px solid #0066cc; display: none; }
         .btn-reset { background: #441111; color: #ff6666; border: 1px solid #662222; margin-top: 5px; }
+
+        /* Окно FAQ */
+        #faq-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85); z-index: 5000; display: none;
+            align-items: center; justify-content: center; backdrop-filter: blur(5px);
+        }
+        .faq-content {
+            background: #111; border: 2px solid #ffd700; padding: 25px;
+            border-radius: 15px; max-width: 400px; width: 85%; box-shadow: 0 0 30px rgba(255,215,0,0.3);
+        }
+        .faq-content h2 { color: #ffd700; margin-top: 0; }
+        .faq-content ul { padding-left: 20px; color: #ccc; line-height: 1.6; }
+        .faq-content li { margin-bottom: 10px; }
+        .close-faq { background: #ffd700; color: #000; padding: 10px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
 
         #minimap-overlay {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -81,10 +104,28 @@
 </head>
 <body>
 
+<div id="faq-overlay">
+    <div class="faq-content">
+        <h2>Как пользоваться картой?</h2>
+        <ul>
+            <li><b>Один клик по РБ:</b> Сфокусировать камеру на боссе.</li>
+            <li><b>Двойной клик по РБ:</b> Отметить смерть. Запустится таймер на 15 минут.</li>
+            <li><b>Список слева:</b> Показывает боссов, которые скоро появятся или уже живы (READY).</li>
+            <li><b>Перемещение:</b> Тяни карту мышкой или пальцем.</li>
+            <li><b>Зум:</b> Используй колесико мыши или «щипок» на смартфоне.</li>
+            <li><b>Секретная кнопка:</b> Золотая метка на карте открывает мини-карту локаций.</li>
+        </ul>
+        <button class="close-faq" onclick="toggleFAQ(false)">ПОНЯТНО</button>
+    </div>
+</div>
+
 <div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true"></div>
 
 <div id="sidebar">
-    <div id="game-time">00:00</div>
+    <div class="time-container">
+        <div id="game-time">00:00</div>
+        <button class="faq-btn" onclick="toggleFAQ(true)">?</button>
+    </div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <button onclick="startAddingBoss()" id="add-boss-btn" class="btn btn-add">+ ДОБАВИТЬ РБ</button>
     <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ ТАЙМЕРЫ</button>
@@ -94,6 +135,7 @@
 <div id="viewport"><div id="map-wrapper"></div></div>
 
 <script>
+    // Настройки и данные без изменений
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
@@ -191,6 +233,11 @@
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
         update();
+    }
+
+    // Новая функция для FAQ
+    function toggleFAQ(show) {
+        document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none';
     }
 
     function addSpecialMarker() {
@@ -358,7 +405,6 @@
     function resetTimers() {
         if(confirm("Сбросить READY-статусы? (Метки исчезнут из списка до следующей смерти)")) {
             bossData.forEach(b => {
-                // Проверяем: если босс УЖЕ живой (READY), сбрасываем его в дефолтное состояние
                 if (b.isAlive) { 
                     rbRef.child(b.id).update({ 
                         isAlive: false, 
@@ -381,7 +427,11 @@
 
     // Drag & Zoom
     let isDrag = false, lx, ly;
-    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onpointerdown = e => { 
+        if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('.faq-content')) { 
+            isDrag = true; lx = e.clientX; ly = e.clientY; 
+        } 
+    };
     window.onpointermove = e => {
         if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
