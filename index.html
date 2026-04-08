@@ -109,7 +109,7 @@
     <div class="faq-content">
         <h2>ИНСТРУКЦИЯ</h2>
         <ul>
-            <li><b>Двойной клик по метке:</b> Отметить смерть РБ. Запустится таймер на 15 минут.</li>
+            <li><b>Двойной клик по метке:</b> Отметить смерть РБ или перезапустить таймер. Запустится таймер на 15 минут.</li>
             <li><b>Одиночный клик:</b> Центрировать карту на выбранном боссе.</li>
             <li><b>Список слева:</b> Сверху те, кто скоро респаунится. Снизу — те, кто уже живы (READY).</li>
             <li><b>Золотая метка:</b> Секретная кнопка для просмотра карты телепортов.</li>
@@ -280,11 +280,18 @@
         wrapper.appendChild(m);
     }
 
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Всегда ставит новый deathTime (перезапуск)
     function toggleBossStatus(id) {
         const b = bossData.find(x => x.id === id);
         if (!b) return;
-        let updates = b.isAlive || b.deathTime ? { isAlive: false, deathTime: null } : { isAlive: false, deathTime: Date.now() };
-        rbRef.child(id).update(updates);
+
+        // Принудительно устанавливаем новый таймер (15 минут)
+        // Если босс был READY, он станет мертвым с таймером. 
+        // Если таймер уже шел, он сбросится на 15:00.
+        rbRef.child(id).update({ 
+            isAlive: false, 
+            deathTime: Date.now() 
+        });
     }
 
     function listenFirebase() {
@@ -308,6 +315,8 @@
 
     function tick() {
         const now = Date.now();
+        let needsRender = false;
+
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
@@ -320,33 +329,32 @@
                     t.className = 'rb-timer-map';
                     if (!m.contains(t)) m.appendChild(t);
                     t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
+                    needsRender = true;
                 }
             } else {
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
             }
         });
-        renderMonitor(); // Перерисовываем список для обновления порядка и таймеров
+        renderMonitor(); 
     }
 
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
 
-        // 1. Фильтруем только активных (живых или с таймером)
         const active = bossData.filter(b => {
             const timeLeft = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : 0;
             return b.isAlive || (b.deathTime && timeLeft > 0);
         });
 
-        // 2. Сортировка: Таймеры сверху (по возрастанию времени), READY снизу
         active.sort((a, b) => {
             const tA = a.deathTime ? (SPAWN_WINDOW - Math.floor((now - a.deathTime) / 1000)) : -1;
             const tB = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : -1;
 
-            if (tA > 0 && tB > 0) return tA - tB; // Оба таймеры: кто раньше, тот выше
-            if (tA > 0) return -1; // А - таймер, Б - READY -> А выше
-            if (tB > 0) return 1;  // Б - таймер, А - READY -> Б выше
-            return a.name.localeCompare(b.name); // Оба READY: по алфавиту
+            if (tA > 0 && tB > 0) return tA - tB;
+            if (tA > 0) return -1;
+            if (tB > 0) return 1;
+            return a.name.localeCompare(b.name);
         });
 
         if (active.length === 0) {
@@ -395,7 +403,9 @@
 
     function resetTimers() {
         if(confirm("Сбросить все READY-статусы?")) {
-            bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); });
+            bossData.forEach(b => { 
+                if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); 
+            });
         }
     }
 
