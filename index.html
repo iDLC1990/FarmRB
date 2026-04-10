@@ -128,7 +128,7 @@
     </div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <button onclick="startAddingBoss()" id="add-boss-btn" class="btn btn-add">+ ДОБАВИТЬ РБ</button>
-    <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ ТАЙМЕРЫ</button>
+    <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ READY ТАЙМЕРЫ</button>
     <div id="monitor-list"></div>
 </div>
 
@@ -280,14 +280,10 @@
         wrapper.appendChild(m);
     }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Всегда ставит новый deathTime (перезапуск)
     function toggleBossStatus(id) {
         const b = bossData.find(x => x.id === id);
         if (!b) return;
 
-        // Принудительно устанавливаем новый таймер (15 минут)
-        // Если босс был READY, он станет мертвым с таймером. 
-        // Если таймер уже шел, он сбросится на 15:00.
         rbRef.child(id).update({ 
             isAlive: false, 
             deathTime: Date.now() 
@@ -300,7 +296,16 @@
             Object.keys(data).forEach(id => {
                 const item = data[id];
                 let boss = bossData.find(b => b.id === id);
-                if (!boss) { boss = { id, ...item }; bossData.push(boss); } else { Object.assign(boss, item); }
+                if (!boss) { 
+                    boss = { id, ...item }; 
+                    bossData.push(boss); 
+                } else { 
+                    // Явное обновление полей для корректного сброса READY
+                    boss.isAlive = item.isAlive || false;
+                    boss.deathTime = item.deathTime || null;
+                    boss.pos = item.pos || boss.pos;
+                }
+                
                 createMarker(boss);
                 const m = document.getElementById('rb-' + id);
                 if (m && !m.classList.contains('dragging')) {
@@ -315,8 +320,6 @@
 
     function tick() {
         const now = Date.now();
-        let needsRender = false;
-
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
@@ -329,7 +332,6 @@
                     t.className = 'rb-timer-map';
                     if (!m.contains(t)) m.appendChild(t);
                     t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
-                    needsRender = true;
                 }
             } else {
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
@@ -342,6 +344,7 @@
         const list = document.getElementById('monitor-list');
         const now = Date.now();
 
+        // Показываем только тех, кто живой или у кого идет таймер
         const active = bossData.filter(b => {
             const timeLeft = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : 0;
             return b.isAlive || (b.deathTime && timeLeft > 0);
@@ -350,7 +353,6 @@
         active.sort((a, b) => {
             const tA = a.deathTime ? (SPAWN_WINDOW - Math.floor((now - a.deathTime) / 1000)) : -1;
             const tB = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : -1;
-
             if (tA > 0 && tB > 0) return tA - tB;
             if (tA > 0) return -1;
             if (tB > 0) return 1;
@@ -401,10 +403,16 @@
 
     function startAddingBoss() { isAddingMode = true; alert("Кликни на карту для установки РБ"); }
 
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Сбрасывает статус READY
     function resetTimers() {
-        if(confirm("Сбросить все READY-статусы?")) {
+        if(confirm("Убрать всех READY боссов из списка?")) {
             bossData.forEach(b => { 
-                if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); 
+                if (b.isAlive) {
+                    rbRef.child(b.id).update({ 
+                        isAlive: false, 
+                        deathTime: null 
+                    }); 
+                }
             });
         }
     }
