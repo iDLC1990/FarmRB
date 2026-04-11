@@ -32,10 +32,19 @@
 
         .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
 
+        /* Имя босса */
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
+        }
+
+        /* --- НОВАЯ НАДПИСЬ: Время запуска по МСК --- */
+        .rb-start-time-label {
+            position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 100, 200, 0.9); color: #fff; padding: 1px 6px; border-radius: 3px;
+            font-size: 10px; font-weight: bold; white-space: nowrap; border: 1px solid #00aaff;
+            pointer-events: none; z-index: 20;
         }
 
         .rb-timer-map {
@@ -109,11 +118,9 @@
     <div class="faq-content">
         <h2>ИНСТРУКЦИЯ</h2>
         <ul>
-            <li><b>Двойной клик по метке:</b> Отметить смерть РБ или перезапустить таймер. Запустится таймер на 15 минут.</li>
+            <li><b>Двойной клик по метке:</b> Отметить смерть РБ. Запустится таймер на 15 мин и покажется время старта по МСК.</li>
             <li><b>Одиночный клик:</b> Центрировать карту на выбранном боссе.</li>
-            <li><b>Список слева:</b> Сверху те, кто скоро респаунится. Снизу — те, кто уже живы (READY).</li>
             <li><b>Золотая метка:</b> Секретная кнопка для просмотра карты телепортов.</li>
-            <li><b>Сброс таймеров:</b> Убирает все READY статусы из списка.</li>
         </ul>
         <button class="close-faq" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
@@ -284,9 +291,17 @@
         const b = bossData.find(x => x.id === id);
         if (!b) return;
 
+        // --- ИЗМЕНЕНИЕ: Получаем текущее время по МСК ---
+        const mskTime = new Date().toLocaleTimeString('ru-RU', {
+            timeZone: 'Europe/Moscow',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
         rbRef.child(id).update({ 
             isAlive: false, 
-            deathTime: Date.now() 
+            deathTime: Date.now(),
+            startTimeMsk: mskTime // Сохраняем строку времени старта
         });
     }
 
@@ -300,9 +315,9 @@
                     boss = { id, ...item }; 
                     bossData.push(boss); 
                 } else { 
-                    // Явное обновление полей для корректного сброса READY
                     boss.isAlive = item.isAlive || false;
                     boss.deathTime = item.deathTime || null;
+                    boss.startTimeMsk = item.startTimeMsk || null; // Подгружаем время старта
                     boss.pos = item.pos || boss.pos;
                 }
                 
@@ -323,18 +338,31 @@
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
+            
+            // --- ЛОГИКА ОТОБРАЖЕНИЯ МСК ВРЕМЕНИ И ТАЙМЕРА ---
             if (boss.deathTime && !boss.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
+                
                 if (rem <= 0) {
-                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null, startTimeMsk: null });
                 } else {
+                    // 1. Таймер (внизу)
                     let t = m.querySelector('.rb-timer-map') || document.createElement('div');
                     t.className = 'rb-timer-map';
                     if (!m.contains(t)) m.appendChild(t);
                     t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
+
+                    // 2. Время запуска МСК (вверху над именем)
+                    if (boss.startTimeMsk) {
+                        let l = m.querySelector('.rb-start-time-label') || document.createElement('div');
+                        l.className = 'rb-start-time-label';
+                        if (!m.contains(l)) m.appendChild(l);
+                        l.innerText = `${boss.startTimeMsk} МСК`;
+                    }
                 }
             } else {
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
+                const l = m.querySelector('.rb-start-time-label'); if (l) l.remove();
             }
         });
         renderMonitor(); 
@@ -344,7 +372,6 @@
         const list = document.getElementById('monitor-list');
         const now = Date.now();
 
-        // Показываем только тех, кто живой или у кого идет таймер
         const active = bossData.filter(b => {
             const timeLeft = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : 0;
             return b.isAlive || (b.deathTime && timeLeft > 0);
@@ -375,7 +402,10 @@
                 }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <div><b>${b.name}</b><span class="rb-note-text">${b.note || ""}</span></div>
+                <div>
+                    <b>${b.name}</b>
+                    <span class="rb-note-text">${b.startTimeMsk ? 'Старт: ' + b.startTimeMsk + ' МСК | ' : ''}${b.note || ""}</span>
+                </div>
                 <span class="${isTimer ? 'timer-active-text' : 'ready-text'}" 
                       style="font-family:monospace; border:1px solid #444; padding:2px 6px; border-radius:4px; min-width:45px; text-align:center;">
                     ${timeStr}
@@ -403,14 +433,14 @@
 
     function startAddingBoss() { isAddingMode = true; alert("Кликни на карту для установки РБ"); }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Сбрасывает статус READY
     function resetTimers() {
         if(confirm("Убрать всех READY боссов из списка?")) {
             bossData.forEach(b => { 
                 if (b.isAlive) {
                     rbRef.child(b.id).update({ 
                         isAlive: false, 
-                        deathTime: null 
+                        deathTime: null,
+                        startTimeMsk: null // Очищаем время МСК
                     }); 
                 }
             });
