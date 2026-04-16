@@ -17,42 +17,30 @@
         #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
+        /* Маркеры */
         .rb-marker {
             position: absolute; width: 18px; height: 18px;
             background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             box-shadow: 0 0 5px rgba(0,0,0,0.8); display: block !important; touch-action: none;
         }
-        
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
-
         .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
-
-        /* Имя босса */
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
 
-        /* Время запуска по МСК (синее, во время таймера) */
         .rb-start-time-label {
             position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
             background: rgba(0, 100, 200, 0.9); color: #fff; padding: 1px 6px; border-radius: 3px;
             font-size: 10px; font-weight: bold; white-space: nowrap; border: 1px solid #00aaff;
             pointer-events: none; z-index: 20;
-        }
-
-        /* НОВАЯ МЕТКА: Последний респаун (зеленое, после таймера) */
-        .rb-last-respawn-label {
-            position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
-            background: rgba(20, 40, 20, 0.9); color: #00ff44; padding: 1px 6px; border-radius: 3px;
-            font-size: 10px; font-weight: bold; white-space: nowrap; border: 1px solid #00ff44;
-            pointer-events: none; z-index: 19;
         }
 
         .rb-timer-map {
@@ -66,81 +54,110 @@
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
+        /* Сайдбар слева (изменяемый размер) */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 290px;
+            position: fixed; top: 15px; left: 15px; width: 290px; min-width: 250px; max-width: 600px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
+            height: calc(100vh - 50px);
         }
-        #monitor-list { margin-top: 15px; max-height: 60vh; overflow-y: auto; }
+        #sidebar-resizer {
+            position: absolute; right: 0; top: 0; width: 10px; height: 100%;
+            cursor: ew-resize; background: transparent;
+        }
+        #sidebar-resizer:hover { background: rgba(255, 215, 0, 0.1); }
+
+        /* Панель Эпиков сверху */
+        #top-sidebar {
+            position: fixed; top: 15px; left: 320px; right: 15px;
+            background: rgba(10, 10, 10, 0.9); border: 1px solid #444;
+            padding: 10px; z-index: 900; border-radius: 15px; backdrop-filter: blur(5px);
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        }
+
+        .epic-card {
+            background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+        .epic-name { font-size: 12px; font-weight: bold; color: #ffd700; text-transform: uppercase; margin-bottom: 4px; }
+        .epic-timer { font-family: monospace; font-size: 14px; color: #00ffcc; }
+        .epic-status { font-size: 10px; color: #888; margin-top: 2px; }
+        .epic-set-btn { 
+            font-size: 9px; background: #333; color: #fff; border: 1px solid #555; 
+            padding: 2px 5px; cursor: pointer; margin-top: 5px; border-radius: 4px;
+        }
+        .epic-set-btn:hover { background: #ffd700; color: #000; }
+
+        /* Списки и кнопки */
+        #monitor-list { margin-top: 15px; height: calc(100% - 180px); overflow-y: auto; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
             font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
         }
         .monitor-item:hover { background: rgba(255,255,255,0.1); }
         .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
-        
         .ready-text { color: #ff3300; font-weight: bold; text-shadow: 0 0 5px rgba(255,51,0,0.5); }
         .timer-active-text { color: #00ffcc; font-weight: bold; }
-
+        
         .time-container { display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 10px; }
         #game-time { font-size:36px; color:#ffd700; font-family:monospace; margin-right: 10px; }
         
-        .faq-btn { 
-            width: 30px; height: 30px; border-radius: 50%; background: #222; color: #ffd700; 
-            border: 1px solid #ffd700; cursor: pointer; font-weight: bold; font-size: 18px;
-            display: flex; align-items: center; justify-content: center; transition: 0.3s;
-        }
-        .faq-btn:hover { background: #ffd700; color: #000; }
-
         .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
-        .btn-editor.active { background:#050; color:#fff; box-shadow: 0 0 15px #0f0; }
-        .btn-add { background:#004488; color:#fff; border: 1px solid #0066cc; display: none; }
-        .btn-reset { background: #441111; color: #ff6666; border: 1px solid #662222; margin-top: 5px; }
+        .btn-add { background:#004488; color:#fff; display: none; }
+        .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
+
+        /* Попап установки времени */
+        #epic-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #111; border: 2px solid #ffd700; padding: 20px; z-index: 2000;
+            border-radius: 15px; display: none; flex-direction: column; gap: 10px; box-shadow: 0 0 50px #000;
+        }
+        #epic-modal input { background: #222; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 5px; }
 
         #faq-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.9); z-index: 5000; display: none;
             align-items: center; justify-content: center; backdrop-filter: blur(8px);
         }
-        .faq-content {
-            background: #111; border: 2px solid #ffd700; padding: 25px;
-            border-radius: 15px; max-width: 400px; width: 85%;
-        }
-        .faq-content h2 { color: #ffd700; margin-top: 0; text-align: center; }
-        .faq-content ul { padding-left: 20px; color: #ccc; line-height: 1.6; }
-        .faq-content li { margin-bottom: 12px; }
+        .faq-content { background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 400px; width: 85%; }
         .close-faq { background: #ffd700; color: #000; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-
-        #minimap-overlay {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90vw; max-width: 700px; background: #000; border: 3px solid #ffd700;
-            z-index: 3000; display: none; border-radius: 10px; overflow: hidden;
-        }
-        #minimap-overlay img { width: 100%; display: block; }
     </style>
 </head>
 <body>
+
+<div id="top-sidebar">
+    </div>
+
+<div id="epic-modal">
+    <h3 id="modal-title" style="margin:0; color:#ffd700;">Set Time</h3>
+    <label>Начало респауна:</label>
+    <input type="datetime-local" id="epic-start">
+    <label>Конец респауна:</label>
+    <input type="datetime-local" id="epic-end">
+    <div style="display:flex; gap:10px;">
+        <button class="btn" onclick="saveEpicTime()" style="background:#0066cc; color:#fff;">СОХРАНИТЬ</button>
+        <button class="btn" onclick="closeEpicModal()" style="background:#444; color:#fff;">ОТМЕНА</button>
+    </div>
+</div>
 
 <div id="faq-overlay">
     <div class="faq-content">
         <h2>ИНСТРУКЦИЯ</h2>
         <ul>
-            <li><b>Двойной клик по метке:</b> Отметить смерть РБ. Запустится таймер на 15 мин.</li>
-            <li><b>Зеленая метка:</b> После таймера покажет точное время респауна (LAST RESPAWN).</li>
-            <li><b>Одиночный клик:</b> Центрировать карту на выбранном боссе.</li>
-            <li><b>Золотая метка:</b> Секретная кнопка для просмотра карты телепортов.</li>
+            <li><b>Эпики (Сверху):</b> Нажми SET, чтобы указать окно респауна. Таймер покажет время до начала или до конца окна.</li>
+            <li><b>Сайдбар:</b> Тяни за правый край, чтобы изменить ширину.</li>
+            <li><b>РБ:</b> Двойной клик по метке на карте запускает стандартный таймер 15 мин.</li>
         </ul>
         <button class="close-faq" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
 </div>
 
-<div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true"></div>
-
 <div id="sidebar">
+    <div id="sidebar-resizer"></div>
     <div class="time-container">
         <div id="game-time">00:00</div>
-        <button class="faq-btn" onclick="toggleFAQ(true)">?</button>
+        <button class="faq-btn" style="width: 30px; height: 30px; border-radius: 50%; background: #222; color: #ffd700; border: 1px solid #ffd700; cursor: pointer;" onclick="toggleFAQ(true)">?</button>
     </div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <button onclick="startAddingBoss()" id="add-boss-btn" class="btn btn-add">+ ДОБАВИТЬ РБ</button>
@@ -159,11 +176,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const rbRef = db.ref('bosses');
+    const epicsRef = db.ref('epics');
 
     const SPAWN_WINDOW = 15 * 60; 
     let isEditorMode = false;
     let isAddingMode = false;
     let draggedBossId = null;
+    let currentEditingEpic = null;
+
+    // Данные эпиков
+    const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
+    let epicData = {};
 
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
@@ -243,16 +266,102 @@
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
+        initEpics();
         addSpecialMarker();
         listenFirebase(); 
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
+        initResize();
         update();
     }
 
-    function toggleFAQ(show) {
-        document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none';
+    // --- ЛОГИКА ЭПИКОВ ---
+    function initEpics() {
+        const container = document.getElementById('top-sidebar');
+        container.innerHTML = epicsList.map(name => `
+            <div class="epic-card" id="epic-${name.replace(' ', '-')}">
+                <div class="epic-name">${name}</div>
+                <div class="epic-timer" id="timer-${name.replace(' ', '-')}">--:--:--</div>
+                <div class="epic-status" id="status-${name.replace(' ', '-')}">No Data</div>
+                <button class="epic-set-btn" onclick="openEpicModal('${name}')">SET</button>
+            </div>
+        `).join('');
     }
+
+    function openEpicModal(name) {
+        currentEditingEpic = name;
+        document.getElementById('modal-title').innerText = "Settings: " + name.toUpperCase();
+        document.getElementById('epic-modal').style.display = 'flex';
+    }
+
+    function closeEpicModal() { document.getElementById('epic-modal').style.display = 'none'; }
+
+    function saveEpicTime() {
+        const start = document.getElementById('epic-start').value;
+        const end = document.getElementById('epic-end').value;
+        if (!start || !end) return alert("Fill both dates!");
+        
+        epicsRef.child(currentEditingEpic.replace(' ', '-')).set({
+            start: new Date(start).getTime(),
+            end: new Date(end).getTime()
+        });
+        closeEpicModal();
+    }
+
+    function updateEpicsUI() {
+        const now = Date.now();
+        epicsList.forEach(name => {
+            const id = name.replace(' ', '-');
+            const data = epicData[id];
+            const timerEl = document.getElementById('timer-' + id);
+            const statusEl = document.getElementById('status-' + id);
+            
+            if (!data) return;
+
+            if (now < data.start) {
+                timerEl.innerText = formatTime(data.start - now);
+                statusEl.innerText = "UNTIL START";
+                statusEl.style.color = "#888";
+            } else if (now >= data.start && now < data.end) {
+                timerEl.innerText = formatTime(data.end - now);
+                statusEl.innerText = "WINDOW OPEN";
+                statusEl.style.color = "#00ffcc";
+            } else {
+                timerEl.innerText = "FINISHED";
+                statusEl.innerText = "RESPAWN OVER";
+                statusEl.style.color = "#ff4400";
+            }
+        });
+    }
+
+    function formatTime(ms) {
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    // --- РЕСАЙЗ САЙДБАРА ---
+    function initResize() {
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('sidebar-resizer');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'ew-resize'; });
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX - 15;
+            if (newWidth > 250 && newWidth < 600) {
+                sidebar.style.width = newWidth + 'px';
+                document.getElementById('top-sidebar').style.left = (newWidth + 30) + 'px';
+            }
+        });
+        window.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+    }
+
+    // --- ТВОЙ ОРИГИНАЛЬНЫЙ ФУНКЦИОНАЛ ---
+    function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
 
     function addSpecialMarker() {
         const sm = document.createElement('div');
@@ -265,7 +374,6 @@
 
     function createMarker(boss) {
         if (!boss || !boss.id || !boss.pos || document.getElementById('rb-' + boss.id)) return;
-
         let m = document.createElement('div');
         m.id = 'rb-' + boss.id;
         m.className = 'rb-marker';
@@ -299,19 +407,8 @@
     function toggleBossStatus(id) {
         const b = bossData.find(x => x.id === id);
         if (!b) return;
-
-        const mskTime = new Date().toLocaleTimeString('ru-RU', {
-            timeZone: 'Europe/Moscow',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        rbRef.child(id).update({ 
-            isAlive: false, 
-            deathTime: Date.now(),
-            startTimeMsk: mskTime,
-            lastRespawnMsk: null // Очищаем старую метку при новом запуске таймера
-        });
+        const mskTime = new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' });
+        rbRef.child(id).update({ isAlive: false, deathTime: Date.now(), startTimeMsk: mskTime });
     }
 
     function listenFirebase() {
@@ -320,17 +417,13 @@
             Object.keys(data).forEach(id => {
                 const item = data[id];
                 let boss = bossData.find(b => b.id === id);
-                if (!boss) { 
-                    boss = { id, ...item }; 
-                    bossData.push(boss); 
-                } else { 
+                if (!boss) { boss = { id, ...item }; bossData.push(boss); } 
+                else { 
                     boss.isAlive = item.isAlive || false;
                     boss.deathTime = item.deathTime || null;
                     boss.startTimeMsk = item.startTimeMsk || null;
-                    boss.lastRespawnMsk = item.lastRespawnMsk || null; // Подгружаем время респауна
                     boss.pos = item.pos || boss.pos;
                 }
-                
                 createMarker(boss);
                 const m = document.getElementById('rb-' + id);
                 if (m && !m.classList.contains('dragging')) {
@@ -341,6 +434,10 @@
             });
             renderMonitor();
         });
+        epicsRef.on('value', (snap) => {
+            epicData = snap.val() || {};
+            updateEpicsUI();
+        });
     }
 
     function tick() {
@@ -348,112 +445,51 @@
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
-            
-            // 1. ЛОГИКА АКТИВНОГО ТАЙМЕРА (15 МИН)
             if (boss.deathTime && !boss.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
-                
                 if (rem <= 0) {
-                    // ТАЙМЕР ВЫШЕЛ: Считаем время когда это произошло по МСК
-                    const respawnDate = new Date(boss.deathTime + (SPAWN_WINDOW * 1000));
-                    const respawnMsk = respawnDate.toLocaleTimeString('ru-RU', {
-                        timeZone: 'Europe/Moscow',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-
-                    rbRef.child(boss.id).update({ 
-                        isAlive: true, 
-                        deathTime: null, 
-                        startTimeMsk: null,
-                        lastRespawnMsk: respawnMsk // Сохраняем результат
-                    });
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null, startTimeMsk: null });
                 } else {
-                    // Отрисовка таймера (обратный отсчет)
                     let t = m.querySelector('.rb-timer-map') || document.createElement('div');
-                    t.className = 'rb-timer-map';
-                    if (!m.contains(t)) m.appendChild(t);
+                    t.className = 'rb-timer-map'; if (!m.contains(t)) m.appendChild(t);
                     t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
-
-                    // Отрисовка времени СТАРТА таймера
                     if (boss.startTimeMsk) {
                         let l = m.querySelector('.rb-start-time-label') || document.createElement('div');
-                        l.className = 'rb-start-time-label';
-                        if (!m.contains(l)) m.appendChild(l);
+                        l.className = 'rb-start-time-label'; if (!m.contains(l)) m.appendChild(l);
                         l.innerText = `${boss.startTimeMsk} МСК`;
                     }
-                    // Удаляем зеленую метку пока идет таймер
-                    const lr = m.querySelector('.rb-last-respawn-label'); if (lr) lr.remove();
                 }
             } else {
-                // Если таймер не активен, удаляем его элементы
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
                 const l = m.querySelector('.rb-start-time-label'); if (l) l.remove();
-
-                // 2. ЛОГИКА ПОСТОЯННОЙ МЕТКИ "LAST RESPAWN" (ЗЕЛЕНАЯ)
-                if (boss.lastRespawnMsk) {
-                    let lr = m.querySelector('.rb-last-respawn-label') || document.createElement('div');
-                    lr.className = 'rb-last-respawn-label';
-                    if (!m.contains(lr)) m.appendChild(lr);
-                    lr.innerText = `(LAST RESPAWN ${boss.lastRespawnMsk} MOSCOW)`;
-                } else {
-                    const lr = m.querySelector('.rb-last-respawn-label'); if (lr) lr.remove();
-                }
             }
         });
+        updateEpicsUI();
         renderMonitor(); 
     }
 
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
-
-        const active = bossData.filter(b => {
-            const timeLeft = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : 0;
-            return b.isAlive || (b.deathTime && timeLeft > 0);
-        });
-
-        active.sort((a, b) => {
-            const tA = a.deathTime ? (SPAWN_WINDOW - Math.floor((now - a.deathTime) / 1000)) : -1;
-            const tB = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : -1;
-            if (tA > 0 && tB > 0) return tA - tB;
-            if (tA > 0) return -1;
-            if (tB > 0) return 1;
-            return a.name.localeCompare(b.name);
-        });
-
-        if (active.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:#555; padding:20px;">Нет активных боссов</div>';
-            return;
-        }
-
+        const active = bossData.filter(b => b.isAlive || (b.deathTime && (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) > 0));
+        active.sort((a, b) => (a.deathTime || 0) - (b.deathTime || 0));
         list.innerHTML = active.map(b => {
             let timeStr = "READY";
             let isTimer = false;
             if (b.deathTime && !b.isAlive) {
                 const rem = Math.max(0, SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000));
-                if (rem > 0) {
-                    timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
-                    isTimer = true;
-                }
+                if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <div>
-                    <b>${b.name}</b>
-                    <span class="rb-note-text">${b.startTimeMsk ? 'Старт: ' + b.startTimeMsk + ' МСК | ' : ''}${b.note || ""}</span>
-                </div>
-                <span class="${isTimer ? 'timer-active-text' : 'ready-text'}" 
-                    style="font-family:monospace; border:1px solid #444; padding:2px 6px; border-radius:4px; min-width:45px; text-align:center;">
-                    ${timeStr}
-                </span>
+                <div><b>${b.name}</b><span class="rb-note-text">${b.startTimeMsk ? 'Start: ' + b.startTimeMsk + ' | ' : ''}${b.note || ""}</span></div>
+                <span class="${isTimer ? 'timer-active-text' : 'ready-text'}">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
     function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
     function focus(boss) {
-        const m = document.getElementById('rb-' + boss.id);
-        if(!m) return;
+        const m = document.getElementById('rb-' + boss.id); if(!m) return;
         const t = parseInt(m.style.top); const l = parseInt(m.style.left);
         scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale);
         update();
@@ -461,27 +497,15 @@
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     function toggleEditor() {
-        if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
+        if (!isEditorMode) { if (prompt("Password:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
-        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
         document.getElementById('add-boss-btn').style.display = isEditorMode ? "block" : "none";
     }
 
-    function startAddingBoss() { isAddingMode = true; alert("Кликни на карту для установки РБ"); }
+    function startAddingBoss() { isAddingMode = true; alert("Click map to add boss"); }
 
     function resetTimers() {
-        if(confirm("Убрать всех READY боссов из списка? (Метки LAST RESPAWN на карте останутся)")) {
-            bossData.forEach(b => { 
-                if (b.isAlive) {
-                    rbRef.child(b.id).update({ 
-                        isAlive: false, 
-                        deathTime: null,
-                        startTimeMsk: null
-                        // lastRespawnMsk не трогаем, чтобы надпись не пропала
-                    }); 
-                }
-            });
-        }
+        if(confirm("Reset all READY bosses?")) bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null, startTimeMsk: null }); });
     }
 
     function updateGameTime() {
@@ -494,9 +518,9 @@
         document.getElementById('game-time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     }
 
-    // Drag & Zoom Controls
+    // Drag & Zoom
     let isDrag = false, lx, ly;
-    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar') && !e.target.closest('#epic-modal')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
         if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
@@ -514,7 +538,7 @@
             const rect = wrapper.getBoundingClientRect();
             const x = Math.round((e.clientX - rect.left) / scale);
             const y = Math.round((e.clientY - rect.top) / scale);
-            const name = prompt("Имя РБ:");
+            const name = prompt("Boss Name:");
             if (name) rbRef.child("rb_"+Date.now()).set({ name, pos: `top:${y}px;left:${x}px;`, isAlive: false, deathTime: null });
             isAddingMode = false;
         }
