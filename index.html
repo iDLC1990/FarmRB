@@ -68,7 +68,6 @@
         }
         #sidebar-resizer:hover { background: rgba(255, 215, 0, 0.1); border-right: 2px solid #ffd700; }
 
-        /* ВЕРХНЯЯ ПАНЕЛЬ (ЕПИКИ) - Сделана еще меньше */
         #top-sidebar {
             position: fixed; top: 10px; left: 320px; right: 15px;
             background: rgba(10, 10, 10, 0.85); border: 1px solid #444;
@@ -84,7 +83,6 @@
             min-width: 0; transition: all 0.3s;
         }
         
-        /* Эффект мигания для открытого окна */
         .epic-window-open {
             animation: window-blink 1s infinite alternate;
             border-color: #ffcc00 !important;
@@ -103,7 +101,6 @@
         }
         .epic-set-btn:hover { background: #ffd700; color: #000; }
 
-        /* Списки и кнопки */
         #monitor-list { margin-top: 15px; height: calc(100% - 180px); overflow-y: auto; }
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
@@ -123,7 +120,6 @@
         .btn-add { background:#004488; color:#fff; display: none; }
         .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
 
-        /* Попап установки времени */
         #epic-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: #111; border: 2px solid #ffd700; padding: 20px; z-index: 2000;
@@ -131,18 +127,29 @@
         }
         #epic-modal input { background: #222; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 5px; }
 
-        #faq-overlay {
+        /* ОВЕРЛЕИ (FAQ и ТЕЛЕПОРТЫ) */
+        #faq-overlay, #teleport-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.9); z-index: 5000; display: none;
             align-items: center; justify-content: center; backdrop-filter: blur(8px);
         }
         .faq-content { background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 400px; width: 85%; }
-        .close-faq { background: #ffd700; color: #000; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .teleport-content { position: relative; max-width: 90%; max-height: 90%; border: 2px solid #ffd700; border-radius: 10px; overflow: hidden; background: #000; }
+        .teleport-img { display: block; max-width: 100%; max-height: 80vh; object-fit: contain; }
+        
+        .close-btn { background: #ffd700; color: #000; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
 
 <div id="top-sidebar"></div>
+
+<div id="teleport-overlay" onclick="toggleTeleport(false)">
+    <div class="teleport-content" onclick="event.stopPropagation()">
+        <img src="https://raw.githubusercontent.com/iDLC1990/FarmRB/refs/heads/main/34.jpg" class="teleport-img">
+        <button class="close-btn" onclick="toggleTeleport(false)">ЗАКРЫТЬ КАРТУ</button>
+    </div>
+</div>
 
 <div id="epic-modal">
     <h3 id="modal-title" style="margin:0; color:#ffd700;">Set Time</h3>
@@ -161,10 +168,11 @@
         <h2>ИНСТРУКЦИЯ</h2>
         <ul>
             <li><b>Эпики (Сверху):</b> Сетка 5 в первом ряду и 4 во втором.</li>
-            <li><b>Сайдбар:</b> Тяни за правый край. Можно сделать совсем узким или растянуть.</li>
+            <li><b>Сайд sidebar:</b> Тяни за правый край.</li>
             <li><b>РБ:</b> Двойной клик по метке запускает таймер 15 мин.</li>
+            <li><b>Карта:</b> Клик по золотой метке откроет карту телепортов.</li>
         </ul>
-        <button class="close-faq" onclick="toggleFAQ(false)">ПОНЯТНО</button>
+        <button class="close-btn" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
 </div>
 
@@ -181,7 +189,6 @@
 </div>
 
 <div id="viewport"><div id="map-wrapper"></div></div>
-
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
@@ -340,7 +347,7 @@
                 timerEl.innerText = formatTime(data.end - now);
                 statusEl.innerText = "WINDOW OPEN";
                 statusEl.style.color = "#00ffcc";
-                cardEl.classList.add('epic-window-open'); // Добавляем мигание
+                cardEl.classList.add('epic-window-open');
             } else {
                 timerEl.innerText = "FINISHED";
                 statusEl.innerText = "RESPAWN OVER";
@@ -377,13 +384,17 @@
     }
 
     function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
+    
+    // Функция для переключения модалки с КАРТОЙ
+    function toggleTeleport(show) { document.getElementById('teleport-overlay').style.display = show ? 'flex' : 'none'; }
 
     function addSpecialMarker() {
         const sm = document.createElement('div');
         sm.className = 'rb-marker special-marker';
         sm.style.top = "2970px"; sm.style.left = "4322px";
         sm.setAttribute('data-name', 'TELEPORT MAP');
-        sm.onclick = (e) => { e.stopPropagation(); toggleFAQ(true); };
+        // ТЕПЕРЬ ТУТ toggleTeleport вместо toggleFAQ
+        sm.onclick = (e) => { e.stopPropagation(); toggleTeleport(true); };
         wrapper.appendChild(sm);
     }
 
@@ -534,7 +545,7 @@
     }
 
     let isDrag = false, lx, ly;
-    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar') && !e.target.closest('#epic-modal')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar') && !e.target.closest('#epic-modal') && !e.target.closest('.teleport-content')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
         if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
