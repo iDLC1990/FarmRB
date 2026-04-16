@@ -3,131 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Pro</title>
+    <title>L2 RB Map - Legend</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        :root { --primary-gold: #ffd700; --bg-dark: #0a0a0a; }
-        body { margin: 0; padding: 0; background: #000; color: #eee; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; }
+        :root { --primary-gold: #ffd700; --bg-panel: rgba(15, 15, 15, 0.95); }
+        body { margin: 0; padding: 0; background: #111; color: #eee; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; touch-action: none; }
 
-        /* Эпик панель в 2 строки */
-        #epic-bar {
-            position: fixed; top: 0; left: 0; width: 100%; 
-            background: rgba(20,20,20,0.95); border-bottom: 2px solid var(--primary-gold);
-            z-index: 2000; display: grid; 
-            grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 5px;
+        /* Эпик-панель: Сетка по 5 штук */
+        #epic-grid {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+            display: grid; grid-template-columns: repeat(5, 1fr); 
+            gap: 4px; padding: 5px; background: #000; border-bottom: 2px solid var(--primary-gold);
             box-sizing: border-box;
         }
-        .epic-item {
+        .epic-card {
             background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
-            padding: 4px; text-align: center; cursor: pointer; transition: 0.2s;
+            padding: 5px; text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .epic-item:hover { border-color: var(--primary-gold); }
-        .epic-name { font-size: 10px; font-weight: bold; color: var(--primary-gold); display: block; }
-        .epic-timer { font-size: 13px; color: #00ffcc; font-family: monospace; font-weight: bold; }
-        .epic-status { font-size: 8px; color: #888; display: block; }
-        .active-window { border-color: #f40 !important; box-shadow: inset 0 0 10px #820; animation: blink 1s infinite; }
+        .epic-card:hover { border-color: var(--primary-gold); }
+        .epic-card.in-window { border-color: #ff4400; box-shadow: inset 0 0 10px #820; animation: pulse 1s infinite; }
+        .e-name { font-size: 10px; font-weight: bold; color: var(--primary-gold); display: block; text-transform: uppercase; }
+        .e-time { font-size: 14px; color: #00ffcc; font-family: monospace; font-weight: bold; }
+        .e-status { font-size: 9px; color: #888; display: block; }
 
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
         /* Карта */
-        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #111; }
+        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #1a1a1a; }
         #map-wrapper { 
-            position: absolute; transform-origin: 0 0; 
-            width: 5062px; height: 4210px; 
+            position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; 
             background-image: url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true');
-        }
-
-        /* Метки РБ */
-        .rb-marker {
-            position: absolute; width: 16px; height: 16px;
-            background: rgba(255,255,255,0.4); border: 2px solid #333; border-radius: 50%;
-            transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
-        }
-        .rb-marker.is-alive { background: radial-gradient(circle, #f40, #800); border-color: #fff; box-shadow: 0 0 15px #f40; width: 20px; height: 20px; z-index: 20; }
-        .rb-marker.priority::before { content: '★'; position: absolute; top: -22px; left: 50%; transform: translateX(-50%); color: var(--primary-gold); font-size: 20px; }
-        .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap; pointer-events: none;
-        }
-
-        .rb-timer-map {
-            position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 2px 5px;
-            font-size: 14px; font-family: monospace; border-radius: 4px; font-weight: bold;
+            will-change: transform;
         }
 
         /* Сайдбар */
         #sidebar {
-            position: fixed; top: 110px; left: 15px; width: 260px;
-            background: rgba(10,10,10,0.9); padding: 15px; border-radius: 12px;
-            border: 1px solid #333; z-index: 1000; max-height: 75vh; overflow-y: auto;
+            position: fixed; top: 100px; left: 15px; width: 260px;
+            background: var(--bg-panel); padding: 15px; border-radius: 12px;
+            border: 1px solid #444; z-index: 1000; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        #game-time { font-size: 32px; color: var(--primary-gold); text-align: center; font-family: monospace; margin-bottom: 15px; }
-        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 12px; }
-        .btn-clear { background: #600; color: #fff; }
-        .btn-faq { background: #444; color: #fff; }
-        .btn-editor { background: #111; color: #0f0; border: 1px solid #050; }
+        #game-time { font-size: 42px; color: var(--primary-gold); text-align: center; font-family: monospace; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
 
-        /* Модалки */
+        /* Метки */
+        .rb-marker {
+            position: absolute; width: 18px; height: 18px;
+            background: rgba(255,255,255,0.3); border: 2px solid #222; border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
+        }
+        .rb-marker.is-alive { background: radial-gradient(circle, #ff4400, #880000); border-color: #fff; box-shadow: 0 0 15px #f40; width: 22px; height: 22px; z-index: 20; }
+        .rb-marker.priority::before { content: '★'; position: absolute; top: -25px; left: 50%; transform: translateX(-50%); color: var(--primary-gold); font-size: 24px; text-shadow: 0 0 5px #000; }
+        .rb-marker::after {
+            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; pointer-events: none;
+        }
+        .rb-timer-map {
+            position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 2px 6px;
+            font-size: 15px; font-family: monospace; border-radius: 4px; font-weight: bold;
+        }
+
+        /* Кнопки */
+        .btn { width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-clear { background: #800; color: #fff; }
+        .btn-clear:hover { background: #b00; }
+        .btn-faq { background: #333; color: #fff; border: 1px solid #555; }
+        .btn-editor { background: #000; color: #0f0; border: 1px solid #0f0; margin-top: 10px; }
+
+        /* Модальные окна */
         .modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #111; border: 2px solid var(--primary-gold); padding: 20px;
-            z-index: 5000; display: none; border-radius: 10px; width: 300px;
+            background: #111; border: 2px solid var(--primary-gold); padding: 25px;
+            z-index: 5000; display: none; border-radius: 12px; width: 320px; box-shadow: 0 0 100px #000;
         }
-        .day-box { display: inline-block; padding: 5px 8px; background: #222; margin: 2px; font-size: 10px; cursor: pointer; border-radius: 3px; }
-        .day-box.selected { background: var(--primary-gold); color: #000; }
-        
-        .mode-timers .rb-marker:not(.has-active-timer) { display: none !important; }
-        .mode-ready .rb-marker.has-active-timer { display: none !important; }
+        .day-chip { display: inline-block; padding: 6px 10px; background: #222; margin: 3px; font-size: 11px; cursor: pointer; border-radius: 4px; border: 1px solid #444; }
+        .day-chip.selected { background: var(--primary-gold); color: #000; border-color: #fff; }
+
+        /* Фильтры */
+        .mode-timers .rb-marker:not(.has-timer) { display: none !important; }
+        .mode-ready .rb-marker.has-timer { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="epic-bar"></div>
+<div id="epic-grid"></div>
 
 <div id="sidebar">
     <div id="game-time">00:00</div>
     
-    <label style="font-size: 10px; color:#888;">РЕЖИМ:</label>
-    <select id="view-mode" onchange="updateViewMode()" style="width:100%; padding:8px; margin-bottom:15px; background:#222; color:#fff; border:none; border-radius:5px;">
-        <option value="default">Стандарт</option>
-        <option value="timers">Только таймеры</option>
+    <label style="font-size: 10px; color:#888; margin-left: 5px;">РЕЖИМ ОТОБРАЖЕНИЯ:</label>
+    <select id="view-mode" onchange="updateViewMode()" style="width:100%; padding:10px; margin-bottom:15px; background:#222; color:#fff; border:1px solid #444; border-radius:8px;">
+        <option value="default">Все Боссы</option>
+        <option value="timers">Только Таймеры</option>
         <option value="ready">Только Живые</option>
     </select>
 
     <button class="btn btn-clear" onclick="clearAllTimers()">ОЧИСТИТЬ СПИСОК</button>
-    <button class="btn btn-faq" onclick="toggleModal('faq-modal', true)">FAQ / ИНСТРУКЦИЯ</button>
+    <button class="btn btn-faq" onclick="showModal('faq-modal')">FAQ / ПОМОЩЬ</button>
     <button class="btn btn-editor" id="editor-btn" onclick="toggleEditor()">РЕДАКТОР: ВЫКЛ</button>
     
-    <div id="monitor-list" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;"></div>
+    <div id="monitor-list" style="margin-top:15px;"></div>
 </div>
 
 <div id="epic-modal" class="modal">
-    <h3 id="modal-title" style="margin:0 0 10px 0; color:var(--primary-gold)"></h3>
-    <label style="font-size:11px">Дата (число месяца):</label>
-    <input type="number" id="setup-date" style="width:100%; margin-bottom:10px;">
-    <label style="font-size:11px">Время старта (МСК):</label>
-    <input type="time" id="setup-time" style="width:100%; margin-bottom:10px;">
-    <div id="day-selector">
-        <div class="day-box" data-day="1">ПН</div><div class="day-box" data-day="2">ВТ</div><div class="day-box" data-day="3">СР</div>
-        <div class="day-box" data-day="4">ЧТ</div><div class="day-box" data-day="5">ПТ</div><div class="day-box" data-day="6">СБ</div><div class="day-box" data-day="0">ВС</div>
+    <h3 id="m-title" style="margin:0 0 15px 0; color:var(--primary-gold); text-align:center;"></h3>
+    <label style="font-size:12px; color:#aaa;">Число месяца:</label>
+    <input type="number" id="s-date" style="width:100%; padding:8px; margin-bottom:12px; background:#000; color:#fff; border:1px solid #444;">
+    <label style="font-size:12px; color:#aaa;">Время начала (МСК):</label>
+    <input type="time" id="s-time" style="width:100%; padding:8px; margin-bottom:12px; background:#000; color:#fff; border:1px solid #444;">
+    
+    <div id="day-picker" style="margin-bottom:15px; text-align:center;">
+        <div class="day-chip" data-day="1">ПН</div><div class="day-chip" data-day="2">ВТ</div>
+        <div class="day-chip" data-day="3">СР</div><div class="day-chip" data-day="4">ЧТ</div>
+        <div class="day-chip" data-day="5">ПТ</div><div class="day-chip" data-day="6">СБ</div>
+        <div class="day-chip" data-day="0">ВС</div>
     </div>
-    <button onclick="saveEpicSettings()" style="width:100%; background:var(--primary-gold); margin-top:10px; padding:8px; border:none; font-weight:bold;">СОХРАНИТЬ</button>
-    <button onclick="toggleModal('epic-modal', false)" style="width:100%; background:#333; color:#fff; margin-top:5px; padding:5px; border:none;">ОТМЕНА</button>
+    
+    <button onclick="saveEpic()" style="width:100%; background:var(--primary-gold); padding:12px; border:none; font-weight:bold; cursor:pointer;">СОХРАНИТЬ</button>
+    <button onclick="hideModal('epic-modal')" style="width:100%; background:transparent; color:#888; border:none; margin-top:10px; cursor:pointer;">ОТМЕНА</button>
 </div>
 
 <div id="faq-modal" class="modal">
-    <h3 style="color:var(--primary-gold)">Инструкция</h3>
-    <p style="font-size:12px; line-height:1.5;">
-        • <b>Двойной клик</b> по метке РБ: запуск 15-мин таймера.<br>
-        • <b>Эпики:</b> кликни по плашке сверху для настройки даты и времени появления.<br>
-        • <b>Редактор:</b> пароль позволяет менять приоритет (звёзды) и двигать метки.<br>
-        • <b>Звезда:</b> в режиме редактора кликни по РБ, чтобы пометить его как важный.
-    </p>
-    <button onclick="toggleModal('faq-modal', false)" style="width:100%; background:var(--primary-gold); padding:8px; border:none; font-weight:bold;">ЗАКРЫТЬ</button>
+    <h3 style="color:var(--primary-gold); text-align:center;">Инструкция</h3>
+    <div style="font-size:13px; line-height:1.6; color:#ccc;">
+        • <b>Клик по Эпику:</b> Настройка даты/времени.<br>
+        • <b>Двойной клик по РБ:</b> Метка убита (таймер 15м).<br>
+        • <b>Звезда:</b> В режиме редактора клик по РБ ставит ★ (Приоритет).<br>
+        • <b>Очистка:</b> Кнопка сбрасывает все таймеры сразу.
+    </div>
+    <button onclick="hideModal('faq-modal')" style="width:100%; background:var(--primary-gold); padding:10px; border:none; font-weight:bold; margin-top:20px;">ПОНЯТНО</button>
 </div>
 
 <div id="viewport"><div id="map-wrapper"></div></div>
@@ -215,55 +222,56 @@
     ];
 
     let epics = ["Queen Ant", "Core", "Orfen", "Zaken", "Baium", "Frintezza", "Antharas", "Valakas", "Beleth"];
-    let epicSettings = {};
-    let isEditorMode = false;
-    let currentEpic = null;
+    let epicStates = {};
+    let isEditor = false;
+    let selectedEpic = null;
 
     function init() {
-        const eBar = document.getElementById('epic-bar');
+        const grid = document.getElementById('epic-grid');
         epics.forEach(name => {
             const id = name.replace(/\s/g, '');
-            eBar.innerHTML += `<div class="epic-item" id="epic-${id}" onclick="openEpic('${name}')">
-                <span class="epic-name">${name}</span>
-                <span class="epic-timer">--:--:--</span>
-                <span class="epic-status">ЖДЁТ</span>
-            </div>`;
+            grid.innerHTML += `
+                <div class="epic-card" id="e-${id}" onclick="openEpic('${name}')">
+                    <span class="e-name">${name}</span>
+                    <span class="e-time">--:--:--</span>
+                    <span class="e-status">ЖДЁТ</span>
+                </div>`;
         });
 
-        document.querySelectorAll('.day-box').forEach(b => {
-            b.onclick = () => b.classList.toggle('selected');
+        document.querySelectorAll('.day-chip').forEach(c => {
+            c.onclick = () => c.classList.toggle('selected');
         });
 
-        listenFirebase();
+        sync();
         setInterval(tick, 1000);
-        setInterval(updateGameTime, 1000);
+        setInterval(updateServerTime, 1000);
         setInterval(updateEpicTimers, 1000);
     }
 
-    function listenFirebase() {
+    function sync() {
         rbRef.on('value', snap => {
-            const data = snap.val() || {};
+            const fb = snap.val() || {};
             bossData.forEach(b => {
-                if(data[b.id]) {
-                    b.isAlive = data[b.id].isAlive;
-                    b.deathTime = data[b.id].deathTime;
-                    b.priority = data[b.id].priority;
+                if(fb[b.id]) {
+                    b.isAlive = fb[b.id].isAlive;
+                    b.deathTime = fb[b.id].deathTime;
+                    b.priority = fb[b.id].priority;
                 }
             });
             render();
         });
-        epicRef.on('value', snap => epicSettings = snap.val() || {});
+        epicRef.on('value', snap => epicStates = snap.val() || {});
     }
 
     function render() {
         const wrap = document.getElementById('map-wrapper');
         bossData.forEach(b => {
-            let m = document.getElementById('rb-' + b.id);
+            let m = document.getElementById('marker-' + b.id);
             if(!m) {
                 m = document.createElement('div');
-                m.id = 'rb-' + b.id; m.className = 'rb-marker';
+                m.id = 'marker-' + b.id; m.className = 'rb-marker';
                 m.onclick = (e) => {
-                    if(isEditorMode) { togglePriority(b.id); return; }
+                    if(isEditor) { toggleStar(b.id); return; }
                     handleRB(b);
                 };
                 wrap.appendChild(m);
@@ -274,55 +282,56 @@
             m.setAttribute('data-name', b.name);
             m.classList.toggle('is-alive', !!b.isAlive);
             m.classList.toggle('priority', !!b.priority);
-            m.classList.toggle('has-active-timer', (b.deathTime && !b.isAlive));
+            m.classList.toggle('has-timer', (b.deathTime && !b.isAlive));
         });
-        updateMonitor();
+        updateList();
+    }
+
+    function clearAllTimers() {
+        if(!confirm("Сбросить все таймеры боссов?")) return;
+        let resetObj = {};
+        bossData.forEach(b => {
+            resetObj[b.id] = { isAlive: true, deathTime: null, priority: !!b.priority };
+        });
+        rbRef.update(resetObj).then(() => alert("Список очищен!"));
     }
 
     function updateEpicTimers() {
         const now = new Date();
-        const serverTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (3 * 3600000));
+        const server = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (3 * 3600000));
 
         epics.forEach(name => {
             const id = name.replace(/\s/g, '');
-            const cfg = epicSettings[id];
-            const div = document.getElementById(`epic-${id}`);
-            if(!cfg || !div) return;
+            const cfg = epicStates[id];
+            const card = document.getElementById(`e-${id}`);
+            if(!cfg || !card) return;
 
-            const target = new Date(serverTime);
+            const target = new Date(server);
             target.setDate(cfg.startDate);
             const [h, m] = cfg.startTime.split(':');
             target.setHours(h, m, 0, 0);
 
-            const diff = target - serverTime;
-            const tLab = div.querySelector('.epic-timer');
-            const sLab = div.querySelector('.epic-status');
+            const diff = target - server;
+            const tText = card.querySelector('.e-time');
+            const sText = card.querySelector('.e-status');
 
             if(diff < 0) {
                 const windowEnd = new Date(target.getTime() + 30 * 60000);
-                if(serverTime < windowEnd) {
-                    div.classList.add('active-window');
-                    sLab.innerText = "ОКНО!";
-                    tLab.innerText = formatS(Math.floor((windowEnd - serverTime)/1000));
+                if(server < windowEnd) {
+                    card.classList.add('in-window');
+                    sText.innerText = "ОКНО ПОЯВЛЕНИЯ";
+                    tText.innerText = fmt(Math.floor((windowEnd - server)/1000));
                 } else {
-                    div.classList.remove('active-window');
-                    sLab.innerText = "ЗАВЕРШЕН";
-                    tLab.innerText = "CLOSED";
+                    card.classList.remove('in-window');
+                    sText.innerText = "ОЖИДАНИЕ СЛЕД.";
+                    tText.innerText = "CLOSED";
                 }
             } else {
-                div.classList.remove('active-window');
-                sLab.innerText = "ДО СТАРТА";
-                tLab.innerText = formatS(Math.floor(diff/1000));
+                card.classList.remove('in-window');
+                sText.innerText = "ДО СТАРТА";
+                tText.innerText = fmt(Math.floor(diff/1000));
             }
         });
-    }
-
-    function clearAllTimers() {
-        if(confirm("Сбросить всех боссов в состояние 'Жив'?")) {
-            bossData.forEach(b => {
-                rbRef.child(b.id).update({ isAlive: true, deathTime: null });
-            });
-        }
     }
 
     function handleRB(b) {
@@ -338,7 +347,7 @@
         bossData.forEach(b => {
             if(b.deathTime && !b.isAlive) {
                 const rem = 900 - Math.floor((now - b.deathTime)/1000);
-                const m = document.getElementById('rb-' + b.id);
+                const m = document.getElementById('marker-' + b.id);
                 if(rem <= 0) rbRef.child(b.id).update({ isAlive: true, deathTime: null });
                 else {
                     let t = m.querySelector('.rb-timer-map') || document.createElement('div');
@@ -349,17 +358,17 @@
         });
     }
 
-    function updateMonitor() {
+    function updateList() {
         const list = document.getElementById('monitor-list');
-        const active = bossData.filter(b => b.isAlive || b.deathTime).sort((a,b) => (b.priority - a.priority));
-        list.innerHTML = active.map(b => `
-            <div style="font-size:12px; padding:5px; border-bottom:1px solid #222; color:${b.priority?'var(--primary-gold)':'#eee'}">
-                ${b.priority?'★ ':''}${b.name} - <span style="color:${b.isAlive?'#0f0':'#00ffcc'}">${b.isAlive?'READY':'TIMER'}</span>
+        const items = bossData.filter(b => b.isAlive || b.deathTime).sort((a,b) => (b.priority - a.priority));
+        list.innerHTML = items.map(b => `
+            <div style="font-size:12px; padding:6px; border-bottom:1px solid #333; color:${b.priority?'var(--primary-gold)':'#fff'}">
+                ${b.priority?'★ ':''}${b.name} - <span style="color:${b.isAlive?'#0f0':'#0ff'}">${b.isAlive?'READY':'TIMER'}</span>
             </div>
         `).join('');
     }
 
-    function updateGameTime() {
+    function updateServerTime() {
         const now = new Date();
         const nowSec = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
         const syncReal = (19 * 3600) + (56 * 60) + 6; const syncGame = (17 * 60) + 36;
@@ -368,46 +377,51 @@
         document.getElementById('game-time').innerText = `${Math.floor(gameMin/60).toString().padStart(2,'0')}:${(gameMin%60).toString().padStart(2,'0')}`;
     }
 
-    function formatS(s) {
+    function fmt(s) {
         const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60;
         return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     }
 
-    function toggleModal(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
+    function showModal(id) { document.getElementById(id).style.display = 'block'; }
+    function hideModal(id) { document.getElementById(id).style.display = 'none'; }
+    
     function openEpic(name) {
-        currentEpic = name;
-        document.getElementById('modal-title').innerText = name;
-        toggleModal('epic-modal', true);
+        selectedEpic = name;
+        document.getElementById('m-title').innerText = name;
+        showModal('epic-modal');
     }
-    function saveEpicSettings() {
-        const d = document.getElementById('setup-date').value;
-        const t = document.getElementById('setup-time').value;
-        const days = Array.from(document.querySelectorAll('.day-box.selected')).map(b => parseInt(b.dataset.day));
-        if(!d || !t) return alert("Укажи дату и время!");
-        epicRef.child(currentEpic.replace(/\s/g, '')).set({ startDate: parseInt(d), startTime: t, days: days });
-        toggleModal('epic-modal', false);
+    
+    function saveEpic() {
+        const d = document.getElementById('s-date').value;
+        const t = document.getElementById('s-time').value;
+        const days = Array.from(document.querySelectorAll('.day-chip.selected')).map(c => parseInt(c.dataset.day));
+        if(!d || !t) return alert("Заполни поля!");
+        epicRef.child(selectedEpic.replace(/\s/g, '')).set({ startDate: parseInt(d), startTime: t, days: days });
+        hideModal('epic-modal');
     }
 
     function toggleEditor() {
-        if(!isEditorMode) { if(prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
-        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
+        if(!isEditor) { if(prompt("Pass:") === "D36rk43mgm") isEditor = true; else return; } else isEditor = false;
+        document.getElementById('editor-btn').innerText = isEditor ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
     }
-    function togglePriority(id) {
+    
+    function toggleStar(id) {
         const b = bossData.find(x => x.id === id);
         rbRef.child(id).update({ priority: !b.priority });
     }
+
     function updateViewMode() {
         const mode = document.getElementById('view-mode').value;
         document.getElementById('map-wrapper').className = mode === 'default' ? '' : 'mode-' + mode;
     }
 
     // Drag & Zoom
-    let scale = 0.3, posX = 0, posY = 0, isDrag = false, lx, ly;
+    let scale = 0.2, posX = 0, posY = 0, isDrag = false, lx, ly;
     window.onpointerdown = e => { if(e.target.id === 'viewport' || e.target.id === 'map-wrapper') { isDrag = true; lx = e.clientX; ly = e.clientY; } };
-    window.onpointermove = e => { if(!isDrag) return; posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; updateT(); };
+    window.onpointermove = e => { if(!isDrag) return; posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; upd(); };
     window.onpointerup = () => isDrag = false;
-    window.onwheel = e => { scale = Math.min(Math.max(0.1, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 2); updateT(); };
-    function updateT() { document.getElementById('map-wrapper').style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+    window.onwheel = e => { scale = Math.min(Math.max(0.1, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 2); upd(); };
+    function upd() { document.getElementById('map-wrapper').style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     init();
 </script>
