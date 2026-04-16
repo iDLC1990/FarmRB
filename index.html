@@ -3,71 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Fixed</title>
+    <title>L2 RB Map - Live Tracking</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        body { margin: 0; padding: 0; background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; user-select: none; }
-        #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; }
+        body { 
+            margin: 0; padding: 0; background: #050505; color: #eee; 
+            font-family: 'Segoe UI', sans-serif; overflow: hidden; 
+            touch-action: none; user-select: none; -webkit-user-select: none;
+        }
+        #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
         #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; background-repeat: no-repeat; background-size: 100% 100%; will-change: transform; }
 
-        .rb-marker { position: absolute; width: 18px; height: 18px; background: rgba(255, 255, 255, 0.4); border: 2px solid #333; border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; }
-        .rb-marker.is-alive { background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; border-color: #fff !important; box-shadow: 0 0 15px #ff3200; width: 22px; height: 22px; z-index: 15; }
-        .rb-marker::after { content: attr(data-name); position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; border: 1px solid #444; pointer-events: none; }
-        .rb-timer-map { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); background: #000; color: #00ffcc; padding: 2px 6px; border-radius: 5px; font-weight: bold; font-family: monospace; font-size: 16px; border: 1px solid #00ffcc; z-index: 100; }
+        /* Маркеры */
+        .rb-marker {
+            position: absolute; width: 18px; height: 18px;
+            background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
+            border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.8); display: block !important; touch-action: none;
+        }
+        .rb-marker.is-alive { 
+            background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
+            border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
+            width: 22px; height: 22px; z-index: 15;
+        }
+        .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
+        .rb-marker::after {
+            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
+            font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
+        }
 
-        #top-sidebar { position: fixed; top: 10px; left: 300px; right: 10px; background: rgba(10, 10, 10, 0.9); border: 1px solid #333; padding: 5px; z-index: 900; border-radius: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-        .epic-card { background: #1a1a1a; border: 1px solid #333; padding: 3px 6px; border-radius: 4px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
-        .epic-info { display: flex; flex-direction: column; }
-        .epic-name { font-size: 10px; font-weight: bold; color: #ffd700; text-transform: uppercase; }
-        .epic-timer { font-family: monospace; font-size: 12px; color: #00ffcc; }
-        .epic-set-btn { font-size: 9px; background: #333; color: #fff; border: 1px solid #555; padding: 2px 4px; cursor: pointer; border-radius: 3px; }
+        .rb-start-time-label {
+            position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 100, 200, 0.9); color: #fff; padding: 1px 6px; border-radius: 3px;
+            font-size: 10px; font-weight: bold; white-space: nowrap; border: 1px solid #00aaff;
+            pointer-events: none; z-index: 20;
+        }
 
-        #sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; background: rgba(10, 10, 10, 0.95); border-right: 1px solid #333; padding: 15px; z-index: 1000; box-sizing: border-box; }
-        #sidebar-resizer { position: absolute; right: -5px; top: 0; width: 10px; height: 100%; cursor: ew-resize; z-index: 1001; }
+        .rb-timer-map {
+            position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 4px 10px; border-radius: 6px;
+            font-weight: bold; font-family: 'Courier New', monospace; 
+            font-size: 18px; border: 2px solid #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.7); z-index: 100; pointer-events: none;
+        }
 
-        #epic-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; border: 2px solid #ffd700; padding: 20px; z-index: 2000; border-radius: 12px; display: none; flex-direction: column; width: 320px; box-shadow: 0 0 30px #000; }
-        .window-list { max-height: 150px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #333; padding: 5px; }
-        .window-item { font-size: 11px; background: #222; margin-bottom: 3px; padding: 4px; display: flex; justify-content: space-between; }
-        .del-win { color: #ff4400; cursor: pointer; font-weight: bold; }
+        .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
+        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
-        #game-time { font-size:32px; color:#ffd700; font-family:monospace; text-align: center; margin-bottom: 10px; }
-        .btn { width:100%; padding:8px; border-radius:6px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
+        /* Сайдбар слева (изменяемый размер) */
+        #sidebar {
+            position: fixed; top: 15px; left: 15px; width: 290px; min-width: 250px; max-width: 600px;
+            background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
+            padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
+            height: calc(100vh - 50px);
+        }
+        #sidebar-resizer {
+            position: absolute; right: 0; top: 0; width: 10px; height: 100%;
+            cursor: ew-resize; background: transparent;
+        }
+        #sidebar-resizer:hover { background: rgba(255, 215, 0, 0.1); }
+
+        /* Панель Эпиков сверху */
+        #top-sidebar {
+            position: fixed; top: 15px; left: 320px; right: 15px;
+            background: rgba(10, 10, 10, 0.9); border: 1px solid #444;
+            padding: 10px; z-index: 900; border-radius: 15px; backdrop-filter: blur(5px);
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        }
+
+        .epic-card {
+            background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+        .epic-name { font-size: 12px; font-weight: bold; color: #ffd700; text-transform: uppercase; margin-bottom: 4px; }
+        .epic-timer { font-family: monospace; font-size: 14px; color: #00ffcc; }
+        .epic-status { font-size: 10px; color: #888; margin-top: 2px; }
+        .epic-set-btn { 
+            font-size: 9px; background: #333; color: #fff; border: 1px solid #555; 
+            padding: 2px 5px; cursor: pointer; margin-top: 5px; border-radius: 4px;
+        }
+        .epic-set-btn:hover { background: #ffd700; color: #000; }
+
+        /* Списки и кнопки */
+        #monitor-list { margin-top: 15px; height: calc(100% - 180px); overflow-y: auto; }
+        .monitor-item {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
+        }
+        .monitor-item:hover { background: rgba(255,255,255,0.1); }
+        .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
+        .ready-text { color: #ff3300; font-weight: bold; text-shadow: 0 0 5px rgba(255,51,0,0.5); }
+        .timer-active-text { color: #00ffcc; font-weight: bold; }
+        
+        .time-container { display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 10px; }
+        #game-time { font-size:36px; color:#ffd700; font-family:monospace; margin-right: 10px; }
+        
+        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
-        #monitor-list { margin-top: 15px; height: calc(100vh - 220px); overflow-y: auto; }
-        .monitor-item { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 0; border-bottom: 1px solid #222; cursor: pointer; }
-        .ready-text { color: #ff3300; font-weight: bold; }
+        .btn-add { background:#004488; color:#fff; display: none; }
+        .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
+
+        /* Попап установки времени */
+        #epic-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #111; border: 2px solid #ffd700; padding: 20px; z-index: 2000;
+            border-radius: 15px; display: none; flex-direction: column; gap: 10px; box-shadow: 0 0 50px #000;
+        }
+        #epic-modal input { background: #222; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 5px; }
+
+        #faq-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.9); z-index: 5000; display: none;
+            align-items: center; justify-content: center; backdrop-filter: blur(8px);
+        }
+        .faq-content { background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 400px; width: 85%; }
+        .close-faq { background: #ffd700; color: #000; padding: 12px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-<div id="top-sidebar"></div>
+<div id="top-sidebar">
+    </div>
 
 <div id="epic-modal">
-    <h3 id="modal-title" style="margin:0 0 10px 0; color:#ffd700; font-size: 14px;">Schedule</h3>
-    <div class="window-list" id="existing-windows"></div>
-    <label style="font-size: 10px;">Старт:</label>
-    <input type="datetime-local" id="epic-start" style="margin-bottom:5px; width:90%;">
-    <label style="font-size: 10px;">Конец:</label>
-    <input type="datetime-local" id="epic-end" style="margin-bottom:10px; width:90%;">
-    <div style="display:flex; gap:5px;">
-        <button class="btn" onclick="addEpicWindow()" style="background:#0066cc; color:#fff; font-size:11px;">ДОБАВИТЬ</button>
-        <button class="btn" onclick="closeEpicModal()" style="background:#444; color:#fff; font-size:11px;">ЗАКРЫТЬ</button>
+    <h3 id="modal-title" style="margin:0; color:#ffd700;">Set Time</h3>
+    <label>Начало респауна:</label>
+    <input type="datetime-local" id="epic-start">
+    <label>Конец респауна:</label>
+    <input type="datetime-local" id="epic-end">
+    <div style="display:flex; gap:10px;">
+        <button class="btn" onclick="saveEpicTime()" style="background:#0066cc; color:#fff;">СОХРАНИТЬ</button>
+        <button class="btn" onclick="closeEpicModal()" style="background:#444; color:#fff;">ОТМЕНА</button>
+    </div>
+</div>
+
+<div id="faq-overlay">
+    <div class="faq-content">
+        <h2>ИНСТРУКЦИЯ</h2>
+        <ul>
+            <li><b>Эпики (Сверху):</b> Нажми SET, чтобы указать окно респауна. Таймер покажет время до начала или до конца окна.</li>
+            <li><b>Сайдбар:</b> Тяни за правый край, чтобы изменить ширину.</li>
+            <li><b>РБ:</b> Двойной клик по метке на карте запускает стандартный таймер 15 мин.</li>
+        </ul>
+        <button class="close-faq" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
 </div>
 
 <div id="sidebar">
     <div id="sidebar-resizer"></div>
-    <div id="game-time">00:00</div>
+    <div class="time-container">
+        <div id="game-time">00:00</div>
+        <button class="faq-btn" style="width: 30px; height: 30px; border-radius: 50%; background: #222; color: #ffd700; border: 1px solid #ffd700; cursor: pointer;" onclick="toggleFAQ(true)">?</button>
+    </div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
+    <button onclick="startAddingBoss()" id="add-boss-btn" class="btn btn-add">+ ДОБАВИТЬ РБ</button>
+    <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ READY ТАЙМЕРЫ</button>
     <div id="monitor-list"></div>
 </div>
 
-<div id="viewport">
-    <div id="map-wrapper"></div>
-</div>
+<div id="viewport"><div id="map-wrapper"></div></div>
 
 <script>
     const firebaseConfig = {
@@ -77,242 +175,388 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const rbRef = db.ref('bosses');
+    const epicsRef = db.ref('epics');
 
-    const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
-    let bossData = [];
-    let epicSchedules = {};
-    let currentEditingEpic = null;
+    const SPAWN_WINDOW = 15 * 60; 
     let isEditorMode = false;
-    let scale = 0.2;
+    let isAddingMode = false;
+    let draggedBossId = null;
+    let currentEditingEpic = null;
+
+    // Данные эпиков
+    const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
+    let epicData = {};
+
+    let bossData = [
+        { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
+        { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
+        { id: "Ghost_of_the_Lidia", name: "Ghost of the Lidia", note: "ll_woatab center", pos: "top:1906px;left:4528px;" },
+        { id: "Fierce_Tiger_King_Angel", name: "Fierce Tiger King Angel", note: "ll_woatab 1tab", pos: "top:2713px;left:4517px;" },
+        { id: "Shilen_Priest_Hisilrome", name: "Shilen's Priest Hisilrome", note: "ll_woatab 3tab", pos: "top:2279px;left:4503px;" },
+        { id: "Rahha", name: "Rahha", note: "pp_woawarka KETP", pos: "top:1981px;left:4047px;" },
+        { id: "Enmity_Ghost_Ramdal", name: "Enmity Ghost Ramdal", note: "dd_sumtoi 1pl", pos: "top:2128px;left:3955px;" },
+        { id: "Gargoyle_Lord_Tiphon", name: "Gargoyle Lord Tiphon", note: "ww_ulanworktk tripon", pos: "top:1853px;left:4509px;" },
+        { id: "Demons_Agent_Falston", name: "Demons Agent Falston", note: "ll_woatab 5tab", pos: "top:1460px;left:3819px;" },
+        { id: "Kernon_Faithful_Kelone", name: "Kernon's Faithful Kelone", note: "th_ostrov bswerx", pos: "top:1838px;left:4284px;" },
+        { id: "Spirit_of_Andras", name: "Spirit of Andras", note: "ww_ulanworktk androna", pos: "top:1851px;left:4661px;" },
+        { id: "Anakim_Nemesis_Zakaron", name: "Anakim's Nemesis Zakaron", note: "kk_port1 ssakaron", pos: "top:2750px;left:4256px;" },
+        { id: "Barakiel", name: "Flame of Splendor Barakiel", note: "ll_woatab finisrb", pos: "top:1376px;left:3793px;" },
+        { id: "Korim", name: "Korim", note: "ww_ulanworktk ibobo", pos: "top:2259px;left:3958px;" },
+        { id: "Queen_Themis", name: "Palibati Queen Themis", note: "ww_ulanworktk paibatis", pos: "top:2226px;left:4712px;" },
+        { id: "Cabrio", name: "Shilen's Messenger Cabrio", note: "kk_port1 sabrio", pos: "top:2145px;left:4614px;" },
+        { id: "Savior_Mardil", name: "Immortal Savior Mardil", note: "dd_sumtoi 4pl", pos: "top:2216px;left:3954px;" },
+        { id: "Tanatos", name: "Doom Blade Tanatos", note: "pp_woawarka KBOX", pos: "top:1953px;left:4150px;" },
+        { id: "Sheshark", name: "Water Dragon Seer Sheshark", note: "th_ostrov ostrov2", pos: "top:3295px;left:3959px;" },
+        { id: "Hallate", name: "Death Lord Hallate", note: "dd_sumtoi 2pl", pos: "top:2175px;left:3959px;" },
+        { id: "Behemoth", name: "Beast Lord Behemoth", note: "LL_ULANX500 PIhIMOT", pos: "top:1870px;left:4098px;" },
+        { id: "Meanas_Anor", name: "Meanas Anor", note: "pp_woawarka wbox", pos: "top:1992px;left:4402px;" },
+        { id: "Skylancer", name: "Roaring Skylancer", note: "pp_woawarka lancer", pos: "top:2527px;left:4165px;" },
+        { id: "Hellmann", name: "Eilhalder von Hellmann", note: "th_ostrov fodvil", pos: "top:1729px;left:3504px;" },
+        { id: "Kandra", name: "Vanor Chief Kandra", note: "kk_port1 kandraa", pos: "top:1565px;left:4027px;" },
+        { id: "Lokness", name: "Fafurion'Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
+        { id: "Sobekk", name: "Krokian Padisha Sobekk", note: "th_ostrov ostrov3", pos: "top:3291px;left:4064px;" },
+        { id: "Decarbia", name: "Bloody Empress Decarbia", note: "LL_ULANX500 kobria", pos: "top:2161px;left:4690px;" },
+        { id: "Ipos", name: "Death Lord Ipos", note: "LL_ULANX500 IBOS", pos: "top:1949px;left:4379px;" },
+        { id: "Shax", name: "Death Lord Shax", note: "kk_port1 sky4len", pos: "top:1997px;left:4512px;" },
+        { id: "Kernon", name: "Kernon", note: "dd_sumtoi 8pl", pos: "top:2129px;left:4074px;" },
+        { id: "Olkuth", name: "Lesser Giant Olkuth", note: "LL_ULANX500 PLOVER", pos: "top:2405px;left:4679px;" },
+        { id: "Naga", name: "Storm Winged Naga", note: "th_ostrov bsnaga", pos: "top:1894px;left:4227px;" },
+        { id: "Palatanos", name: "Palatanos of Horrific Power", note: "pp_woawarka PALATAN5", pos: "top:1906px;left:4305px;" },
+        { id: "Flamestone_Giant", name: "Flamestone Giant", note: "pp_woawarka WATP", pos: "top:2014px;left:4287px;" },
+        { id: "Ashakiel", name: "Ocean Flame Ashakiel", note: "th_ostrov ostrov4", pos: "top:3264px;left:4100px;" },
+        { id: "Hestia", name: "Hestia", note: "kk_port1 hestia", pos: "top:1152px;left:4191px;" },
+        { id: "Shuriel", name: "Fire of Wrath Shuriel", note: "dd_sumtoi 10pl", pos: "top:2174px;left:4076px;" },
+        { id: "Golkonda", name: "Longhorn Golkonda", note: "ww_ulanworktk halgonda", pos: "top:2216px;left:4078px;" },
+        { id: "Galaxia", name: "Cherub Galaxia", note: "dd_sumtoi 13pl", pos: "top:2261px;left:4084px;" },
+        { id: "Shadith", name: "Varka's Hero Shadith", note: "pp_woawarka iiiadit", pos: "top:1750px;left:4017px;" },
+        { id: "Mos", name: "Varka's Commander Mos", note: "LL_ULANX500 5ALI", pos: "top:1770px;left:3960px;" },
+        { id: "Ember", name: "Ember", note: "ww_ulanworktk bember", pos: "top:1173px;left:4720px;" },
+        { id: "Uruka", name: "Uruka", note: "ww_ulanworktk urkahan", pos: "top:1990px;left:3002px;" },
+        { id: "Ashutar", name: "Soul of Water Ashutar", note: "kk_port1 wwarka", pos: "top:1765px;left:3911px;" },
+        { id: "Nastron", name: "Soul of Fire Nastron", note: "kk_port1 kketra", pos: "top:1411px;left:4266px;" },
+        { id: "Horus", name: "Varka's Chief Horus", note: "LL_ULANX500 4ALI", pos: "top:1721px;left:3923px;" },
+        { id: "Halter", name: "Andreas van Halter", note: "LL_ULANX500 PAGANKA", pos: "top:1640px;left:3222px;" },
+        { id: "Plague_Golem", name: "Plague Golem", note: "ll_woatab 4tab", pos: "top:1584px;left:4509px;" },
+        { id: "MILENU", name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" },
+        { id: "Brakki", name: "Ketra's Chief Brakki", note: "kk_port1 kketra", pos: "top:1385px;left:4289px;" },
+        { id: "Tayr", name: "Ketra's Commander Tayr", note: "kk_port1 kketra", pos: "top:1421px;left:4298px;" },
+        { id: "Hekaton", name: "Ketra's Hero Hekaton", note: "Ketra Hekaton", pos: "top:1477px;left:4316px;" },
+        { id: "Queen_Shyeed", name: "Queen Shyeed", note: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
+        { id: "Anays", name: "Lord of Splendor Anays", note: "Anays", pos: "top:1402px;left:4036px;" },
+        { id: "Sailren", name: "Sailren", note: "Sailren", pos: "top:1956px;left:3236px;" },
+        { id: "Daimon", name: "Daimon the White-Eyes", note: "Daimon", pos: "top:1717px;left:4660px;" },
+        { id: "Glaki", name: "Last Lesser Giant Glaki", note: "Glaki", pos: "top:2492px;left:4526px;" },
+        { id: "Bumbalump", name: "Icicle Emperor Bumbalump", note: "Bumbalump", pos: "top:1103px;left:4403px;" },
+        { id: "Gorgolos", name: "Gorgolos", note: "GM_RUSMAG BATAT", pos: "top:2542px;left:4659px;" },
+        { id: "Kastor", name: "Roaring Lord Kastor", note: "Kastor", pos: "top:2035px;left:3921px;" },
+        { id: "Hekaton_Prime", name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
+        { id: "Isabella", name: "Isabella", note: "newly added", pos: "top:2627px;left:2408px;" },
+        { id: "Royal_Sharpshooter", name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
+        { id: "Enchanced_Mimir", name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
+        { id: "Abyssal_Makkum", name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
+        { id: "Gordon", name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
+        { id: "Typhoon", name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
+    ];
+
+    const wrapper = document.getElementById('map-wrapper');
+    const viewport = document.getElementById('viewport');
+    let scale = window.innerWidth / 5062;
     let posX = 0, posY = 0;
 
     function init() {
-        document.getElementById('map-wrapper').style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
-        renderEpicUI();
-        initResize();
-        listenFirebase();
+        wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
+        initEpics();
+        addSpecialMarker();
+        listenFirebase(); 
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
+        initResize();
+        update();
     }
 
-    // --- ЭПИКИ ---
-    function renderEpicUI() {
+    // --- ЛОГИКА ЭПИКОВ ---
+    function initEpics() {
         const container = document.getElementById('top-sidebar');
-        container.innerHTML = epicsList.map(name => {
-            const id = name.replace(/\s+/g, '-');
-            return `
-                <div class="epic-card" id="epic-${id}">
-                    <div class="epic-info">
-                        <span class="epic-name">${name}</span>
-                        <span class="epic-timer" id="timer-${id}">--:--</span>
-                    </div>
-                    <button class="epic-set-btn" onclick="openEpicModal('${name}')">SET</button>
-                </div>
-            `;
-        }).join('');
+        container.innerHTML = epicsList.map(name => `
+            <div class="epic-card" id="epic-${name.replace(' ', '-')}">
+                <div class="epic-name">${name}</div>
+                <div class="epic-timer" id="timer-${name.replace(' ', '-')}">--:--:--</div>
+                <div class="epic-status" id="status-${name.replace(' ', '-')}">No Data</div>
+                <button class="epic-set-btn" onclick="openEpicModal('${name}')">SET</button>
+            </div>
+        `).join('');
     }
 
     function openEpicModal(name) {
         currentEditingEpic = name;
-        const id = name.replace(/\s+/g, '-');
-        document.getElementById('modal-title').innerText = name.toUpperCase();
-        renderWindowList();
+        document.getElementById('modal-title').innerText = "Settings: " + name.toUpperCase();
         document.getElementById('epic-modal').style.display = 'flex';
-    }
-
-    function renderWindowList() {
-        const id = currentEditingEpic.replace(/\s+/g, '-');
-        const raw = epicSchedules[id] || [];
-        const windows = Array.isArray(raw) ? raw : Object.values(raw); // FIX: Превращаем объект в массив
-        const container = document.getElementById('existing-windows');
-        container.innerHTML = windows.map((w, i) => `
-            <div class="window-item">
-                <span>${new Date(w.start).toLocaleDateString()} ${new Date(w.start).getHours()}:${new Date(w.start).getMinutes().toString().padStart(2,'0')}</span>
-                <span class="del-win" onclick="deleteWindow(${i})">✕</span>
-            </div>
-        `).join('') || "No dates set";
-    }
-
-    function addEpicWindow() {
-        const start = new Date(document.getElementById('epic-start').value).getTime();
-        const end = new Date(document.getElementById('epic-end').value).getTime();
-        if (!start || !end) return;
-        const id = currentEditingEpic.replace(/\s+/g, '-');
-        if (!epicSchedules[id]) epicSchedules[id] = [];
-        
-        // Гарантируем, что это массив перед пушем
-        if (!Array.isArray(epicSchedules[id])) epicSchedules[id] = Object.values(epicSchedules[id]);
-        
-        epicSchedules[id].push({ start, end });
-        db.ref('epics/' + id).set(epicSchedules[id]);
-        renderWindowList();
-    }
-
-    function deleteWindow(i) {
-        const id = currentEditingEpic.replace(/\s+/g, '-');
-        if (!Array.isArray(epicSchedules[id])) epicSchedules[id] = Object.values(epicSchedules[id]);
-        epicSchedules[id].splice(i, 1);
-        db.ref('epics/' + id).set(epicSchedules[id]);
-        renderWindowList();
     }
 
     function closeEpicModal() { document.getElementById('epic-modal').style.display = 'none'; }
 
-    // --- ФУНКЦИИ МОНИТОРИНГА И РЕНДЕРА ---
-    function listenFirebase() {
-        db.ref('bosses').on('value', snap => {
-            const data = snap.val() || {};
-            bossData = Object.keys(data).map(id => ({ id, ...data[id] }));
-            renderMarkers();
+    function saveEpicTime() {
+        const start = document.getElementById('epic-start').value;
+        const end = document.getElementById('epic-end').value;
+        if (!start || !end) return alert("Fill both dates!");
+        
+        epicsRef.child(currentEditingEpic.replace(' ', '-')).set({
+            start: new Date(start).getTime(),
+            end: new Date(end).getTime()
         });
-        db.ref('epics').on('value', snap => {
-            epicSchedules = snap.val() || {};
+        closeEpicModal();
+    }
+
+    function updateEpicsUI() {
+        const now = Date.now();
+        epicsList.forEach(name => {
+            const id = name.replace(' ', '-');
+            const data = epicData[id];
+            const timerEl = document.getElementById('timer-' + id);
+            const statusEl = document.getElementById('status-' + id);
+            
+            if (!data) return;
+
+            if (now < data.start) {
+                timerEl.innerText = formatTime(data.start - now);
+                statusEl.innerText = "UNTIL START";
+                statusEl.style.color = "#888";
+            } else if (now >= data.start && now < data.end) {
+                timerEl.innerText = formatTime(data.end - now);
+                statusEl.innerText = "WINDOW OPEN";
+                statusEl.style.color = "#00ffcc";
+            } else {
+                timerEl.innerText = "FINISHED";
+                statusEl.innerText = "RESPAWN OVER";
+                statusEl.style.color = "#ff4400";
+            }
         });
     }
 
-    function renderMarkers() {
-        const wrapper = document.getElementById('map-wrapper');
-        bossData.forEach(boss => {
-            if (!boss.pos) return; // FIX: Пропуск боссов без позиции
-            let m = document.getElementById('rb-' + boss.id);
-            if (!m) {
-                m = document.createElement('div');
-                m.id = 'rb-' + boss.id;
-                m.className = 'rb-marker';
-                m.setAttribute('data-name', boss.name);
-                m.onclick = (e) => { e.stopPropagation(); focus(boss); };
-                m.ondblclick = (e) => { e.stopPropagation(); markDead(boss.id); };
-                wrapper.appendChild(m);
+    function formatTime(ms) {
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    // --- РЕСАЙЗ САЙДБАРА ---
+    function initResize() {
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('sidebar-resizer');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'ew-resize'; });
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX - 15;
+            if (newWidth > 250 && newWidth < 600) {
+                sidebar.style.width = newWidth + 'px';
+                document.getElementById('top-sidebar').style.left = (newWidth + 30) + 'px';
             }
-            const p = boss.pos.split(';'); // Если тут ошибка — значит в базе pos: undefined
-            if (p.length < 2) return;
-            m.style.top = p[0].split(':')[1];
-            m.style.left = p[1].split(':')[1];
-            boss.isAlive ? m.classList.add('is-alive') : m.classList.remove('is-alive');
+        });
+        window.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+    }
+
+    // --- ТВОЙ ОРИГИНАЛЬНЫЙ ФУНКЦИОНАЛ ---
+    function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
+
+    function addSpecialMarker() {
+        const sm = document.createElement('div');
+        sm.className = 'rb-marker special-marker';
+        sm.style.top = "2970px"; sm.style.left = "4322px";
+        sm.setAttribute('data-name', 'TELEPORT MAP');
+        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'block'; };
+        wrapper.appendChild(sm);
+    }
+
+    function createMarker(boss) {
+        if (!boss || !boss.id || !boss.pos || document.getElementById('rb-' + boss.id)) return;
+        let m = document.createElement('div');
+        m.id = 'rb-' + boss.id;
+        m.className = 'rb-marker';
+        const p = boss.pos.split(';');
+        m.style.top = p[0].split(':')[1];
+        m.style.left = p[1].split(':')[1];
+        m.setAttribute('data-name', boss.name);
+        
+        let lastClick = 0;
+        m.addEventListener('pointerdown', (e) => {
+            if (isEditorMode) {
+                e.stopPropagation(); draggedBossId = boss.id;
+                m.classList.add('dragging'); m.setPointerCapture(e.pointerId);
+            }
+        });
+
+        m.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isEditorMode) return;
+            const now = Date.now();
+            if (now - lastClick < 400) { 
+                lastClick = 0; toggleBossStatus(boss.id);
+            } else {
+                lastClick = now;
+                setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400);
+            }
+        });
+        wrapper.appendChild(m);
+    }
+
+    function toggleBossStatus(id) {
+        const b = bossData.find(x => x.id === id);
+        if (!b) return;
+        const mskTime = new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' });
+        rbRef.child(id).update({ isAlive: false, deathTime: Date.now(), startTimeMsk: mskTime });
+    }
+
+    function listenFirebase() {
+        rbRef.on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            Object.keys(data).forEach(id => {
+                const item = data[id];
+                let boss = bossData.find(b => b.id === id);
+                if (!boss) { boss = { id, ...item }; bossData.push(boss); } 
+                else { 
+                    boss.isAlive = item.isAlive || false;
+                    boss.deathTime = item.deathTime || null;
+                    boss.startTimeMsk = item.startTimeMsk || null;
+                    boss.pos = item.pos || boss.pos;
+                }
+                createMarker(boss);
+                const m = document.getElementById('rb-' + id);
+                if (m && !m.classList.contains('dragging')) {
+                    const p = boss.pos.split(';');
+                    m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
+                    boss.isAlive ? m.classList.add('is-alive') : m.classList.remove('is-alive');
+                }
+            });
+            renderMonitor();
+        });
+        epicsRef.on('value', (snap) => {
+            epicData = snap.val() || {};
+            updateEpicsUI();
         });
     }
 
     function tick() {
         const now = Date.now();
-        // Обычные РБ
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
             if (boss.deathTime && !boss.isAlive) {
-                const rem = 900 - Math.floor((now - boss.deathTime) / 1000);
+                const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
                 if (rem <= 0) {
-                    db.ref('bosses/' + boss.id).update({ isAlive: true, deathTime: null });
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null, startTimeMsk: null });
                 } else {
                     let t = m.querySelector('.rb-timer-map') || document.createElement('div');
                     t.className = 'rb-timer-map'; if (!m.contains(t)) m.appendChild(t);
-                    t.innerText = Math.floor(rem/60) + ":" + (rem%60).toString().padStart(2,'0');
+                    t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
+                    if (boss.startTimeMsk) {
+                        let l = m.querySelector('.rb-start-time-label') || document.createElement('div');
+                        l.className = 'rb-start-time-label'; if (!m.contains(l)) m.appendChild(l);
+                        l.innerText = `${boss.startTimeMsk} МСК`;
+                    }
                 }
             } else {
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
+                const l = m.querySelector('.rb-start-time-label'); if (l) l.remove();
             }
         });
-
-        // Эпики
-        epicsList.forEach(name => {
-            const id = name.replace(/\s+/g, '-');
-            const raw = epicSchedules[id] || [];
-            const windows = Array.isArray(raw) ? raw : Object.values(raw); // FIX: Чтобы filter работал
-            const timerEl = document.getElementById('timer-' + id);
-            
-            const active = windows.filter(w => w.end > now).sort((a,b) => a.start - b.start)[0];
-
-            if (!active) { 
-                timerEl.innerText = "--:--"; 
-                timerEl.style.color = "#555";
-                return; 
-            }
-            
-            if (now < active.start) {
-                timerEl.innerText = formatTime(active.start - now);
-                timerEl.style.color = "#00ffcc";
-            } else {
-                timerEl.innerText = "WINDOW";
-                timerEl.style.color = "#ff4400";
-            }
-        });
-        renderMonitor();
-    }
-
-    function formatTime(ms) {
-        const s = Math.floor(ms / 1000);
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        return h + ":" + m.toString().padStart(2, '0');
+        updateEpicsUI();
+        renderMonitor(); 
     }
 
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
-        const active = bossData.filter(b => b.isAlive || (b.deathTime && (900 - Math.floor((now-b.deathTime)/1000)) > 0));
-        active.sort((a,b) => (a.deathTime || 0) - (b.deathTime || 0));
+        const active = bossData.filter(b => b.isAlive || (b.deathTime && (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) > 0));
+        active.sort((a, b) => (a.deathTime || 0) - (b.deathTime || 0));
         list.innerHTML = active.map(b => {
             let timeStr = "READY";
+            let isTimer = false;
             if (b.deathTime && !b.isAlive) {
-                const rem = Math.max(0, 900 - Math.floor((now - b.deathTime) / 1000));
-                timeStr = Math.floor(rem/60) + ":" + (rem%60).toString().padStart(2,'0');
+                const rem = Math.max(0, SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000));
+                if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <span><b>${b.name}</b></span>
-                <span class="${timeStr==='READY'?'ready-text':''}">${timeStr}</span>
+                <div><b>${b.name}</b><span class="rb-note-text">${b.startTimeMsk ? 'Start: ' + b.startTimeMsk + ' | ' : ''}${b.note || ""}</span></div>
+                <span class="${isTimer ? 'timer-active-text' : 'ready-text'}">${timeStr}</span>
             </div>`;
         }).join('');
     }
 
-    function markDead(id) {
-        db.ref('bosses/' + id).update({ isAlive: false, deathTime: Date.now() });
-    }
-
-    // --- УПРАВЛЕНИЕ КАРТОЙ ---
-    function initResize() {
-        const sidebar = document.getElementById('sidebar');
-        const resizer = document.getElementById('sidebar-resizer');
-        const topBar = document.getElementById('top-sidebar');
-        let dragging = false;
-        resizer.onmousedown = () => dragging = true;
-        window.onmousemove = (e) => { if (!dragging) return; let w = Math.max(10, e.clientX); sidebar.style.width = w + 'px'; topBar.style.left = (w + 20) + 'px'; };
-        window.onmouseup = () => dragging = false;
-    }
-
-    function focusById(id) { const b = bossData.find(x=>x.id===id); if(b) focus(b); }
+    function focusById(id) { const b = bossData.find(x => x.id === id); if (b) focus(b); }
     function focus(boss) {
-        if (!boss.pos) return;
-        const p = boss.pos.split(';');
-        const t = parseInt(p[0].split(':')[1]); const l = parseInt(p[1].split(':')[1]);
+        const m = document.getElementById('rb-' + boss.id); if(!m) return;
+        const t = parseInt(m.style.top); const l = parseInt(m.style.left);
         scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale);
         update();
     }
-    function update() { document.getElementById('map-wrapper').style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+
+    function toggleEditor() {
+        if (!isEditorMode) { if (prompt("Password:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
+        document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
+        document.getElementById('add-boss-btn').style.display = isEditorMode ? "block" : "none";
+    }
+
+    function startAddingBoss() { isAddingMode = true; alert("Click map to add boss"); }
+
+    function resetTimers() {
+        if(confirm("Reset all READY bosses?")) bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null, startTimeMsk: null }); });
+    }
 
     function updateGameTime() {
         const now = new Date();
-        const sec = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
-        let gMin = Math.floor(1056 + (sec - 71766) / 10);
-        gMin = ((gMin % 1440) + 1440) % 1440;
-        document.getElementById('game-time').innerText = Math.floor(gMin/60).toString().padStart(2,'0') + ":" + (gMin%60).toString().padStart(2,'0');
+        const nowSec = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
+        const syncReal = (19 * 3600) + (56 * 60) + 6; const syncGame = (17 * 60) + 36;
+        let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
+        gameMin = ((gameMin % 1440) + 1440) % 1440;
+        const h = Math.floor(gameMin / 60); const m = gameMin % 60;
+        document.getElementById('game-time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     }
 
-    function toggleEditor() {
-        if (!isEditorMode) { if (prompt("Pass:") === "D36rk43mgm") isEditorMode = true; else return; }
-        else isEditorMode = false;
-        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ОН" : "РЕДАКТОР: ВЫКЛ";
-    }
-
-    window.onwheel = e => {
+    // Drag & Zoom
+    let isDrag = false, lx, ly;
+    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar') && !e.target.closest('#epic-modal')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onpointermove = e => {
+        if (draggedBossId) {
+            const rect = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / scale);
+            const y = Math.round((e.clientY - rect.top) / scale);
+            const m = document.getElementById('rb-' + draggedBossId);
+            if (m) { m.style.top = y + 'px'; m.style.left = x + 'px'; }
+        } else if (isDrag) {
+            posX += e.clientX - lx; posY += e.clientY - ly;
+            lx = e.clientX; ly = e.clientY; update();
+        }
+    };
+    window.onpointerup = (e) => {
+        if (isAddingMode && isEditorMode && !draggedBossId) {
+            const rect = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / scale);
+            const y = Math.round((e.clientY - rect.top) / scale);
+            const name = prompt("Boss Name:");
+            if (name) rbRef.child("rb_"+Date.now()).set({ name, pos: `top:${y}px;left:${x}px;`, isAlive: false, deathTime: null });
+            isAddingMode = false;
+        }
+        if (draggedBossId) {
+            const m = document.getElementById('rb-' + draggedBossId);
+            if (m) rbRef.child(draggedBossId).update({ pos: `top:${m.style.top};left:${m.style.left};` });
+            draggedBossId = null;
+        }
+        isDrag = false;
+    };
+    viewport.addEventListener('wheel', e => {
+        e.preventDefault();
         const delta = e.deltaY > 0 ? 0.8 : 1.2;
         const ns = Math.min(Math.max(0.05, scale * delta), 4);
         posX = e.clientX - (e.clientX - posX) * (ns / scale);
         posY = e.clientY - (e.clientY - posY) * (ns / scale);
         scale = ns; update();
-    };
-    let isDrag = false, lx, ly;
-    window.onmousedown = e => { if(!e.target.closest('#sidebar') && !e.target.closest('#top-sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
-    window.onmousemove = e => { if(isDrag) { posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; update(); } };
-    window.onmouseup = () => isDrag = false;
+    }, { passive: false });
 
     init();
 </script>
