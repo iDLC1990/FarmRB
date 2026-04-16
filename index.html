@@ -68,29 +68,38 @@
         }
         #sidebar-resizer:hover { background: rgba(255, 215, 0, 0.1); border-right: 2px solid #ffd700; }
 
-        /* ВЕРХНЯЯ ПАНЕЛЬ: Сетка 5x2 (5 в первом ряду, 4 во втором) */
+        /* ВЕРХНЯЯ ПАНЕЛЬ (ЕПИКИ) - Сделана еще меньше */
         #top-sidebar {
-            position: fixed; top: 15px; left: 320px; right: 15px;
-            background: rgba(10, 10, 10, 0.9); border: 1px solid #444;
-            padding: 8px; z-index: 900; border-radius: 15px; backdrop-filter: blur(5px);
+            position: fixed; top: 10px; left: 320px; right: 15px;
+            background: rgba(10, 10, 10, 0.85); border: 1px solid #444;
+            padding: 4px; z-index: 900; border-radius: 10px; backdrop-filter: blur(5px);
             display: grid; 
-            grid-template-columns: repeat(5, 1fr); /* 5 колонок */
-            gap: 6px;
-            max-height: 160px; /* Чтобы не перекрывало слишком много */
-            overflow-y: auto;
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 4px;
         }
 
         .epic-card {
-            background: #1a1a1a; border: 1px solid #333; padding: 4px 6px; border-radius: 8px;
+            background: #111; border: 1px solid #222; padding: 2px 4px; border-radius: 6px;
             display: flex; flex-direction: column; align-items: center; position: relative;
-            min-width: 0; /* Чтобы grid мог сжимать карточки */
+            min-width: 0; transition: all 0.3s;
         }
-        .epic-name { font-size: 10px; font-weight: bold; color: #ffd700; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
-        .epic-timer { font-family: monospace; font-size: 12px; color: #00ffcc; }
-        .epic-status { font-size: 8px; color: #888; margin-top: 1px; }
+        
+        /* Эффект мигания для открытого окна */
+        .epic-window-open {
+            animation: window-blink 1s infinite alternate;
+            border-color: #ffcc00 !important;
+        }
+        @keyframes window-blink {
+            from { background: #111; box-shadow: 0 0 2px #ffcc00; }
+            to { background: #443300; box-shadow: 0 0 10px #ffcc00; }
+        }
+
+        .epic-name { font-size: 9px; font-weight: bold; color: #ffd700; text-transform: uppercase; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+        .epic-timer { font-family: monospace; font-size: 11px; color: #00ffcc; line-height: 1; }
+        .epic-status { font-size: 7px; color: #888; margin-top: 1px; font-weight: bold; }
         .epic-set-btn { 
-            font-size: 8px; background: #333; color: #fff; border: 1px solid #555; 
-            padding: 1px 4px; cursor: pointer; margin-top: 3px; border-radius: 4px;
+            font-size: 7px; background: #222; color: #aaa; border: 1px solid #444; 
+            padding: 0px 4px; cursor: pointer; margin-top: 2px; border-radius: 3px;
         }
         .epic-set-btn:hover { background: #ffd700; color: #000; }
 
@@ -190,7 +199,6 @@
     let draggedBossId = null;
     let currentEditingEpic = null;
 
-    // Список из 9 боссов
     const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
     let epicData = {};
 
@@ -319,19 +327,25 @@
             const data = epicData[id];
             const timerEl = document.getElementById('timer-' + id);
             const statusEl = document.getElementById('status-' + id);
-            if (!data) return;
+            const cardEl = document.getElementById('epic-' + id);
+            
+            if (!data || !cardEl) return;
+
             if (now < data.start) {
                 timerEl.innerText = formatTime(data.start - now);
                 statusEl.innerText = "UNTIL START";
                 statusEl.style.color = "#888";
+                cardEl.classList.remove('epic-window-open');
             } else if (now >= data.start && now < data.end) {
                 timerEl.innerText = formatTime(data.end - now);
                 statusEl.innerText = "WINDOW OPEN";
                 statusEl.style.color = "#00ffcc";
+                cardEl.classList.add('epic-window-open'); // Добавляем мигание
             } else {
                 timerEl.innerText = "FINISHED";
                 statusEl.innerText = "RESPAWN OVER";
                 statusEl.style.color = "#ff4400";
+                cardEl.classList.remove('epic-window-open');
             }
         });
     }
