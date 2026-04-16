@@ -3,172 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L2 RB Map - Ultimate Tracking</title>
+    <title>L2 RB Map - Pro</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        :root {
-            --primary-gold: #ffd700;
-            --bg-dark: #050505;
-            --sidebar-bg: rgba(10, 10, 10, 0.95);
-        }
+        :root { --primary-gold: #ffd700; --bg-dark: #0a0a0a; }
+        body { margin: 0; padding: 0; background: #000; color: #eee; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; }
 
-        body { 
-            margin: 0; padding: 0; background: var(--bg-dark); color: #eee; 
-            font-family: 'Segoe UI', sans-serif; overflow: hidden; 
-            touch-action: none; user-select: none;
-        }
-
-        /* Верхняя панель Эпиков */
+        /* Эпик панель в 2 строки */
         #epic-bar {
-            position: fixed; top: 0; left: 0; width: 100%; height: 75px;
-            background: linear-gradient(to bottom, #1a1a1a, #000);
-            border-bottom: 2px solid var(--primary-gold);
-            z-index: 2000; display: flex; align-items: center; 
-            padding: 0 15px; overflow-x: auto; white-space: nowrap;
-            gap: 12px; scrollbar-width: none;
+            position: fixed; top: 0; left: 0; width: 100%; 
+            background: rgba(20,20,20,0.95); border-bottom: 2px solid var(--primary-gold);
+            z-index: 2000; display: grid; 
+            grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 5px;
+            box-sizing: border-box;
         }
-        #epic-bar::-webkit-scrollbar { display: none; }
-
         .epic-item {
-            display: inline-flex; flex-direction: column; align-items: center;
-            padding: 6px 12px; border: 1px solid #333; border-radius: 6px;
-            min-width: 130px; background: rgba(255,255,255,0.05); cursor: pointer;
-            transition: 0.3s;
+            background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
+            padding: 4px; text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .epic-item:hover { border-color: var(--primary-gold); background: rgba(255,215,0,0.1); }
-        .epic-name { font-size: 11px; font-weight: bold; color: var(--primary-gold); text-transform: uppercase; margin-bottom: 2px; }
-        .epic-timer { font-family: 'Courier New', monospace; font-size: 15px; color: #00ffcc; font-weight: bold; }
-        .epic-status { font-size: 9px; color: #888; text-transform: uppercase; }
-        
-        .epic-item.active-window { 
-            border-color: #ff4400; 
-            box-shadow: 0 0 15px #f40; 
-            animation: pulse-epic 1.5s infinite; 
-            background: rgba(255, 68, 0, 0.2);
+        .epic-item:hover { border-color: var(--primary-gold); }
+        .epic-name { font-size: 10px; font-weight: bold; color: var(--primary-gold); display: block; }
+        .epic-timer { font-size: 13px; color: #00ffcc; font-family: monospace; font-weight: bold; }
+        .epic-status { font-size: 8px; color: #888; display: block; }
+        .active-window { border-color: #f40 !important; box-shadow: inset 0 0 10px #820; animation: blink 1s infinite; }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* Карта */
+        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #111; }
+        #map-wrapper { 
+            position: absolute; transform-origin: 0 0; 
+            width: 5062px; height: 4210px; 
+            background-image: url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true');
         }
-
-        @keyframes pulse-epic { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-
-        #viewport { width: 100vw; height: 100vh; cursor: grab; overflow: hidden; position: relative; background: #000; }
-        #map-wrapper { position: absolute; transform-origin: 0 0; width: 5062px; height: 4210px; will-change: transform; transition: filter 0.5s; }
-
-        /* Ночной режим */
-        .night-mode #map-wrapper { filter: brightness(0.3) contrast(1.3) saturate(0.7); }
 
         /* Метки РБ */
         .rb-marker {
-            position: absolute; width: 18px; height: 18px;
-            background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
-            border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
-            box-shadow: 0 0 5px rgba(0,0,0,0.8);
+            position: absolute; width: 16px; height: 16px;
+            background: rgba(255,255,255,0.4); border: 2px solid #333; border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
         }
-        .rb-marker.is-alive { 
-            background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
-            border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
-            width: 22px; height: 22px; z-index: 15;
-        }
-        
-        /* Приоритет ★ */
-        .rb-marker.priority::before {
-            content: '★'; position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
-            color: var(--primary-gold); font-size: 22px; text-shadow: 0 0 8px #000;
-        }
-
+        .rb-marker.is-alive { background: radial-gradient(circle, #f40, #800); border-color: #fff; box-shadow: 0 0 15px #f40; width: 20px; height: 20px; z-index: 20; }
+        .rb-marker.priority::before { content: '★'; position: absolute; top: -22px; left: 50%; transform: translateX(-50%); color: var(--primary-gold); font-size: 20px; }
         .rb-marker::after {
-            content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; 
-            font-size: 11px; white-space: nowrap; pointer-events: none; border: 1px solid #444;
+            content: attr(data-name); position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap; pointer-events: none;
         }
 
-        /* Режимы фильтрации */
-        .mode-minimal .rb-marker::after, 
-        .mode-minimal .rb-start-time-label, 
-        .mode-minimal .rb-last-respawn-label, 
-        .mode-minimal .rb-timer-map { display: none !important; }
+        .rb-timer-map {
+            position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; border: 1px solid #00ffcc; padding: 2px 5px;
+            font-size: 14px; font-family: monospace; border-radius: 4px; font-weight: bold;
+        }
+
+        /* Сайдбар */
+        #sidebar {
+            position: fixed; top: 110px; left: 15px; width: 260px;
+            background: rgba(10,10,10,0.9); padding: 15px; border-radius: 12px;
+            border: 1px solid #333; z-index: 1000; max-height: 75vh; overflow-y: auto;
+        }
+        #game-time { font-size: 32px; color: var(--primary-gold); text-align: center; font-family: monospace; margin-bottom: 15px; }
+        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .btn-clear { background: #600; color: #fff; }
+        .btn-faq { background: #444; color: #fff; }
+        .btn-editor { background: #111; color: #0f0; border: 1px solid #050; }
+
+        /* Модалки */
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #111; border: 2px solid var(--primary-gold); padding: 20px;
+            z-index: 5000; display: none; border-radius: 10px; width: 300px;
+        }
+        .day-box { display: inline-block; padding: 5px 8px; background: #222; margin: 2px; font-size: 10px; cursor: pointer; border-radius: 3px; }
+        .day-box.selected { background: var(--primary-gold); color: #000; }
         
         .mode-timers .rb-marker:not(.has-active-timer) { display: none !important; }
         .mode-ready .rb-marker.has-active-timer { display: none !important; }
-
-        .rb-timer-map {
-            position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 3px 8px; border-radius: 6px;
-            font-weight: bold; font-family: monospace; font-size: 16px; border: 2px solid #00ffcc;
-            z-index: 100; pointer-events: none;
-        }
-
-        #sidebar {
-            position: fixed; top: 90px; left: 15px; width: 280px;
-            background: var(--sidebar-bg); border: 1px solid #333;
-            padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
-            max-height: calc(100vh - 120px); overflow-y: auto;
-        }
-
-        .control-group { margin-bottom: 12px; border-bottom: 1px solid #222; padding-bottom: 10px; }
-        label { display: block; font-size: 10px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
-        select, button { width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; font-size: 12px; }
-        
-        #game-time { font-size: 36px; color: var(--primary-gold); text-align: center; margin-bottom: 10px; font-family: monospace; }
-
-        /* Модалка Эпиков */
-        #epic-modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #111; border: 2px solid var(--primary-gold); padding: 20px;
-            z-index: 5000; display: none; border-radius: 12px; width: 320px; box-shadow: 0 0 50px #000;
-        }
-        .day-checkboxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; }
-        .day-box { font-size: 11px; text-align: center; background: #222; padding: 8px; border-radius: 5px; cursor: pointer; border: 1px solid #333; transition: 0.2s; }
-        .day-box.selected { background: var(--primary-gold); color: #000; border-color: #fff; }
-
-        .monitor-item {
-            padding: 10px; border-bottom: 1px solid #222; font-size: 12px; display: flex; justify-content: space-between; align-items: center;
-        }
-        .priority-text { color: var(--primary-gold); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="epic-bar"></div>
 
-<div id="epic-modal">
-    <h3 id="modal-title" style="margin-top:0; color:var(--primary-gold); text-align:center;">Настройка Эпика</h3>
-    <label>Число месяца для старта:</label>
-    <input type="number" id="setup-date" placeholder="Напр: 17" style="width:100%; padding:8px; margin-bottom:12px; background:#222; color:#fff; border:1px solid #444; border-radius:5px;">
-    <label>Время начала (МСК):</label>
-    <input type="time" id="setup-time" style="width:100%; padding:8px; margin-bottom:12px; background:#222; color:#fff; border:1px solid #444; border-radius:5px;">
-    <label>Повторять в дни недели:</label>
-    <div class="day-checkboxes" id="day-selector">
-        <div class="day-box" data-day="1">ПН</div><div class="day-box" data-day="2">ВТ</div>
-        <div class="day-box" data-day="3">СР</div><div class="day-box" data-day="4">ЧТ</div>
-        <div class="day-box" data-day="5">ПТ</div><div class="day-box" data-day="6">СБ</div>
-        <div class="day-box" data-day="0">ВС</div>
-    </div>
-    <button onclick="saveEpicSettings()" style="background:var(--primary-gold); color:#000; margin-bottom:8px;">СОХРАНИТЬ</button>
-    <button onclick="closeEpicModal()" style="background:#333; color:#fff;">ОТМЕНА</button>
-</div>
-
 <div id="sidebar">
     <div id="game-time">00:00</div>
     
-    <div class="control-group">
-        <label>Режим отображения:</label>
-        <select id="view-mode" onchange="updateViewMode()">
-            <option value="default">Стандарт</option>
-            <option value="minimal">Минимализм (только точки)</option>
-            <option value="timers">Только Таймеры</option>
-            <option value="ready">Только Живые (Ready)</option>
-        </select>
-    </div>
+    <label style="font-size: 10px; color:#888;">РЕЖИМ:</label>
+    <select id="view-mode" onchange="updateViewMode()" style="width:100%; padding:8px; margin-bottom:15px; background:#222; color:#fff; border:none; border-radius:5px;">
+        <option value="default">Стандарт</option>
+        <option value="timers">Только таймеры</option>
+        <option value="ready">Только Живые</option>
+    </select>
 
-    <div class="control-group">
-        <label>Настройки карты:</label>
-        <button id="night-btn" onclick="toggleNightMode()" style="background:#1a1a1a; color:#fff; border:1px solid #444; margin-bottom:5px;">НОЧНОЙ РЕЖИМ: ВЫКЛ</button>
-        <button onclick="toggleEditor()" id="editor-btn" style="background:#1a1a1a; color:#0f0; border:1px solid #050;">РЕДАКТОР: ВЫКЛ</button>
-    </div>
+    <button class="btn btn-clear" onclick="clearAllTimers()">ОЧИСТИТЬ СПИСОК</button>
+    <button class="btn btn-faq" onclick="toggleModal('faq-modal', true)">FAQ / ИНСТРУКЦИЯ</button>
+    <button class="btn btn-editor" id="editor-btn" onclick="toggleEditor()">РЕДАКТОР: ВЫКЛ</button>
+    
+    <div id="monitor-list" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;"></div>
+</div>
 
-    <div id="monitor-list"></div>
+<div id="epic-modal" class="modal">
+    <h3 id="modal-title" style="margin:0 0 10px 0; color:var(--primary-gold)"></h3>
+    <label style="font-size:11px">Дата (число месяца):</label>
+    <input type="number" id="setup-date" style="width:100%; margin-bottom:10px;">
+    <label style="font-size:11px">Время старта (МСК):</label>
+    <input type="time" id="setup-time" style="width:100%; margin-bottom:10px;">
+    <div id="day-selector">
+        <div class="day-box" data-day="1">ПН</div><div class="day-box" data-day="2">ВТ</div><div class="day-box" data-day="3">СР</div>
+        <div class="day-box" data-day="4">ЧТ</div><div class="day-box" data-day="5">ПТ</div><div class="day-box" data-day="6">СБ</div><div class="day-box" data-day="0">ВС</div>
+    </div>
+    <button onclick="saveEpicSettings()" style="width:100%; background:var(--primary-gold); margin-top:10px; padding:8px; border:none; font-weight:bold;">СОХРАНИТЬ</button>
+    <button onclick="toggleModal('epic-modal', false)" style="width:100%; background:#333; color:#fff; margin-top:5px; padding:5px; border:none;">ОТМЕНА</button>
+</div>
+
+<div id="faq-modal" class="modal">
+    <h3 style="color:var(--primary-gold)">Инструкция</h3>
+    <p style="font-size:12px; line-height:1.5;">
+        • <b>Двойной клик</b> по метке РБ: запуск 15-мин таймера.<br>
+        • <b>Эпики:</b> кликни по плашке сверху для настройки даты и времени появления.<br>
+        • <b>Редактор:</b> пароль позволяет менять приоритет (звёзды) и двигать метки.<br>
+        • <b>Звезда:</b> в режиме редактора кликни по РБ, чтобы пометить его как важный.
+    </p>
+    <button onclick="toggleModal('faq-modal', false)" style="width:100%; background:var(--primary-gold); padding:8px; border:none; font-weight:bold;">ЗАКРЫТЬ</button>
 </div>
 
 <div id="viewport"><div id="map-wrapper"></div></div>
@@ -184,101 +143,95 @@
     const rbRef = db.ref('bosses');
     const epicRef = db.ref('epics');
 
-    const SPAWN_WINDOW = 15 * 60; 
-    let isEditorMode = false;
-    let isNightMode = false;
-    let currentEditingEpic = null;
-
-    // ВАШ ПОЛНЫЙ СПИСОК БОССОВ ВЕРНУЛСЯ
     let bossData = [
-        { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
-        { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
-        { id: "Ghost_of_the_Lidia", name: "Ghost of the Lidia", note: "ll_woatab center", pos: "top:1906px;left:4528px;" },
-        { id: "Fierce_Tiger_King_Angel", name: "Fierce Tiger King Angel", note: "ll_woatab 1tab", pos: "top:2713px;left:4517px;" },
-        { id: "Shilen_Priest_Hisilrome", name: "Shilen's Priest Hisilrome", note: "ll_woatab 3tab", pos: "top:2279px;left:4503px;" },
-        { id: "Rahha", name: "Rahha", note: "pp_woawarka KETP", pos: "top:1981px;left:4047px;" },
-        { id: "Enmity_Ghost_Ramdal", name: "Enmity Ghost Ramdal", note: "dd_sumtoi 1pl", pos: "top:2128px;left:3955px;" },
-        { id: "Gargoyle_Lord_Tiphon", name: "Gargoyle Lord Tiphon", note: "ww_ulanworktk tripon", pos: "top:1853px;left:4509px;" },
-        { id: "Demons_Agent_Falston", name: "Demons Agent Falston", note: "ll_woatab 5tab", pos: "top:1460px;left:3819px;" },
-        { id: "Kernon_Faithful_Kelone", name: "Kernon's Faithful Kelone", note: "th_ostrov bswerx", pos: "top:1838px;left:4284px;" },
-        { id: "Spirit_of_Andras", name: "Spirit of Andras", note: "ww_ulanworktk androna", pos: "top:1851px;left:4661px;" },
-        { id: "Anakim_Nemesis_Zakaron", name: "Anakim's Nemesis Zakaron", note: "kk_port1 ssakaron", pos: "top:2750px;left:4256px;" },
-        { id: "Barakiel", name: "Flame of Splendor Barakiel", note: "ll_woatab finisrb", pos: "top:1376px;left:3793px;" },
-        { id: "Korim", name: "Korim", note: "ww_ulanworktk ibobo", pos: "top:2259px;left:3958px;" },
-        { id: "Queen_Themis", name: "Palibati Queen Themis", note: "ww_ulanworktk paibatis", pos: "top:2226px;left:4712px;" },
-        { id: "Cabrio", name: "Shilen's Messenger Cabrio", note: "kk_port1 sabrio", pos: "top:2145px;left:4614px;" },
-        { id: "Savior_Mardil", name: "Immortal Savior Mardil", note: "dd_sumtoi 4pl", pos: "top:2216px;left:3954px;" },
-        { id: "Tanatos", name: "Doom Blade Tanatos", note: "pp_woawarka KBOX", pos: "top:1953px;left:4150px;" },
-        { id: "Sheshark", name: "Water Dragon Seer Sheshark", note: "th_ostrov ostrov2", pos: "top:3295px;left:3959px;" },
-        { id: "Hallate", name: "Death Lord Hallate", note: "dd_sumtoi 2pl", pos: "top:2175px;left:3959px;" },
-        { id: "Behemoth", name: "Beast Lord Behemoth", note: "LL_ULANX500 PIhIMOT", pos: "top:1870px;left:4098px;" },
-        { id: "Meanas_Anor", name: "Meanas Anor", note: "pp_woawarka wbox", pos: "top:1992px;left:4402px;" },
-        { id: "Skylancer", name: "Roaring Skylancer", note: "pp_woawarka lancer", pos: "top:2527px;left:4165px;" },
-        { id: "Hellmann", name: "Eilhalder von Hellmann", note: "th_ostrov fodvil", pos: "top:1729px;left:3504px;" },
-        { id: "Kandra", name: "Vanor Chief Kandra", note: "kk_port1 kandraa", pos: "top:1565px;left:4027px;" },
-        { id: "Lokness", name: "Fafurion'Herald Lokness", note: "th_ostrov ostrov1", pos: "top:3295px;left:3910px;" },
-        { id: "Sobekk", name: "Krokian Padisha Sobekk", note: "th_ostrov ostrov3", pos: "top:3291px;left:4064px;" },
-        { id: "Decarbia", name: "Bloody Empress Decarbia", note: "LL_ULANX500 kobria", pos: "top:2161px;left:4690px;" },
-        { id: "Ipos", name: "Death Lord Ipos", note: "LL_ULANX500 IBOS", pos: "top:1949px;left:4379px;" },
-        { id: "Shax", name: "Death Lord Shax", note: "kk_port1 sky4len", pos: "top:1997px;left:4512px;" },
-        { id: "Kernon", name: "Kernon", note: "dd_sumtoi 8pl", pos: "top:2129px;left:4074px;" },
-        { id: "Olkuth", name: "Lesser Giant Olkuth", note: "LL_ULANX500 PLOVER", pos: "top:2405px;left:4679px;" },
-        { id: "Naga", name: "Storm Winged Naga", note: "th_ostrov bsnaga", pos: "top:1894px;left:4227px;" },
-        { id: "Palatanos", name: "Palatanos of Horrific Power", note: "pp_woawarka PALATAN5", pos: "top:1906px;left:4305px;" },
-        { id: "Flamestone_Giant", name: "Flamestone Giant", note: "pp_woawarka WATP", pos: "top:2014px;left:4287px;" },
-        { id: "Ashakiel", name: "Ocean Flame Ashakiel", note: "th_ostrov ostrov4", pos: "top:3264px;left:4100px;" },
-        { id: "Hestia", name: "Hestia", note: "kk_port1 hestia", pos: "top:1152px;left:4191px;" },
-        { id: "Shuriel", name: "Fire of Wrath Shuriel", note: "dd_sumtoi 10pl", pos: "top:2174px;left:4076px;" },
-        { id: "Golkonda", name: "Longhorn Golkonda", note: "ww_ulanworktk halgonda", pos: "top:2216px;left:4078px;" },
-        { id: "Galaxia", name: "Cherub Galaxia", note: "dd_sumtoi 13pl", pos: "top:2261px;left:4084px;" },
-        { id: "Shadith", name: "Varka's Hero Shadith", note: "pp_woawarka iiiadit", pos: "top:1750px;left:4017px;" },
-        { id: "Mos", name: "Varka's Commander Mos", note: "LL_ULANX500 5ALI", pos: "top:1770px;left:3960px;" },
-        { id: "Ember", name: "Ember", note: "ww_ulanworktk bember", pos: "top:1173px;left:4720px;" },
-        { id: "Uruka", name: "Uruka", note: "ww_ulanworktk urkahan", pos: "top:1990px;left:3002px;" },
-        { id: "Ashutar", name: "Soul of Water Ashutar", note: "kk_port1 wwarka", pos: "top:1765px;left:3911px;" },
-        { id: "Nastron", name: "Soul of Fire Nastron", note: "kk_port1 kketra", pos: "top:1411px;left:4266px;" },
-        { id: "Horus", name: "Varka's Chief Horus", note: "LL_ULANX500 4ALI", pos: "top:1721px;left:3923px;" },
-        { id: "Halter", name: "Andreas van Halter", note: "LL_ULANX500 PAGANKA", pos: "top:1640px;left:3222px;" },
-        { id: "Plague_Golem", name: "Plague Golem", note: "ll_woatab 4tab", pos: "top:1584px;left:4509px;" },
-        { id: "MILENU", name: "MILENU", note: "GM_RUSMAG FSO", pos: "top:3972px;left:3737px;" },
-        { id: "Brakki", name: "Ketra's Chief Brakki", note: "kk_port1 kketra", pos: "top:1385px;left:4289px;" },
-        { id: "Tayr", name: "Ketra's Commander Tayr", note: "kk_port1 kketra", pos: "top:1421px;left:4298px;" },
-        { id: "Hekaton", name: "Ketra's Hero Hekaton", note: "Ketra Hekaton", pos: "top:1477px;left:4316px;" },
-        { id: "Queen_Shyeed", name: "Queen Shyeed", note: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
-        { id: "Anays", name: "Lord of Splendor Anays", note: "Anays", pos: "top:1402px;left:4036px;" },
-        { id: "Sailren", name: "Sailren", note: "Sailren", pos: "top:1956px;left:3236px;" },
-        { id: "Daimon", name: "Daimon the White-Eyes", note: "Daimon", pos: "top:1717px;left:4660px;" },
-        { id: "Glaki", name: "Last Lesser Giant Glaki", note: "Glaki", pos: "top:2492px;left:4526px;" },
-        { id: "Bumbalump", name: "Icicle Emperor Bumbalump", note: "Bumbalump", pos: "top:1103px;left:4403px;" },
-        { id: "Gorgolos", name: "Gorgolos", note: "GM_RUSMAG BATAT", pos: "top:2542px;left:4659px;" },
-        { id: "Kastor", name: "Roaring Lord Kastor", note: "Kastor", pos: "top:2035px;left:3921px;" },
-        { id: "Hekaton_Prime", name: "Hekaton Prime", note: "GM_RUSMAG BATAT", pos: "top:2606px;left:4688px;" },
-        { id: "Isabella", name: "Isabella", note: "newly added", pos: "top:2627px;left:2408px;" },
-        { id: "Royal_Sharpshooter", name: "Royal Sharpshooter", note: "newly added", pos: "top:2638px;left:3712px;" },
-        { id: "Enchanced_Mimir", name: "Enchanced Mimir", note: "newly added", pos: "top:2937px;left:4001px;" },
-        { id: "Abyssal_Makkum", name: "Abyssal Makkum", note: "newly added", pos: "top:2567px;left:3804px;" },
-        { id: "Gordon", name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
-        { id: "Typhoon", name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
+        { id: "Abyss_Brukunt", name: "Abyss Brukunt", pos: "top:2721px;left:4385px;" },
+        { id: "Demon_Kurikups", name: "Demon Kurikups", pos: "top:3725px;left:3430px;" },
+        { id: "Ghost_of_the_Lidia", name: "Ghost of the Lidia", pos: "top:1906px;left:4528px;" },
+        { id: "Fierce_Tiger_King_Angel", name: "Fierce Tiger King Angel", pos: "top:2713px;left:4517px;" },
+        { id: "Shilen_Priest_Hisilrome", name: "Shilen's Priest Hisilrome", pos: "top:2279px;left:4503px;" },
+        { id: "Rahha", name: "Rahha", pos: "top:1981px;left:4047px;" },
+        { id: "Enmity_Ghost_Ramdal", name: "Enmity Ghost Ramdal", pos: "top:2128px;left:3955px;" },
+        { id: "Gargoyle_Lord_Tiphon", name: "Gargoyle Lord Tiphon", pos: "top:1853px;left:4509px;" },
+        { id: "Demons_Agent_Falston", name: "Demons Agent Falston", pos: "top:1460px;left:3819px;" },
+        { id: "Kernon_Faithful_Kelone", name: "Kernon's Faithful Kelone", pos: "top:1838px;left:4284px;" },
+        { id: "Spirit_of_Andras", name: "Spirit of Andras", pos: "top:1851px;left:4661px;" },
+        { id: "Anakim_Nemesis_Zakaron", name: "Anakim's Nemesis Zakaron", pos: "top:2750px;left:4256px;" },
+        { id: "Barakiel", name: "Flame of Splendor Barakiel", pos: "top:1376px;left:3793px;" },
+        { id: "Korim", name: "Korim", pos: "top:2259px;left:3958px;" },
+        { id: "Queen_Themis", name: "Palibati Queen Themis", pos: "top:2226px;left:4712px;" },
+        { id: "Cabrio", name: "Shilen's Messenger Cabrio", pos: "top:2145px;left:4614px;" },
+        { id: "Savior_Mardil", name: "Immortal Savior Mardil", pos: "top:2216px;left:3954px;" },
+        { id: "Tanatos", name: "Doom Blade Tanatos", pos: "top:1953px;left:4150px;" },
+        { id: "Sheshark", name: "Water Dragon Seer Sheshark", pos: "top:3295px;left:3959px;" },
+        { id: "Hallate", name: "Death Lord Hallate", pos: "top:2175px;left:3959px;" },
+        { id: "Behemoth", name: "Beast Lord Behemoth", pos: "top:1870px;left:4098px;" },
+        { id: "Meanas_Anor", name: "Meanas Anor", pos: "top:1992px;left:4402px;" },
+        { id: "Skylancer", name: "Roaring Skylancer", pos: "top:2527px;left:4165px;" },
+        { id: "Hellmann", name: "Eilhalder von Hellmann", pos: "top:1729px;left:3504px;" },
+        { id: "Kandra", name: "Vanor Chief Kandra", pos: "top:1565px;left:4027px;" },
+        { id: "Lokness", name: "Fafurion'Herald Lokness", pos: "top:3295px;left:3910px;" },
+        { id: "Sobekk", name: "Krokian Padisha Sobekk", pos: "top:3291px;left:4064px;" },
+        { id: "Decarbia", name: "Bloody Empress Decarbia", pos: "top:2161px;left:4690px;" },
+        { id: "Ipos", name: "Death Lord Ipos", pos: "top:1949px;left:4379px;" },
+        { id: "Shax", name: "Death Lord Shax", pos: "top:1997px;left:4512px;" },
+        { id: "Kernon", name: "Kernon", pos: "top:2129px;left:4074px;" },
+        { id: "Olkuth", name: "Lesser Giant Olkuth", pos: "top:2405px;left:4679px;" },
+        { id: "Naga", name: "Storm Winged Naga", pos: "top:1894px;left:4227px;" },
+        { id: "Palatanos", name: "Palatanos of Horrific Power", pos: "top:1906px;left:4305px;" },
+        { id: "Flamestone_Giant", name: "Flamestone Giant", pos: "top:2014px;left:4287px;" },
+        { id: "Ashakiel", name: "Ocean Flame Ashakiel", pos: "top:3264px;left:4100px;" },
+        { id: "Hestia", name: "Hestia", pos: "top:1152px;left:4191px;" },
+        { id: "Shuriel", name: "Fire of Wrath Shuriel", pos: "top:2174px;left:4076px;" },
+        { id: "Golkonda", name: "Longhorn Golkonda", pos: "top:2216px;left:4078px;" },
+        { id: "Galaxia", name: "Cherub Galaxia", pos: "top:2261px;left:4084px;" },
+        { id: "Shadith", name: "Varka's Hero Shadith", pos: "top:1750px;left:4017px;" },
+        { id: "Mos", name: "Varka's Commander Mos", pos: "top:1770px;left:3960px;" },
+        { id: "Ember", name: "Ember", pos: "top:1173px;left:4720px;" },
+        { id: "Uruka", name: "Uruka", pos: "top:1990px;left:3002px;" },
+        { id: "Ashutar", name: "Soul of Water Ashutar", pos: "top:1765px;left:3911px;" },
+        { id: "Nastron", name: "Soul of Fire Nastron", pos: "top:1411px;left:4266px;" },
+        { id: "Horus", name: "Varka's Chief Horus", pos: "top:1721px;left:3923px;" },
+        { id: "Halter", name: "Andreas van Halter", pos: "top:1640px;left:3222px;" },
+        { id: "Plague_Golem", name: "Plague Golem", pos: "top:1584px;left:4509px;" },
+        { id: "MILENU", name: "MILENU", pos: "top:3972px;left:3737px;" },
+        { id: "Brakki", name: "Ketra's Chief Brakki", pos: "top:1385px;left:4289px;" },
+        { id: "Tayr", name: "Ketra's Commander Tayr", pos: "top:1421px;left:4298px;" },
+        { id: "Hekaton", name: "Ketra's Hero Hekaton", pos: "top:1477px;left:4316px;" },
+        { id: "Queen_Shyeed", name: "Queen Shyeed", pos: "top:1714px;left:3813px;" },
+        { id: "Anays", name: "Lord of Splendor Anays", pos: "top:1402px;left:4036px;" },
+        { id: "Sailren", name: "Sailren", pos: "top:1956px;left:3236px;" },
+        { id: "Daimon", name: "Daimon the White-Eyes", pos: "top:1717px;left:4660px;" },
+        { id: "Glaki", name: "Last Lesser Giant Glaki", pos: "top:2492px;left:4526px;" },
+        { id: "Bumbalump", name: "Icicle Emperor Bumbalump", pos: "top:1103px;left:4403px;" },
+        { id: "Gorgolos", name: "Gorgolos", pos: "top:2542px;left:4659px;" },
+        { id: "Kastor", name: "Roaring Lord Kastor", pos: "top:2035px;left:3921px;" },
+        { id: "Hekaton_Prime", name: "Hekaton Prime", pos: "top:2606px;left:4688px;" },
+        { id: "Isabella", name: "Isabella", pos: "top:2627px;left:2408px;" },
+        { id: "Royal_Sharpshooter", name: "Royal Sharpshooter", pos: "top:2638px;left:3712px;" },
+        { id: "Enchanced_Mimir", name: "Enchanced Mimir", pos: "top:2937px;left:4001px;" },
+        { id: "Abyssal_Makkum", name: "Abyssal Makkum", pos: "top:2567px;left:3804px;" },
+        { id: "Gordon", name: "gordon", pos: "top:1577px;left:4400px;" },
+        { id: "Typhoon", name: "Typhoon", pos: "top:4008px;left:2830px;" }
     ];
 
     let epics = ["Queen Ant", "Core", "Orfen", "Zaken", "Baium", "Frintezza", "Antharas", "Valakas", "Beleth"];
     let epicSettings = {};
+    let isEditorMode = false;
+    let currentEpic = null;
 
     function init() {
-        document.getElementById('map-wrapper').style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
-        
         const eBar = document.getElementById('epic-bar');
         epics.forEach(name => {
-            const div = document.createElement('div');
-            div.className = 'epic-item';
-            div.id = `epic-${name.replace(/\s/g, '')}`;
-            div.innerHTML = `<span class="epic-name">${name}</span><span class="epic-timer">--:--:--</span><span class="epic-status">Ждёт</span>`;
-            div.onclick = () => openEpicModal(name);
-            eBar.appendChild(div);
+            const id = name.replace(/\s/g, '');
+            eBar.innerHTML += `<div class="epic-item" id="epic-${id}" onclick="openEpic('${name}')">
+                <span class="epic-name">${name}</span>
+                <span class="epic-timer">--:--:--</span>
+                <span class="epic-status">ЖДЁТ</span>
+            </div>`;
         });
 
-        document.querySelectorAll('.day-box').forEach(box => {
-            box.onclick = () => box.classList.toggle('selected');
+        document.querySelectorAll('.day-box').forEach(b => {
+            b.onclick = () => b.classList.toggle('selected');
         });
 
         listenFirebase();
@@ -288,126 +241,120 @@
     }
 
     function listenFirebase() {
-        rbRef.on('value', (snap) => {
-            const fbData = snap.val() || {};
-            bossData.forEach(localBoss => {
-                const cloud = fbData[localBoss.id];
-                if(cloud) {
-                    localBoss.isAlive = cloud.isAlive;
-                    localBoss.deathTime = cloud.deathTime;
-                    localBoss.priority = cloud.priority;
+        rbRef.on('value', snap => {
+            const data = snap.val() || {};
+            bossData.forEach(b => {
+                if(data[b.id]) {
+                    b.isAlive = data[b.id].isAlive;
+                    b.deathTime = data[b.id].deathTime;
+                    b.priority = data[b.id].priority;
                 }
             });
-            renderMarkers();
-            renderMonitor();
+            render();
         });
-        epicRef.on('value', snap => { epicSettings = snap.val() || {}; });
+        epicRef.on('value', snap => epicSettings = snap.val() || {});
     }
 
-    function renderMarkers() {
-        const wrapper = document.getElementById('map-wrapper');
-        bossData.forEach(boss => {
-            let m = document.getElementById('rb-' + boss.id);
-            if (!m) {
+    function render() {
+        const wrap = document.getElementById('map-wrapper');
+        bossData.forEach(b => {
+            let m = document.getElementById('rb-' + b.id);
+            if(!m) {
                 m = document.createElement('div');
-                m.id = 'rb-' + boss.id;
-                m.className = 'rb-marker';
+                m.id = 'rb-' + b.id; m.className = 'rb-marker';
                 m.onclick = (e) => {
-                    e.stopPropagation();
-                    if(isEditorMode) { togglePriority(boss.id); return; }
-                    handleBossClick(boss);
+                    if(isEditorMode) { togglePriority(b.id); return; }
+                    handleRB(b);
                 };
-                wrapper.appendChild(m);
+                wrap.appendChild(m);
             }
-            const p = boss.pos.split(';');
+            const p = b.pos.split(';');
             m.style.top = p[0].split(':')[1];
             m.style.left = p[1].split(':')[1];
-            m.setAttribute('data-name', boss.name);
-            m.classList.toggle('is-alive', !!boss.isAlive);
-            m.classList.toggle('priority', !!boss.priority);
-            m.classList.toggle('has-active-timer', (boss.deathTime && !boss.isAlive));
+            m.setAttribute('data-name', b.name);
+            m.classList.toggle('is-alive', !!b.isAlive);
+            m.classList.toggle('priority', !!b.priority);
+            m.classList.toggle('has-active-timer', (b.deathTime && !b.isAlive));
         });
+        updateMonitor();
     }
 
     function updateEpicTimers() {
         const now = new Date();
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const serverTime = new Date(utc + (3600000 * 3)); // UTC+3
+        const serverTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (3 * 3600000));
 
         epics.forEach(name => {
             const id = name.replace(/\s/g, '');
-            const settings = epicSettings[id];
-            const display = document.getElementById(`epic-${id}`);
-            if (!settings || !display) return;
+            const cfg = epicSettings[id];
+            const div = document.getElementById(`epic-${id}`);
+            if(!cfg || !div) return;
 
-            const tLabel = display.querySelector('.epic-timer');
-            const sLabel = display.querySelector('.epic-status');
-
-            let target = new Date(serverTime);
-            target.setDate(settings.startDate);
-            const [h, m] = settings.startTime.split(':');
+            const target = new Date(serverTime);
+            target.setDate(cfg.startDate);
+            const [h, m] = cfg.startTime.split(':');
             target.setHours(h, m, 0, 0);
 
-            let diff = target - serverTime;
+            const diff = target - serverTime;
+            const tLab = div.querySelector('.epic-timer');
+            const sLab = div.querySelector('.epic-status');
 
-            if (diff < 0) {
+            if(diff < 0) {
                 const windowEnd = new Date(target.getTime() + 30 * 60000);
-                if (serverTime < windowEnd) {
-                    display.classList.add('active-window');
-                    sLabel.innerText = "ОКНО ПОЯВЛЕНИЯ";
-                    tLabel.innerText = formatTime(Math.floor((windowEnd - serverTime)/1000));
+                if(serverTime < windowEnd) {
+                    div.classList.add('active-window');
+                    sLab.innerText = "ОКНО!";
+                    tLab.innerText = formatS(Math.floor((windowEnd - serverTime)/1000));
                 } else {
-                    display.classList.remove('active-window');
-                    sLabel.innerText = "Ждёт настройки";
-                    tLabel.innerText = "CLOSED";
+                    div.classList.remove('active-window');
+                    sLab.innerText = "ЗАВЕРШЕН";
+                    tLab.innerText = "CLOSED";
                 }
             } else {
-                display.classList.remove('active-window');
-                sLabel.innerText = "До начала";
-                tLabel.innerText = formatTime(Math.floor(diff/1000));
+                div.classList.remove('active-window');
+                sLab.innerText = "ДО СТАРТА";
+                tLab.innerText = formatS(Math.floor(diff/1000));
             }
         });
     }
 
-    function handleBossClick(boss) {
-        const now = Date.now();
-        if (boss.lastClick && (now - boss.lastClick < 400)) {
-            rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() });
+    function clearAllTimers() {
+        if(confirm("Сбросить всех боссов в состояние 'Жив'?")) {
+            bossData.forEach(b => {
+                rbRef.child(b.id).update({ isAlive: true, deathTime: null });
+            });
         }
-        boss.lastClick = now;
     }
 
-    function togglePriority(id) {
-        const b = bossData.find(x => x.id === id);
-        rbRef.child(id).update({ priority: !b.priority });
+    function handleRB(b) {
+        const now = Date.now();
+        if(b.lc && (now - b.lc < 400)) {
+            rbRef.child(b.id).update({ isAlive: false, deathTime: now });
+        }
+        b.lc = now;
     }
 
     function tick() {
         const now = Date.now();
-        bossData.forEach(boss => {
-            const m = document.getElementById('rb-' + boss.id);
-            if (!m) return;
-            if (boss.deathTime && !boss.isAlive) {
-                const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
-                if (rem <= 0) { rbRef.child(boss.id).update({ isAlive: true, deathTime: null }); }
+        bossData.forEach(b => {
+            if(b.deathTime && !b.isAlive) {
+                const rem = 900 - Math.floor((now - b.deathTime)/1000);
+                const m = document.getElementById('rb-' + b.id);
+                if(rem <= 0) rbRef.child(b.id).update({ isAlive: true, deathTime: null });
                 else {
                     let t = m.querySelector('.rb-timer-map') || document.createElement('div');
-                    t.className = 'rb-timer-map'; if (!m.contains(t)) m.appendChild(t);
+                    t.className = 'rb-timer-map'; m.appendChild(t);
                     t.innerText = Math.floor(rem/60) + ":" + (rem%60).toString().padStart(2,'0');
                 }
-            } else { if(m.querySelector('.rb-timer-map')) m.querySelector('.rb-timer-map').remove(); }
+            }
         });
     }
 
-    function renderMonitor() {
+    function updateMonitor() {
         const list = document.getElementById('monitor-list');
-        const active = bossData.filter(b => b.isAlive || b.deathTime)
-            .sort((a,b) => (b.priority - a.priority));
-        
+        const active = bossData.filter(b => b.isAlive || b.deathTime).sort((a,b) => (b.priority - a.priority));
         list.innerHTML = active.map(b => `
-            <div class="monitor-item">
-                <span class="${b.priority?'priority-text':''}">${b.priority?'★ ':''}${b.name}</span>
-                <span style="color:${b.isAlive?'#0f0':'#00ffcc'}">${b.isAlive?'READY':'TIMER'}</span>
+            <div style="font-size:12px; padding:5px; border-bottom:1px solid #222; color:${b.priority?'var(--primary-gold)':'#eee'}">
+                ${b.priority?'★ ':''}${b.name} - <span style="color:${b.isAlive?'#0f0':'#00ffcc'}">${b.isAlive?'READY':'TIMER'}</span>
             </div>
         `).join('');
     }
@@ -421,30 +368,45 @@
         document.getElementById('game-time').innerText = `${Math.floor(gameMin/60).toString().padStart(2,'0')}:${(gameMin%60).toString().padStart(2,'0')}`;
     }
 
-    // Вспомогательные функции
-    function formatTime(s) { 
+    function formatS(s) {
         const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60;
         return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     }
-    function toggleNightMode() { isNightMode = !isNightMode; document.body.classList.toggle('night-mode', isNightMode); document.getElementById('night-btn').innerText = `НОЧНОЙ РЕЖИМ: ${isNightMode?'ВКЛ':'ВЫКЛ'}`; }
-    function updateViewMode() { const mode = document.getElementById('view-mode').value; const wrapper = document.getElementById('map-wrapper'); wrapper.className = mode === 'default' ? '' : 'mode-' + mode; }
-    function toggleEditor() { if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false; document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ"; }
-    function openEpicModal(name) { currentEditingEpic = name; document.getElementById('modal-title').innerText = name; document.getElementById('epic-modal').style.display = 'block'; }
-    function closeEpicModal() { document.getElementById('epic-modal').style.display = 'none'; }
+
+    function toggleModal(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
+    function openEpic(name) {
+        currentEpic = name;
+        document.getElementById('modal-title').innerText = name;
+        toggleModal('epic-modal', true);
+    }
     function saveEpicSettings() {
-        const d = document.getElementById('setup-date').value; const t = document.getElementById('setup-time').value;
+        const d = document.getElementById('setup-date').value;
+        const t = document.getElementById('setup-time').value;
         const days = Array.from(document.querySelectorAll('.day-box.selected')).map(b => parseInt(b.dataset.day));
-        if(!d || !t) return alert("Заполни дату и время!");
-        epicRef.child(currentEditingEpic.replace(/\s/g, '')).set({ startDate: parseInt(d), startTime: t, days: days });
-        closeEpicModal();
+        if(!d || !t) return alert("Укажи дату и время!");
+        epicRef.child(currentEpic.replace(/\s/g, '')).set({ startDate: parseInt(d), startTime: t, days: days });
+        toggleModal('epic-modal', false);
     }
 
-    // Навигация (Drag & Zoom)
-    let scale = 0.25, posX = 0, posY = 0, isDrag = false, lx, ly;
+    function toggleEditor() {
+        if(!isEditorMode) { if(prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
+        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
+    }
+    function togglePriority(id) {
+        const b = bossData.find(x => x.id === id);
+        rbRef.child(id).update({ priority: !b.priority });
+    }
+    function updateViewMode() {
+        const mode = document.getElementById('view-mode').value;
+        document.getElementById('map-wrapper').className = mode === 'default' ? '' : 'mode-' + mode;
+    }
+
+    // Drag & Zoom
+    let scale = 0.3, posX = 0, posY = 0, isDrag = false, lx, ly;
     window.onpointerdown = e => { if(e.target.id === 'viewport' || e.target.id === 'map-wrapper') { isDrag = true; lx = e.clientX; ly = e.clientY; } };
-    window.onpointermove = e => { if (!isDrag) return; posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; updateT(); };
+    window.onpointermove = e => { if(!isDrag) return; posX += e.clientX - lx; posY += e.clientY - ly; lx = e.clientX; ly = e.clientY; updateT(); };
     window.onpointerup = () => isDrag = false;
-    window.onwheel = e => { const delta = e.deltaY > 0 ? 0.9 : 1.1; scale = Math.min(Math.max(0.1, scale * delta), 3); updateT(); };
+    window.onwheel = e => { scale = Math.min(Math.max(0.1, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 2); updateT(); };
     function updateT() { document.getElementById('map-wrapper').style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     init();
