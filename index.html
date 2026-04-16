@@ -54,37 +54,43 @@
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
-        /* Сайдбар слева (изменяемый размер) */
+        /* САЙДБАР (изменено: убрано ограничение по ширине, добавлен overflow) */
         #sidebar {
-            position: fixed; top: 15px; left: 15px; width: 290px; min-width: 250px; max-width: 600px;
+            position: fixed; top: 15px; left: 15px; width: 290px; 
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
             height: calc(100vh - 50px);
+            overflow: hidden; /* Чтобы контент не вылезал при узком сайдбаре */
         }
         #sidebar-resizer {
-            position: absolute; right: 0; top: 0; width: 10px; height: 100%;
-            cursor: ew-resize; background: transparent;
+            position: absolute; right: 0; top: 0; width: 12px; height: 100%;
+            cursor: ew-resize; background: transparent; z-index: 1001;
         }
-        #sidebar-resizer:hover { background: rgba(255, 215, 0, 0.1); }
+        #sidebar-resizer:hover { background: rgba(255, 215, 0, 0.1); border-right: 2px solid #ffd700; }
 
-        /* Панель Эпиков сверху */
+        /* ВЕРХНЯЯ ПАНЕЛЬ (изменено: компактный вид в одну строку с прокруткой) */
         #top-sidebar {
             position: fixed; top: 15px; left: 320px; right: 15px;
             background: rgba(10, 10, 10, 0.9); border: 1px solid #444;
-            padding: 10px; z-index: 900; border-radius: 15px; backdrop-filter: blur(5px);
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            padding: 8px; z-index: 900; border-radius: 15px; backdrop-filter: blur(5px);
+            display: flex; gap: 8px; overflow-x: auto; /* Теперь все в одну строку */
+            scrollbar-width: thin; scrollbar-color: #333 transparent;
         }
+        #top-sidebar::-webkit-scrollbar { height: 4px; }
+        #top-sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
 
         .epic-card {
-            background: #1a1a1a; border: 1px solid #333; padding: 8px; border-radius: 8px;
+            background: #1a1a1a; border: 1px solid #333; padding: 6px 12px; border-radius: 8px;
             display: flex; flex-direction: column; align-items: center; position: relative;
+            min-width: 110px; /* Фиксированная ширина карточки */
+            flex-shrink: 0;
         }
-        .epic-name { font-size: 12px; font-weight: bold; color: #ffd700; text-transform: uppercase; margin-bottom: 4px; }
-        .epic-timer { font-family: monospace; font-size: 14px; color: #00ffcc; }
-        .epic-status { font-size: 10px; color: #888; margin-top: 2px; }
+        .epic-name { font-size: 11px; font-weight: bold; color: #ffd700; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; }
+        .epic-timer { font-family: monospace; font-size: 13px; color: #00ffcc; }
+        .epic-status { font-size: 9px; color: #888; margin-top: 1px; }
         .epic-set-btn { 
             font-size: 9px; background: #333; color: #fff; border: 1px solid #555; 
-            padding: 2px 5px; cursor: pointer; margin-top: 5px; border-radius: 4px;
+            padding: 2px 5px; cursor: pointer; margin-top: 4px; border-radius: 4px;
         }
         .epic-set-btn:hover { background: #ffd700; color: #000; }
 
@@ -93,6 +99,7 @@
         .monitor-item {
             display: flex; justify-content: space-between; align-items: center;
             font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer;
+            min-width: 200px; /* Чтобы текст не схлопывался */
         }
         .monitor-item:hover { background: rgba(255,255,255,0.1); }
         .rb-note-text { display: block; font-size: 10px; color: #888; font-weight: normal; margin-top: 2px; }
@@ -102,7 +109,7 @@
         .time-container { display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 10px; }
         #game-time { font-size:36px; color:#ffd700; font-family:monospace; margin-right: 10px; }
         
-        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
+        .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; white-space: nowrap; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-add { background:#004488; color:#fff; display: none; }
         .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
@@ -126,8 +133,7 @@
 </head>
 <body>
 
-<div id="top-sidebar">
-    </div>
+<div id="top-sidebar"></div>
 
 <div id="epic-modal">
     <h3 id="modal-title" style="margin:0; color:#ffd700;">Set Time</h3>
@@ -145,8 +151,8 @@
     <div class="faq-content">
         <h2>ИНСТРУКЦИЯ</h2>
         <ul>
-            <li><b>Эпики (Сверху):</b> Нажми SET, чтобы указать окно респауна. Таймер покажет время до начала или до конца окна.</li>
-            <li><b>Сайдбар:</b> Тяни за правый край, чтобы изменить ширину.</li>
+            <li><b>Эпики (Сверху):</b> Теперь в одну строку. Можно прокручивать влево-вправо, если не влезают.</li>
+            <li><b>Сайдбар:</b> Тяни за правый край. Можно сделать совсем узким или растянуть на весь экран.</li>
             <li><b>РБ:</b> Двойной клик по метке на карте запускает стандартный таймер 15 мин.</li>
         </ul>
         <button class="close-faq" onclick="toggleFAQ(false)">ПОНЯТНО</button>
@@ -184,7 +190,6 @@
     let draggedBossId = null;
     let currentEditingEpic = null;
 
-    // Данные эпиков
     const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
     let epicData = {};
 
@@ -275,7 +280,6 @@
         update();
     }
 
-    // --- ЛОГИКА ЭПИКОВ ---
     function initEpics() {
         const container = document.getElementById('top-sidebar');
         container.innerHTML = epicsList.map(name => `
@@ -300,7 +304,6 @@
         const start = document.getElementById('epic-start').value;
         const end = document.getElementById('epic-end').value;
         if (!start || !end) return alert("Fill both dates!");
-        
         epicsRef.child(currentEditingEpic.replace(' ', '-')).set({
             start: new Date(start).getTime(),
             end: new Date(end).getTime()
@@ -315,9 +318,7 @@
             const data = epicData[id];
             const timerEl = document.getElementById('timer-' + id);
             const statusEl = document.getElementById('status-' + id);
-            
             if (!data) return;
-
             if (now < data.start) {
                 timerEl.innerText = formatTime(data.start - now);
                 statusEl.innerText = "UNTIL START";
@@ -342,25 +343,28 @@
         return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
     }
 
-    // --- РЕСАЙЗ САЙДБАРА ---
+    // --- ОБНОВЛЕННЫЙ РЕСАЙЗ ---
     function initResize() {
         const sidebar = document.getElementById('sidebar');
         const resizer = document.getElementById('sidebar-resizer');
+        const topSidebar = document.getElementById('top-sidebar');
         let isResizing = false;
 
         resizer.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'ew-resize'; });
         window.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
             let newWidth = e.clientX - 15;
-            if (newWidth > 250 && newWidth < 600) {
+            
+            // Новые границы: от 20px до почти ширины экрана
+            if (newWidth > 20 && newWidth < (window.innerWidth - 50)) {
                 sidebar.style.width = newWidth + 'px';
-                document.getElementById('top-sidebar').style.left = (newWidth + 30) + 'px';
+                // Шапка сдвигается за сайдбаром
+                topSidebar.style.left = (newWidth + 30) + 'px';
             }
         });
         window.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
     }
 
-    // --- ТВОЙ ОРИГИНАЛЬНЫЙ ФУНКЦИОНАЛ ---
     function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
 
     function addSpecialMarker() {
@@ -368,7 +372,7 @@
         sm.className = 'rb-marker special-marker';
         sm.style.top = "2970px"; sm.style.left = "4322px";
         sm.setAttribute('data-name', 'TELEPORT MAP');
-        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'block'; };
+        sm.onclick = (e) => { e.stopPropagation(); toggleFAQ(true); };
         wrapper.appendChild(sm);
     }
 
@@ -518,7 +522,6 @@
         document.getElementById('game-time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     }
 
-    // Drag & Zoom
     let isDrag = false, lx, ly;
     window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar') && !e.target.closest('#epic-modal')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
