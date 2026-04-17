@@ -425,7 +425,7 @@
     const syncReal = 80640; 
     
     // Игровое время 20:26 переводим в минуты: (20 * 60) + 26 = 1226
-    const syncGame = 1226;
+    const syncGame = 1225;
 
     // Считаем разницу: каждые 10 реальных секунд прибавляют 1 игровую минуту
     let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
