@@ -414,14 +414,31 @@
     function resetTimers() { if(confirm("Сбросить все READY таймеры?")) { bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); } }
 
     function updateGameTime() {
-        const now = new Date();
-        const nowSec = (now.getUTCHours()*3600) + (now.getUTCMinutes()*60) + now.getUTCSeconds();
-        const syncReal = (19*3600) + (56*60) + 6; const syncGame = (17*60) + 36;
-        let gameMin = Math.floor(syncGame + (nowSec - syncReal)/10);
-        gameMin = ((gameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(gameMin/60); const m = gameMin % 60;
-        document.getElementById('game-time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-    }
+    const now = new Date();
+    
+    // Получаем текущее реальное время в секундах от начала дня
+    // Используем getHours(), чтобы время считалось по твоему местному часовому поясу
+    const nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+
+    // ТВОИ ДАННЫЕ ДЛЯ СИНХРОНИЗАЦИИ:
+    // Реальное время 22:24:00 переводим в секунды: (22 * 3600) + (24 * 60) = 80640
+    const syncReal = 80640; 
+    
+    // Игровое время 20:26 переводим в минуты: (20 * 60) + 26 = 1226
+    const syncGame = 1226;
+
+    // Считаем разницу: каждые 10 реальных секунд прибавляют 1 игровую минуту
+    let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
+
+    // Математическое зацикливание на 24 часа (1440 минут)
+    gameMin = ((gameMin % 1440) + 1440) % 1440;
+
+    const h = Math.floor(gameMin / 60);
+    const m = gameMin % 60;
+
+    document.getElementById('game-time').innerText = 
+        `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
 
     function addSpecialMarker() {
         const sm = document.createElement('div'); sm.className = 'rb-marker special-marker';
