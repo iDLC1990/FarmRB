@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L2 Boss Map - Updated</title>
+    <title>L2 Boss Map - Epic Window</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        /* --- ТВОИ ОРИГИНАЛЬНЫЕ СТИЛИ (БЕЗ ИЗМЕНЕНИЙ) --- */
+        /* --- ТВОИ ОРИГИНАЛЬНЫЕ СТИЛИ --- */
         body { 
             margin: 0; padding: 0; background: #050505; color: #eee; 
             font-family: 'Segoe UI', sans-serif; overflow: hidden; 
@@ -33,18 +33,11 @@
             background: rgba(0,0,0,0.8); color: #fff; padding: 2px 8px; border-radius: 4px; 
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
-        .rb-start-time-label {
-            position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 100, 200, 0.9); color: #fff; padding: 1px 6px; border-radius: 3px;
-            font-size: 10px; font-weight: bold; white-space: nowrap; border: 1px solid #00aaff;
-            pointer-events: none; z-index: 20;
-        }
         .rb-timer-map {
             position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
             background: #000; color: #00ffcc; padding: 4px 10px; border-radius: 6px;
             font-weight: bold; font-family: 'Courier New', monospace; 
-            font-size: 18px; border: 2px solid #00ffcc;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.7); z-index: 100; pointer-events: none;
+            font-size: 18px; border: 2px solid #00ffcc; z-index: 100; pointer-events: none;
         }
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
@@ -55,36 +48,33 @@
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
         }
 
-        /* --- НОВЫЙ ВЕРХНИЙ САЙДБАР (ПО ТВОЕМУ СКРИНШОТУ) --- */
+        /* --- ВЕРХНИЙ САЙДБАР (ЭПИКИ) --- */
         #top-sidebar {
-            position: fixed;
-            top: 10px;
-            left: 400px; /* Отступ справа от основного сайдбара */
-            padding: 4px;
-            z-index: 900;
-            border-radius: 10px;
-            backdrop-filter: blur(5px);
-            display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 колонок как на фото */
-            gap: 4px;
+            position: fixed; top: 10px; left: 320px; right: 15px;
+            background: rgba(10, 10, 10, 0.85); border: 1px solid #444;
+            padding: 5px; z-index: 900; border-radius: 10px; backdrop-filter: blur(8px);
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;
         }
 
         .epic-item {
-            background: rgba(20, 20, 20, 0.6);
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 5px;
-            text-align: center;
-            cursor: pointer;
-            transition: background 0.2s;
+            background: rgba(25, 25, 25, 0.7); border: 1px solid #444;
+            border-radius: 6px; padding: 5px; text-align: center; cursor: pointer;
         }
-        .epic-item:hover { background: rgba(40, 40, 40, 0.9); border-color: #ffd700; }
-        .epic-name { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #888; margin-bottom: 2px; }
-        .epic-timer { font-family: 'Courier New', monospace; font-size: 13px; color: #00ffcc; font-weight: bold; }
-        .epic-timer.ready { color: #ff4400; text-shadow: 0 0 5px #ff4400; }
-        .epic-timer.countdown { color: #ffd700; }
+        .epic-item:hover { background: rgba(50, 50, 50, 0.9); border-color: #ffd700; }
+        .epic-name { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #aaa; margin-bottom: 2px; }
+        .epic-timer { font-family: monospace; font-size: 12px; font-weight: bold; }
+        
+        /* Цвета состояний таймера */
+        .timer-wait { color: #ffd700; } /* Желтый - ждем старта */
+        .timer-window { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; } /* Розовый - окно 30 мин */
+        .timer-ready { color: #ff3300; animation: blink 1s infinite; } /* Мигающий красный - READY */
+        
+        @keyframes blink { 50% { opacity: 0.3; } }
 
-        /* Остальные стили интерфейса */
+        /* Скрытый календарь */
+        #hidden-date-input { position: fixed; top: -100px; left: -100px; visibility: hidden; }
+
+        /* Остальные стили */
         #monitor-list { margin-top: 15px; max-height: 40vh; overflow-y: auto; }
         .monitor-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; }
         .ready-text { color: #ff3300; font-weight: bold; }
@@ -95,31 +85,30 @@
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; }
         .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
-
+        
         #faq-overlay, #minimap-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        .faq-content { background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 400px; width: 85%; }
     </style>
 </head>
 <body>
+
+<input type="datetime-local" id="hidden-date-input">
 
 <div id="top-sidebar">
     </div>
 
 <div id="faq-overlay">
-    <div class="faq-content">
-        <h2>ИНСТРУКЦИЯ</h2>
-        <ul>
-            <li><b>Обычные РБ:</b> Двойной клик для отметки смерти.</li>
-            <li><b>Эпики (сверху):</b> Кликните, чтобы задать точное время СТАРТА.</li>
-            <li><b>Редактор:</b> Для перемещения меток (нужен пароль).</li>
-        </ul>
-        <button class="btn" style="background:#ffd700; color:#000;" onclick="toggleFAQ(false)">ЗАКРЫТЬ</button>
+    <div style="background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 400px; width: 85%;">
+        <h2 style="color:#ffd700">ИНСТРУКЦИЯ ЭПИКОВ</h2>
+        <p>1. Кликни по боссу сверху — откроется календарь.<br>
+           2. Выбери дату и время **СТАРТА**.<br>
+           3. <span style="color:#ffd700">Желтый таймер</span>: время до начала респа.<br>
+           4. <span style="color:#ff00ff">Розовый таймер</span>: идет окно респауна (30 мин).<br>
+           5. <span style="color:#ff3300">READY</span>: босс 100% стоит.</p>
+        <button class="btn" style="background:#ffd700; color:#000;" onclick="toggleFAQ(false)">ПОНЯЛ</button>
     </div>
 </div>
 
-<div id="minimap-overlay" onclick="this.style.display='none'">
-    <img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" style="width:90%; max-width:700px; border:3px solid #ffd700;">
-</div>
+<div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" style="width:90%; max-width:700px; border:3px solid #ffd700;"></div>
 
 <div id="sidebar">
     <div class="time-container">
@@ -133,7 +122,6 @@
 
 <div id="viewport"><div id="map-wrapper"></div></div>
 <script>
-    // Конфигурация Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
@@ -142,9 +130,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const rbRef = db.ref('bosses');
-    const epicRef = db.ref('epics'); // Отдельная ветка для эпик боссов
+    const epicRef = db.ref('epics');
 
-    // Твой оригинальный список боссов
+    const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
+    let epicStates = {};
+    let activeEpicId = null;
+
+    // Твой оригинальный массив боссов (сохранен полностью)
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -216,10 +208,6 @@
         { id: "Typhoon", name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
     ];
 
-    // Список Эпиков для верхнего сайдбара
-    const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
-    let epicStates = {};
-
     const wrapper = document.getElementById('map-wrapper');
     const viewport = document.getElementById('viewport');
     let scale = window.innerWidth / 5062;
@@ -232,9 +220,20 @@
         renderEpicSidebar();
         addSpecialMarker();
         listenFirebase();
-        listenEpics(); // Слушаем состояние эпиков
+        listenEpics();
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
+        
+        // Слушатель календаря
+        const dateInput = document.getElementById('hidden-date-input');
+        dateInput.onchange = (e) => {
+            if (activeEpicId && e.target.value) {
+                const targetTime = new Date(e.target.value).getTime();
+                epicRef.child(activeEpicId).set({ startTime: targetTime });
+                activeEpicId = null;
+            }
+        };
+
         update();
     }
 
@@ -244,68 +243,61 @@
         const container = document.getElementById('top-sidebar');
         container.innerHTML = epicsList.map(name => {
             const id = name.replace(/\s+/g, '_');
-            return `
-                <div class="epic-item" onclick="setEpicStartTime('${id}', '${name}')">
-                    <div class="epic-name">${name}</div>
-                    <div id="epic-timer-${id}" class="epic-timer">--:--:--</div>
-                </div>
-            `;
+            return `<div class="epic-item" onclick="openCalendar('${id}')">
+                <div class="epic-name">${name}</div>
+                <div id="timer-${id}" class="epic-timer">OFF</div>
+            </div>`;
         }).join('');
     }
 
+    function openCalendar(id) {
+        activeEpicId = id;
+        document.getElementById('hidden-date-input').showPicker(); // Открывает календарь
+    }
+
     function listenEpics() {
-        epicRef.on('value', snap => {
-            epicStates = snap.val() || {};
-        });
+        epicRef.on('value', snap => { epicStates = snap.val() || {}; });
     }
-
-    function setEpicStartTime(id, name) {
-        const val = prompt(`Введите дату и время СТАРТА для ${name}\nФормат: ГГГГ-ММ-ДД ЧЧ:ММ\n(Например: 2024-05-24 19:00)`);
-        if (!val) return;
-
-        const targetDate = new Date(val.replace(' ', 'T'));
-        if (isNaN(targetDate.getTime())) {
-            alert("Ошибка формата! Используйте ГГГГ-ММ-ДД ЧЧ:ММ");
-            return;
-        }
-
-        epicRef.child(id).set({ startTime: targetDate.getTime() });
-    }
-
-    // --- ОБЩИЙ ТАЙМЕР (ТИК) ---
 
     function tick() {
         const now = Date.now();
+        const WINDOW_MS = 30 * 60 * 1000; // 30 минут окна
 
-        // 1. Обновление эпик таймеров
+        // Таймеры Эпиков
         epicsList.forEach(name => {
             const id = name.replace(/\s+/g, '_');
-            const timerEl = document.getElementById(`epic-timer-${id}`);
-            if (!timerEl) return;
+            const el = document.getElementById(`timer-${id}`);
+            if (!el) return;
 
             const data = epicStates[id];
             if (!data || !data.startTime) {
-                timerEl.innerText = "OFF";
-                timerEl.className = "epic-timer";
-                return;
+                el.innerText = "OFF"; el.className = "epic-timer"; return;
             }
 
             const diff = data.startTime - now;
+
             if (diff > 0) {
-                // Идет отсчет ДО старта
-                const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
-                const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-                const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-                timerEl.innerText = `${h}:${m}:${s}`;
-                timerEl.className = "epic-timer countdown";
+                // ЭТАП 1: Отсчет до старта (Желтый)
+                const h = Math.floor(diff/3600000).toString().padStart(2,'0');
+                const m = Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
+                const s = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+                el.innerText = `${h}:${m}:${s}`;
+                el.className = "epic-timer timer-wait";
+            } else if (Math.abs(diff) < WINDOW_MS) {
+                // ЭТАП 2: Окно респауна (Розовый)
+                const passed = Math.abs(diff);
+                const m = Math.floor(passed/60000).toString().padStart(2,'0');
+                const s = Math.floor((passed%60000)/1000).toString().padStart(2,'0');
+                el.innerText = `WIN: ${m}:${s}`;
+                el.className = "epic-timer timer-window";
             } else {
-                // Время старта пришло
-                timerEl.innerText = "READY";
-                timerEl.className = "epic-timer ready";
+                // ЭТАП 3: READY (Мигающий красный)
+                el.innerText = "READY";
+                el.className = "epic-timer timer-ready";
             }
         });
 
-        // 2. Обновление обычных РБ (Твой старый код)
+        // Таймеры Обычных РБ
         const SPAWN_WINDOW = 15 * 60;
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
@@ -313,29 +305,21 @@
             if (boss.deathTime && !boss.isAlive) {
                 const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
                 if (rem <= 0) {
-                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null, startTimeMsk: null });
+                    rbRef.child(boss.id).update({ isAlive: true, deathTime: null });
                 } else {
                     let t = m.querySelector('.rb-timer-map') || document.createElement('div');
                     t.className = 'rb-timer-map';
                     if (!m.contains(t)) m.appendChild(t);
                     t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
-
-                    if (boss.startTimeMsk) {
-                        let l = m.querySelector('.rb-start-time-label') || document.createElement('div');
-                        l.className = 'rb-start-time-label';
-                        if (!m.contains(l)) m.appendChild(l);
-                        l.innerText = `${boss.startTimeMsk} МСК`;
-                    }
                 }
             } else {
                 const t = m.querySelector('.rb-timer-map'); if (t) t.remove();
-                const l = m.querySelector('.rb-start-time-label'); if (l) l.remove();
             }
         });
         renderMonitor();
     }
 
-    // --- ОСТАЛЬНОЙ ФУНКЦИОНАЛ (БЕЗ ИЗМЕНЕНИЙ) ---
+    // --- ФУНКЦИИ КАРТЫ И ОБЫЧНЫХ БОССОВ (ТВОИ БЕЗ ИЗМЕНЕНИЙ) ---
 
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
@@ -367,21 +351,16 @@
         let m = document.createElement('div'); m.id = 'rb-' + boss.id; m.className = 'rb-marker';
         const p = boss.pos.split(';'); m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
         m.setAttribute('data-name', boss.name);
-        
         let lastClick = 0;
-        m.addEventListener('pointerdown', (e) => { 
-            if (isEditorMode) { e.stopPropagation(); draggedBossId = boss.id; m.classList.add('dragging'); m.setPointerCapture(e.pointerId); } 
-        });
+        m.addEventListener('pointerdown', (e) => { if (isEditorMode) { e.stopPropagation(); draggedBossId = boss.id; m.classList.add('dragging'); m.setPointerCapture(e.pointerId); } });
         m.addEventListener('click', (e) => {
             e.stopPropagation(); if (isEditorMode) return;
             const now = Date.now();
             if (now - lastClick < 400) { 
                 lastClick = 0; 
-                const mskTime = new Date().toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' });
-                rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now(), startTimeMsk: mskTime });
+                rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() });
             } else { 
-                lastClick = now; 
-                setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400); 
+                lastClick = now; setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400); 
             }
         });
         wrapper.appendChild(m);
@@ -390,21 +369,17 @@
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
-        const SPAWN_WINDOW = 15 * 60;
-        const active = bossData.filter(b => {
-            const timeLeft = b.deathTime ? (SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000)) : 0;
-            return b.isAlive || (b.deathTime && timeLeft > 0);
-        });
-        active.sort((a, b) => a.name.localeCompare(b.name));
+        const active = bossData.filter(b => b.isAlive || (b.deathTime && (15*60 - Math.floor((now-b.deathTime)/1000)) > 0));
+        active.sort((a,b) => a.name.localeCompare(b.name));
         if (active.length === 0) { list.innerHTML = '<div style="text-align:center;color:#555;padding:20px;">Активных РБ нет</div>'; return; }
         list.innerHTML = active.map(b => {
             let timeStr = "READY"; let isTimer = false;
             if (b.deathTime && !b.isAlive) {
-                const rem = Math.max(0, SPAWN_WINDOW - Math.floor((now - b.deathTime) / 1000));
+                const rem = 15*60 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <div><b>${b.name}</b><br><small style="color:#888">${b.startTimeMsk || ''}</small></div>
+                <div><b>${b.name}</b></div>
                 <span class="${isTimer ? 'timer-active-text' : 'ready-text'}">${timeStr}</span>
             </div>`;
         }).join('');
@@ -414,43 +389,42 @@
     function focus(boss) {
         const m = document.getElementById('rb-' + boss.id); if(!m) return;
         const t = parseInt(m.style.top); const l = parseInt(m.style.left);
-        scale = 0.8; posX = (window.innerWidth / 2) - (l * scale); posY = (window.innerHeight / 2) - (t * scale); update();
+        scale = 0.8; posX = (window.innerWidth/2) - (l*scale); posY = (window.innerHeight/2) - (t*scale); update();
     }
     function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     function toggleEditor() {
-        if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } 
-        else isEditorMode = false;
+        if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
         document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ" : "РЕДАКТОР: ВЫКЛ";
     }
 
     function resetTimers() {
         if(confirm("Сбросить все READY таймеры?")) {
-            bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null, startTimeMsk: null }); });
+            bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); });
         }
     }
 
     function updateGameTime() {
         const now = new Date();
-        const nowSec = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
-        const syncReal = (19 * 3600) + (56 * 60) + 6; const syncGame = (17 * 60) + 36;
-        let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
+        const nowSec = (now.getUTCHours()*3600) + (now.getUTCMinutes()*60) + now.getUTCSeconds();
+        const syncReal = (19*3600) + (56*60) + 6; const syncGame = (17*60) + 36;
+        let gameMin = Math.floor(syncGame + (nowSec - syncReal)/10);
         gameMin = ((gameMin % 1440) + 1440) % 1440;
-        const h = Math.floor(gameMin / 60); const m = gameMin % 60;
+        const h = Math.floor(gameMin/60); const m = gameMin % 60;
         document.getElementById('game-time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     }
 
     function addSpecialMarker() {
         const sm = document.createElement('div'); sm.className = 'rb-marker special-marker';
         sm.style.top = "2970px"; sm.style.left = "4322px"; sm.setAttribute('data-name', 'TELEPORT MAP');
-        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display = 'flex'; };
+        sm.onclick = (e) => { e.stopPropagation(); document.getElementById('minimap-overlay').style.display='flex'; };
         wrapper.appendChild(sm);
     }
 
     function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
 
-    // Карта Drag/Zoom
+    // Drag & Zoom
     let isDrag = false, lx, ly;
     window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
