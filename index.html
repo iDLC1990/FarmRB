@@ -293,7 +293,7 @@
                 const passed = Math.abs(diff);
                 const m = Math.floor(passed/60000).toString().padStart(2,'0');
                 const s = Math.floor((passed%60000)/1000).toString().padStart(2,'0');
-                el.innerText = `WIN: ${m}:${s}`;
+                el.innerText = `START RESP: ${m}:${s}`;
                 el.className = "epic-timer timer-window";
             } else {
                 el.innerText = "READY";
