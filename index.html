@@ -107,12 +107,31 @@
 <div id="top-sidebar"></div>
 
 <div id="faq-overlay">
-    <div style="background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 400px; width: 85%;">
-        <h2 style="color:#ffd700">ИНСТРУКЦИЯ</h2>
-        <p>1. Тяните за правый нижний угол сайдбара, чтобы изменить его ширину.<br>
-           2. Клик на эпика откроет календарь прямо под ним.<br>
-           3. Таймеры: Желтый (до респа) -> Розовый (окно 30м) -> Красный (Ready).</p>
-        <button class="btn" style="background:#ffd700; color:#000;" onclick="toggleFAQ(false)">ЗАКРЫТЬ</button>
+    <div style="background: #111; border: 2px solid #ffd700; padding: 25px; border-radius: 15px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 30px rgba(0,0,0,0.5);">
+        <h2 style="color:#ffd700; text-align: center; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">Гайд по использованию карты</h2>
+        
+        <div style="line-height: 1.6; font-size: 14px; color: #ccc;">
+            <h3 style="color:#00ffcc;">1. Управление и Навигация</h3>
+            <p>• <b>Перемещение:</b> Зажмите левую кнопку мыши на фоне карты и тяните.<br>
+               • <b>Масштаб:</b> Используйте колесико мыши для приближения (Zoom).<br>
+               • <b>Сайдбар:</b> Вы можете менять ширину левого меню, потянув за его правый край.</p>
+
+            <h3 style="color:#00ffcc;">2. Обычные Боссы (РБ)</h3>
+            <p>• <span style="color:#ff4400;">●</span> <b>Красный маркер:</b> Босс жив.<br>
+               • <b>Запись смерти:</b> Сделайте <b>двойной клик</b> по маркеру босса, чтобы запустить таймер.<br>
+               • <b>Таймер:</b> На карте появится отсчет до 100% появления босса.<br>
+               • <b>Фокус:</b> Кликните на имя босса в списке слева, чтобы камера переместилась к нему.</p>
+
+            <h3 style="color:#00ffcc;">3. Эпические Боссы (Система Окон)</h3>
+            <p>• <b>Выбор времени:</b> Кликните на карточку эпика сверху — откроется календарь. Выберите время <b>начала респауна</b>.<br>
+               • <span style="color:#ffd700;">●</span> <b>Желтый таймер:</b> Время до начала респа.<br>
+               • <span style="color:#ff00ff;">●</span> <b>Розовый таймер (MIN/MAX RESP):</b> Идет 30-минутное окно респауна.<br>
+            <h3 style="color:#00ffcc;">4. Редактор и Админ-панель</h3>
+            <p>• Кнопка <b>"Редактор"</b> позволяет перемещать маркеры боссов по карте (требуется пароль).<br>
+               • Все изменения позиций и времени синхронизируются между всеми игроками в реальном времени.</p>
+        </div>
+
+        <button class="btn" style="background:#ffd700; color:#000; margin-top: 20px;" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
 </div>
 
@@ -293,7 +312,7 @@
                 const passed = Math.abs(diff);
                 const m = Math.floor(passed/60000).toString().padStart(2,'0');
                 const s = Math.floor((passed%60000)/1000).toString().padStart(2,'0');
-                el.innerText = `START RESP: ${m}:${s}`;
+                el.innerText = `MIN/MAX RESP: ${m}:${s}`;
                 el.className = "epic-timer timer-window";
             } else {
                 el.innerText = "READY";
