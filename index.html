@@ -144,8 +144,14 @@
         projectId: "l2-rb-map",
         databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.database.app",
     };
-    initializeApp(Config);
-    const db = database();
+    // Было:
+    // initializeApp(Config);
+    // const db = database();
+
+    // СТАНЕТ ТАК:
+    firebase.initializeApp(Config); // Добавили префикс firebase.
+    const db = firebase.database(); // Добавили префикс firebase.
+    
     const rbRef = db.ref('bosses');
     const epicRef = db.ref('epics');
 
