@@ -75,7 +75,6 @@
         .monitor-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; }
         .monitor-item:hover { background: rgba(255,255,255,0.05); }
         
-        /* СТИЛЬ ДЛЯ ПРИПИСКИ В СПИСКЕ */
         .monitor-note { font-size: 11px; color: #00ffcc; opacity: 0.7; margin-top: 2px; }
 
         .ready-text { color: #ff3300; font-weight: bold; }
@@ -138,6 +137,7 @@
 </div>
 
 <div id="viewport"><div id="map-wrapper"></div></div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
@@ -223,46 +223,50 @@
         { id: "Gordon", name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
         { id: "Typhoon", name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
     ];
+    let wrapper, viewport; 
+    let scale = window.innerWidth / 5062;
+    let posX = 0, posY = 0;
+    let isEditorMode = false;
+    let draggedBossId = null;
 
-    // 1. Сначала просто объявляем переменные без присвоения
-let wrapper, viewport; 
-let scale = window.innerWidth / 5062;
-let posX = 0, posY = 0;
-let isEditorMode = false;
-let draggedBossId = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapper = document.getElementById('map-wrapper');
+        viewport = document.getElementById('viewport');
 
-// 2. Оборачиваем запуск в проверку готовности страницы
-document.addEventListener('DOMContentLoaded', () => {
-    // Теперь, когда страница загрузилась, ищем элементы
-    wrapper = document.getElementById('map-wrapper');
-    viewport = document.getElementById('viewport');
+        if (!viewport || !wrapper) {
+            console.error("Критическая ошибка: Элементы карты не найдены.");
+            return;
+        }
 
-    if (!viewport) {
-        console.error("Элемент viewport не найден! Проверь ID в HTML.");
-        return;
+        init();
+
+        // Исправленный блок Zoom (объединен в один)
+        viewport.addEventListener('wheel', e => {
+            e.preventDefault(); 
+            const delta = e.deltaY > 0 ? 0.8 : 1.2; 
+            const ns = Math.min(Math.max(0.05, scale * delta), 4);
+            posX = e.clientX - (e.clientX - posX) * (ns / scale); 
+            posY = e.clientY - (e.clientY - posY) * (ns / scale);
+            scale = ns; 
+            update();
+        }, { passive: false });
+
+        // Обработка инпута даты для эпиков
+        document.getElementById('hidden-date-input').addEventListener('change', (e) => {
+            if (activeEpicId && e.target.value) {
+                const startTime = new Date(e.target.value).getTime();
+                epicRef.child(activeEpicId).set({ startTime });
+                activeEpicId = null;
+                e.target.value = '';
+            }
+        });
+    });
+
+    function update() { 
+        if (wrapper) {
+            wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
+        }
     }
-
-    // Запускаем основную инициализацию
-    init();
-
-    // Переносим зум сюда, чтобы он вешался только после того, как viewport найден
-    viewport.addEventListener('wheel', e => {
-        e.preventDefault(); 
-        const delta = e.deltaY > 0 ? 0.8 : 1.2; 
-        const ns = Math.min(Math.max(0.05, scale * delta), 4);
-        posX = e.clientX - (e.clientX - posX) * (ns / scale); 
-        posY = e.clientY - (e.clientY - posY) * (ns / scale);
-        scale = ns; 
-        update();
-    }, { passive: false });
-});
-
-// 3. Функцию update чуть-чуть меняем для безопасности
-function update() { 
-    if (wrapper) { // проверяем, существует ли wrapper
-        wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
-    }
-}
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
@@ -325,6 +329,7 @@ function update() {
                 el.className = "epic-timer timer-ready";
             }
         });
+
         const SPAWN_WINDOW = 15 * 60;
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
@@ -382,6 +387,7 @@ function update() {
         wrapper.appendChild(m);
     }
 
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ МОНИТОРА (теперь приписки note отображаются)
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
@@ -395,7 +401,7 @@ function update() {
                 const rem = 15*60 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
             }
-            // Вставляем приписку под именем, если она есть в bossData
+            // ИСПРАВЛЕНИЕ: Гарантированный вывод приписки
             const noteText = b.note ? `<div class="monitor-note">${b.note}</div>` : '';
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div>
@@ -413,7 +419,6 @@ function update() {
         const t = parseInt(m.style.top); const l = parseInt(m.style.left);
         scale = 0.8; posX = (window.innerWidth/2) - (l*scale); posY = (window.innerHeight/2) - (t*scale); update();
     }
-    function update() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
 
     function toggleEditor() {
         if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
@@ -442,6 +447,7 @@ function update() {
 
     function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
 
+    // Глобальные события перемещения
     let isDrag = false, lx, ly;
     window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
@@ -460,13 +466,6 @@ function update() {
         }
         isDrag = false;
     };
-    viewport.addEventListener('wheel', e => {
-        e.preventDefault(); const delta = e.deltaY > 0 ? 0.8 : 1.2; const ns = Math.min(Math.max(0.05, scale * delta), 4);
-        posX = e.clientX - (e.clientX - posX) * (ns / scale); posY = e.clientY - (e.clientY - posY) * (ns / scale);
-        scale = ns; update();
-    }, { passive: false });
-
-    init();
 </script>
 </body>
 </html>
