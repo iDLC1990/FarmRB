@@ -224,12 +224,45 @@
         { id: "Typhoon", name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" }
     ];
 
-    const wrapper = document.getElementById('map-wrapper');
-    const viewport = document.getElementById('viewport');
-    let scale = window.innerWidth / 5062;
-    let posX = 0, posY = 0;
-    let isEditorMode = false;
-    let draggedBossId = null;
+    // 1. Сначала просто объявляем переменные без присвоения
+let wrapper, viewport; 
+let scale = window.innerWidth / 5062;
+let posX = 0, posY = 0;
+let isEditorMode = false;
+let draggedBossId = null;
+
+// 2. Оборачиваем запуск в проверку готовности страницы
+document.addEventListener('DOMContentLoaded', () => {
+    // Теперь, когда страница загрузилась, ищем элементы
+    wrapper = document.getElementById('map-wrapper');
+    viewport = document.getElementById('viewport');
+
+    if (!viewport) {
+        console.error("Элемент viewport не найден! Проверь ID в HTML.");
+        return;
+    }
+
+    // Запускаем основную инициализацию
+    init();
+
+    // Переносим зум сюда, чтобы он вешался только после того, как viewport найден
+    viewport.addEventListener('wheel', e => {
+        e.preventDefault(); 
+        const delta = e.deltaY > 0 ? 0.8 : 1.2; 
+        const ns = Math.min(Math.max(0.05, scale * delta), 4);
+        posX = e.clientX - (e.clientX - posX) * (ns / scale); 
+        posY = e.clientY - (e.clientY - posY) * (ns / scale);
+        scale = ns; 
+        update();
+    }, { passive: false });
+});
+
+// 3. Функцию update чуть-чуть меняем для безопасности
+function update() { 
+    if (wrapper) { // проверяем, существует ли wrapper
+        wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
+    }
+}
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
