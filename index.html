@@ -7,7 +7,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        /* --- ТВОИ ОРИГИНАЛЬНЫЕ СТИЛИ --- */
         body { 
             margin: 0; padding: 0; background: #050505; color: #eee; 
             font-family: 'Segoe UI', sans-serif; overflow: hidden; 
@@ -42,23 +41,16 @@
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
-        /* --- ОБНОВЛЕННЫЙ ИЗМЕНЯЕМЫЙ САЙДБАР --- */
         #sidebar {
             position: fixed; top: 15px; left: 15px; 
-            width: 290px; min-width: 200px; max-width: 600px; /* Ограничения размеров */
+            width: 290px; min-width: 200px; max-width: 600px;
             background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
-            
-            /* Делаем сайдбар растягиваемым */
-            resize: horizontal; 
-            overflow: hidden; /* Важно для работы resize */
-            display: flex;
-            flex-direction: column;
+            resize: horizontal; overflow: hidden; display: flex; flex-direction: column;
         }
 
         #top-sidebar {
             position: fixed; top: 10px; left: 500px; 
-        
             padding: 5px; z-index: 900; border-radius: 10px; backdrop-filter: blur(8px);
             display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;
         }
@@ -66,7 +58,7 @@
         .epic-item {
             background: rgba(25, 25, 25, 0.7); border: 1px solid #444;
             border-radius: 6px; padding: 5px; text-align: center; cursor: pointer;
-            position: relative; /* Для привязки календаря */
+            position: relative;
         }
         .epic-item:hover { background: rgba(50, 50, 50, 0.9); border-color: #ffd700; }
         .epic-name { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #aaa; margin-bottom: 2px; }
@@ -77,17 +69,15 @@
         .timer-ready { color: #ff3300; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.3; } }
 
-        /* Скрытый инпут, который будет прыгать под кнопку */
-        #hidden-date-input { 
-            position: absolute; 
-            opacity: 0; 
-            pointer-events: none; 
-            width: 0; height: 0;
-            z-index: -1;
-        }
+        #hidden-date-input { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; z-index: -1; }
 
         #monitor-list { margin-top: 15px; flex-grow: 1; overflow-y: auto; }
         .monitor-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; }
+        .monitor-item:hover { background: rgba(255,255,255,0.05); }
+        
+        /* СТИЛЬ ДЛЯ ПРИПИСКИ В СПИСКЕ */
+        .monitor-note { font-size: 11px; color: #00ffcc; opacity: 0.7; margin-top: 2px; }
+
         .ready-text { color: #ff3300; font-weight: bold; }
         .timer-active-text { color: #00ffcc; font-weight: bold; }
         .time-container { display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 10px; }
@@ -103,7 +93,6 @@
 <body>
 
 <input type="datetime-local" id="hidden-date-input">
-
 <div id="top-sidebar"></div>
 
 <div id="faq-overlay">
@@ -125,7 +114,8 @@
             <h3 style="color:#00ffcc;">3. Эпические Боссы (Система Окон)</h3>
             <p>• <b>Выбор времени:</b> Кликните на карточку эпика сверху — откроется календарь. Выберите время <b>начала респауна</b>.<br>
                • <span style="color:#ffd700;">●</span> <b>Желтый таймер:</b> Время до начала респа.<br>
-               • <span style="color:#ff00ff;">●</span> <b>Розовый таймер (MIN/MAX RESP):</b> Идет 30-минутное окно респауна.<br>
+               • <span style="color:#ff00ff;">●</span> <b>Розовый таймер (MIN/MAX RESP):</b> Идет 30-минутное окно респауна.</p>
+               
             <h3 style="color:#00ffcc;">4. Редактор и Админ-панель</h3>
             <p>• Кнопка <b>"Редактор"</b> позволяет перемещать маркеры боссов по карте (требуется пароль).<br>
                • Все изменения позиций и времени синхронизируются между всеми игроками в реальном времени.</p>
@@ -146,9 +136,7 @@
     <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ READY ТАЙМЕРЫ</button>
     <div id="monitor-list"></div>
 </div>
-
-<div id="viewport"><div id="map-wrapper"></div></div>
-<script>
+    <script>
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
@@ -163,7 +151,6 @@
     let epicStates = {};
     let activeEpicId = null;
 
-    // Твой оригинальный массив боссов
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -250,15 +237,6 @@
         listenEpics();
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
-        
-        const dateInput = document.getElementById('hidden-date-input');
-        dateInput.onchange = (e) => {
-            if (activeEpicId && e.target.value) {
-                const targetTime = new Date(e.target.value).getTime();
-                epicRef.child(activeEpicId).set({ startTime: targetTime });
-                activeEpicId = null;
-            }
-        };
         update();
     }
 
@@ -273,18 +251,13 @@
         }).join('');
     }
 
-    // --- ПЕРЕМЕЩАЕМ КАЛЕНДАРЬ ПОД КНОПКУ ---
     function openCalendar(id) {
         activeEpicId = id;
         const btn = document.getElementById(`btn-${id}`);
         const rect = btn.getBoundingClientRect();
         const input = document.getElementById('hidden-date-input');
-        
-        // Ставим невидимый инпут прямо под кнопку
         input.style.top = (rect.bottom + window.scrollY) + 'px';
         input.style.left = rect.left + 'px';
-        
-        // Вызываем календарь (в современных браузерах откроется под инпутом)
         input.showPicker(); 
     }
 
@@ -293,14 +266,12 @@
     function tick() {
         const now = Date.now();
         const WINDOW_MS = 30 * 60 * 1000; 
-
         epicsList.forEach(name => {
             const id = name.replace(/\s+/g, '_');
             const el = document.getElementById(`timer-${id}`);
             if (!el) return;
             const data = epicStates[id];
             if (!data || !data.startTime) { el.innerText = "OFF"; el.className = "epic-timer"; return; }
-
             const diff = data.startTime - now;
             if (diff > 0) {
                 const h = Math.floor(diff/3600000).toString().padStart(2,'0');
@@ -319,7 +290,6 @@
                 el.className = "epic-timer timer-ready";
             }
         });
-
         const SPAWN_WINDOW = 15 * 60;
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
@@ -337,7 +307,6 @@
         renderMonitor();
     }
 
-    // --- ФУНКЦИИ КАРТЫ (БЕЗ ИЗМЕНЕНИЙ) ---
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
@@ -384,14 +353,20 @@
         const active = bossData.filter(b => b.isAlive || (b.deathTime && (15*60 - Math.floor((now-b.deathTime)/1000)) > 0));
         active.sort((a,b) => a.name.localeCompare(b.name));
         if (active.length === 0) { list.innerHTML = '<div style="text-align:center;color:#555;padding:20px;">Активных РБ нет</div>'; return; }
+        
         list.innerHTML = active.map(b => {
             let timeStr = "READY"; let isTimer = false;
             if (b.deathTime && !b.isAlive) {
                 const rem = 15*60 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
             }
+            // Вставляем приписку под именем, если она есть в bossData
+            const noteText = b.note ? `<div class="monitor-note">${b.note}</div>` : '';
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <div><b>${b.name}</b></div>
+                <div>
+                    <b>${b.name}</b>
+                    ${noteText}
+                </div>
                 <span class="${isTimer ? 'timer-active-text' : 'ready-text'}">${timeStr}</span>
             </div>`;
         }).join('');
@@ -414,31 +389,14 @@
     function resetTimers() { if(confirm("Сбросить все READY таймеры?")) { bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); } }
 
     function updateGameTime() {
-    const now = new Date();
-    
-    // Получаем текущее реальное время в секундах от начала дня
-    // Используем getHours(), чтобы время считалось по твоему местному часовому поясу
-    const nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-
-    // ТВОИ ДАННЫЕ ДЛЯ СИНХРОНИЗАЦИИ:
-    // Реальное время 22:24:00 переводим в секунды: (22 * 3600) + (24 * 60) = 80640
-    const syncReal = 80639; 
-    
-    // Игровое время 20:26 переводим в минуты: (20 * 60) + 26 = 1226
-    const syncGame = 1225;
-
-    // Считаем разницу: каждые 10 реальных секунд прибавляют 1 игровую минуту
-    let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
-
-    // Математическое зацикливание на 24 часа (1440 минут)
-    gameMin = ((gameMin % 1440) + 1440) % 1440;
-
-    const h = Math.floor(gameMin / 60);
-    const m = gameMin % 60;
-
-    document.getElementById('game-time').innerText = 
-        `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-}
+        const now = new Date();
+        const nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+        const syncReal = 80639; const syncGame = 1225;
+        let gameMin = Math.floor(syncGame + (nowSec - syncReal) / 10);
+        gameMin = ((gameMin % 1440) + 1440) % 1440;
+        const h = Math.floor(gameMin / 60); const m = gameMin % 60;
+        document.getElementById('game-time').innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
 
     function addSpecialMarker() {
         const sm = document.createElement('div'); sm.className = 'rb-marker special-marker';
@@ -477,3 +435,5 @@
 </script>
 </body>
 </html>
+
+<div id="viewport"><div id="map-wrapper"></div></div>
