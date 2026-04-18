@@ -144,16 +144,15 @@
         projectId: "l2-rb-map",
         databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.database.app",
     };
-    // Было:
-    // initializeApp(Config);
-    // const db = database();
-
-    // СТАНЕТ ТАК:
-    firebase.initializeApp(Config); // Добавили префикс firebase.
-    const db = firebase.database(); // Добавили префикс firebase.
-    
-    const rbRef = db.ref('bosses');
-    const epicRef = db.ref('epics');
+    /// Безопасная инициализация
+if (!firebase.apps.length) {
+    firebase.initializeApp(Config);
+} else {
+    firebase.app(); // если уже запущен, просто используем существующий
+}
+const db = firebase.database();
+const rbRef = db.ref('bosses');
+const epicRef = db.ref('epics');
 
     const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
     let epicStates = {};
