@@ -360,8 +360,10 @@ bossData.forEach(boss => {
             const fbBoss = firebaseData[boss.id];
             
             if (fbBoss) {
-                // Синхронизируем только если данные в базе реально есть
-                boss.isAlive = fbBoss.isAlive !== undefined ? fbBoss.isAlive : boss.isAlive;
+                // Чистый синтаксис без лишних знаков
+                if (typeof fbBoss.isAlive !== 'undefined') {
+                    boss.isAlive = fbBoss.isAlive;
+                }
                 boss.deathTime = fbBoss.deathTime || null;
                 boss.pos = fbBoss.pos || boss.pos;
             }
@@ -370,10 +372,11 @@ bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (m && !m.classList.contains('dragging')) {
                 const p = boss.pos.split(';');
-                m.style.top = p[0].split(':')[1]; 
-                m.style.left = p[1].split(':')[1];
+                if (p.length >= 2) {
+                    m.style.top = p[0].split(':')[1]; 
+                    m.style.left = p[1].split(':')[1];
+                }
                 
-                // Визуальное обновление
                 if (boss.isAlive) {
                     m.classList.add('is-alive');
                 } else {
