@@ -139,13 +139,13 @@
 
 <div id="viewport"><div id="map-wrapper"></div></div>
 <script>
-    const firebaseConfig = {
+    const Config = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
-        databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app",
+        databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.database.app",
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    .initializeApp(Config);
+    const db = .database();
     const rbRef = db.ref('bosses');
     const epicRef = db.ref('epics');
 
@@ -268,7 +268,7 @@ function update() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
         renderEpicSidebar();
         addSpecialMarker();
-        listenFirebase();
+        listen();
         listenEpics();
         setInterval(tick, 1000);
         setInterval(updateGameTime, 1000);
@@ -326,21 +326,31 @@ function update() {
             }
         });
         const SPAWN_WINDOW = 15 * 60;
-        bossData.forEach(boss => {
-            const m = document.getElementById('rb-' + boss.id);
-            if (!m) return;
-            if (boss.deathTime && !boss.isAlive) {
-                const rem = SPAWN_WINDOW - Math.floor((now - boss.deathTime) / 1000);
-                if (rem <= 0) { rbRef.child(boss.id).update({ isAlive: true, deathTime: null }); } 
-                else {
-                    let t = m.querySelector('.rb-timer-map') || document.createElement('div');
-                    t.className = 'rb-timer-map'; if (!m.contains(t)) m.appendChild(t);
-                    t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
-                }
-            } else { const t = m.querySelector('.rb-timer-map'); if (t) t.remove(); }
-        });
-        renderMonitor();
+       // Внутри функции tick() найди цикл по bossData:
+bossData.forEach(boss => {
+    const m = document.getElementById('rb-' + boss.id);
+    if (!m) return;
+
+    if (boss.deathTime && !boss.isAlive) {
+        const now = Date.now();
+        const elapsedSec = Math.floor((now - boss.deathTime) / 1000);
+        const rem = SPAWN_WINDOW - elapsedSec;
+
+        if (rem <= 0) {
+            // Только если время реально вышло, помечаем как живого
+            // Но НЕ обновляем базу данных автоматически с телефона (это часто причина багов)
+            boss.isAlive = true; 
+        } else {
+            let t = m.querySelector('.rb-timer-map') || document.createElement('div');
+            t.className = 'rb-timer-map'; 
+            if (!m.contains(t)) m.appendChild(t);
+            t.innerText = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`;
+        }
+    } else { 
+        const t = m.querySelector('.rb-timer-map'); 
+        if (t) t.remove(); 
     }
+});
 
     function listenFirebase() {
     rbRef.on('value', (snapshot) => {
@@ -349,29 +359,31 @@ function update() {
         bossData.forEach(boss => {
             const fbBoss = firebaseData[boss.id];
             
-            // Если в базе есть данные по этому боссу, обновляем статус и позицию
             if (fbBoss) {
-                boss.isAlive = fbBoss.isAlive || false;
+                // Синхронизируем только если данные в базе реально есть
+                boss.isAlive = fbBoss.isAlive !== undefined ? fbBoss.isAlive : boss.isAlive;
                 boss.deathTime = fbBoss.deathTime || null;
                 boss.pos = fbBoss.pos || boss.pos;
-                // Приписку (note) НЕ берем из базы, оставляем ту, что в коде
             }
 
-            // Создаем или обновляем маркер на карте
             createMarker(boss);
             const m = document.getElementById('rb-' + boss.id);
             if (m && !m.classList.contains('dragging')) {
                 const p = boss.pos.split(';');
                 m.style.top = p[0].split(':')[1]; 
                 m.style.left = p[1].split(':')[1];
-                boss.isAlive ? m.classList.add('is-alive') : m.classList.remove('is-alive');
+                
+                // Визуальное обновление
+                if (boss.isAlive) {
+                    m.classList.add('is-alive');
+                } else {
+                    m.classList.remove('is-alive');
+                }
             }
         });
-        
-        renderMonitor(); // Перерисовываем список слева
+        renderMonitor();
     });
 }
-
     function createMarker(boss) {
         if (!boss || !boss.id || !boss.pos || document.getElementById('rb-' + boss.id)) return;
         let m = document.createElement('div'); m.id = 'rb-' + boss.id; m.className = 'rb-marker';
