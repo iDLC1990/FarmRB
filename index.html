@@ -390,7 +390,7 @@
     function updateGameTime() {
         const now = new Date();
         const nowSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        let gameMin = Math.floor(1225 + (nowSec - 81839) / 10);
+        let gameMin = Math.floor(1225 + (nowSec - 152039) / 10);
         gameMin = ((gameMin % 1440) + 1440) % 1440;
         document.getElementById('game-time').innerText = `${Math.floor(gameMin/60).toString().padStart(2,'0')}:${(gameMin%60).toString().padStart(2,'0')}`;
     }
