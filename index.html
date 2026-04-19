@@ -25,20 +25,21 @@
             background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             box-shadow: 0 0 5px rgba(0,0,0,0.8); display: block !important;
+            transition: background 0.3s;
         }
+        /* Живой босс */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
-        
-        /* Новое: анимация мигания (добавлена к существующим стилям) */
+        /* Мигание: 1 час после респауна */
         .rb-marker.is-blinking {
             animation: blink-live 1s infinite alternate;
         }
         @keyframes blink-live {
-            from { opacity: 1; box-shadow: 0 0 20px rgba(255, 50, 0, 1); }
-            to { opacity: 0.5; box-shadow: 0 0 40px rgba(255, 255, 255, 0.8); }
+            from { box-shadow: 0 0 10px #ff4400; filter: brightness(1); }
+            to { box-shadow: 0 0 30px #ff0000, 0 0 10px #fff; filter: brightness(1.5); }
         }
 
         .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
@@ -48,18 +49,16 @@
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
         .rb-timer-map {
-            position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #00ffcc; padding: 4px 10px; border-radius: 6px;
-            font-weight: bold; font-family: 'Courier New', monospace; 
-            font-size: 18px; border: 2px solid #00ffcc; z-index: 100; pointer-events: none;
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #00ffcc; padding: 2px 6px; border-radius: 4px;
+            font-weight: bold; font-family: monospace; font-size: 14px; z-index: 20;
         }
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
         #sidebar {
             position: fixed; top: 15px; left: 15px; 
-            width: 290px; min-width: 200px; max-width: 600px;
-            background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
+            width: 290px; min-width: 200px; background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
             resize: horizontal; overflow: hidden; display: flex; flex-direction: column;
         }
@@ -291,6 +290,8 @@
 
     function tick() {
         const now = Date.now();
+        
+        // Эпики без изменений
         epicsList.forEach(name => {
             const id = name.replace(/\s+/g, '_');
             const el = document.getElementById(`timer-${id}`);
@@ -311,29 +312,49 @@
             } else { el.innerText = "READY"; el.className = "epic-timer timer-ready"; }
         });
 
-        // ОБНОВЛЕННАЯ ЛОГИКА МАРКЕРОВ
+        // ПРАВКА ЛОГИКИ ОБЫЧНЫХ РБ
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
             if (!m) return;
             
             const timeSinceDeath = boss.deathTime ? (now - boss.deathTime) : null;
-            const fifteenMin = 900000; // 15 * 60 * 1000
-            const oneHour = 3600000;   // 60 * 60 * 1000
+            const fifteenMin = 900000; 
+            const oneHour = 3600000;
 
-            // Если босс помечен как Alive или прошло 15 минут
-            const isActuallyAlive = boss.isAlive || (timeSinceDeath !== null && timeSinceDeath >= fifteenMin);
+            // ГЛАВНОЕ УСЛОВИЕ: босс "жив" если в базе isAlive ИЛИ прошло больше 15 мин
+            // НО если deathTime был недавно (меньше 15 мин), он ПРИНУДИТЕЛЬНО мертв
+            let isAlive = boss.isAlive;
+            if (timeSinceDeath !== null) {
+                if (timeSinceDeath < fifteenMin) isAlive = false; // Еще идет таймер
+                else isAlive = true; // 15 мин прошло - воскрес
+            }
 
-            if (isActuallyAlive) {
+            // Обновляем маркер на карте
+            if (isAlive) {
                 m.classList.add('is-alive');
-                
-                // Проверяем: прошло ли больше 15 мин, но меньше чем 1ч 15мин (15 мин таймер + 1 час мигания)
+                // Добавляем мигание на 1 час (от 15 мин до 1ч 15мин после смерти)
                 if (timeSinceDeath !== null && timeSinceDeath >= fifteenMin && timeSinceDeath < (fifteenMin + oneHour)) {
                     m.classList.add('is-blinking');
                 } else {
                     m.classList.remove('is-blinking');
                 }
+                
+                // Удаляем текст таймера с карты, если он там был
+                const existingTimer = m.querySelector('.rb-timer-map');
+                if (existingTimer) existingTimer.remove();
             } else {
                 m.classList.remove('is-alive', 'is-blinking');
+                // Отрисовка таймера прямо на маркере (15 минут)
+                if (timeSinceDeath !== null && timeSinceDeath < fifteenMin) {
+                    let timerDiv = m.querySelector('.rb-timer-map');
+                    if (!timerDiv) {
+                        timerDiv = document.createElement('div');
+                        timerDiv.className = 'rb-timer-map';
+                        m.appendChild(timerDiv);
+                    }
+                    const rem = fifteenMin - timeSinceDeath;
+                    timerDiv.innerText = `${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000).toString().padStart(2,'0')}`;
+                }
             }
         });
 
@@ -345,7 +366,7 @@
             const data = snapshot.val() || {};
             bossData.forEach(boss => {
                 const item = data[boss.id] || {};
-                boss.isAlive = item.isAlive || false;
+                boss.isAlive = (item.isAlive !== undefined) ? item.isAlive : true;
                 boss.deathTime = item.deathTime || null;
                 boss.pos = item.pos || boss.pos;
                 createMarker(boss);
@@ -368,7 +389,11 @@
         m.addEventListener('click', (e) => {
             e.stopPropagation(); if (isEditorMode) return;
             const now = Date.now();
-            if (now - lastClick < 400) { rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() }); } 
+            if (now - lastClick < 400) { 
+                // Дабл клик - записываем смерть
+                rbRef.child(boss.id).update({ isAlive: false, deathTime: now }); 
+                lastClick = 0;
+            } 
             else { lastClick = now; setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400); }
         });
         wrapper.appendChild(m);
@@ -377,10 +402,13 @@
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
+        
+        // В списке показываем всех, кто либо в таймере, либо недавно ожил
         const active = bossData.filter(b => {
             const timeSinceDeath = b.deathTime ? (now - b.deathTime) : null;
-            return b.isAlive || (timeSinceDeath !== null);
+            return b.deathTime !== null || b.isAlive;
         });
+
         active.sort((a,b) => a.name.localeCompare(b.name));
         list.innerHTML = active.map(b => {
             const timeSinceDeath = b.deathTime ? (now - b.deathTime) : null;
@@ -388,8 +416,8 @@
             let isTimer = false;
             
             if (timeSinceDeath !== null && timeSinceDeath < 900000) {
-                const rem = 900 - Math.floor(timeSinceDeath / 1000);
-                timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; 
+                const rem = 900000 - timeSinceDeath;
+                timeStr = `${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000).toString().padStart(2,'0')}`; 
                 isTimer = true;
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
@@ -411,7 +439,7 @@
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
     }
 
-    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { rbRef.child(b.id).update({ isAlive: true, deathTime: null }); }); }
+    function resetTimers() { if(confirm("Сбросить все смерти? Все боссы станут READY.")) bossData.forEach(b => { rbRef.child(b.id).update({ isAlive: true, deathTime: null }); }); }
 
     function updateGameTime() {
         const now = new Date();
