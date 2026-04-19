@@ -25,21 +25,21 @@
             background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             box-shadow: 0 0 5px rgba(0,0,0,0.8); display: block !important;
-            transition: background 0.3s;
+            transition: background 0.3s, box-shadow 0.3s;
         }
+        /* БОСС ЖИВ - КРАСНЫЙ */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
-        .rb-marker.is-blinking {
-            animation: blink-live 1s infinite alternate;
+        /* ОКНО РЕСПАУНА (30 МИН ПОСЛЕ ТАЙМЕРА) - ЗЕЛЕНЫЙ */
+        .rb-marker.is-window {
+            background: radial-gradient(circle, #00ff00 0%, #004400 100%) !important;
+            border-color: #fff !important; box-shadow: 0 0 20px rgba(0, 255, 0, 1) !important;
+            width: 22px; height: 22px; z-index: 16;
         }
-        @keyframes blink-live {
-            from { box-shadow: 0 0 10px #ff4400; filter: brightness(1); }
-            to { box-shadow: 0 0 30px #ff0000, 0 0 10px #fff; filter: brightness(1.5); }
-        }
-
+        
         .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
@@ -47,16 +47,18 @@
             font-size: 12px; white-space: nowrap; border: 1px solid #444; pointer-events: none;
         }
         .rb-timer-map {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #00ffcc; padding: 2px 6px; border-radius: 4px;
-            font-weight: bold; font-family: monospace; font-size: 14px; z-index: 20;
+            position: absolute; top: 25px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #00ffcc; padding: 4px 10px; border-radius: 6px;
+            font-weight: bold; font-family: 'Courier New', monospace; 
+            font-size: 18px; border: 2px solid #00ffcc; z-index: 100; pointer-events: none;
         }
         .special-marker { background: #ffd700 !important; border: 2px solid #fff !important; animation: pulse 1.5s infinite; z-index: 25; }
         @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.3; } 100% { scale: 1; } }
 
         #sidebar {
             position: fixed; top: 15px; left: 15px; 
-            width: 290px; min-width: 200px; background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
+            width: 290px; min-width: 200px; max-width: 600px;
+            background: rgba(10, 10, 10, 0.95); border: 1px solid #333;
             padding: 15px; z-index: 1000; border-radius: 15px; backdrop-filter: blur(10px);
             resize: horizontal; overflow: hidden; display: flex; flex-direction: column;
         }
@@ -80,7 +82,7 @@
         #game-time { font-size:36px; color:#ffd700; font-family:monospace; margin-right: 10px; }
         .btn { width:100%; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:5px; cursor:pointer; border: none; }
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
-        .btn-editor.active { background:#050; color:#fff; border: 1px solid #0f0; box-shadow: 0 0 10px #0f0; }
+        .btn-editor.active { background:#050; color:#fff; }
         .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
         #faq-overlay, #minimap-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
         #hidden-date-input { position: absolute; opacity: 0; pointer-events: none; }
@@ -113,19 +115,14 @@
                • <b>Сайдбар:</b> Вы можете менять ширину левого меню, потянув за его правый край.</p>
 
             <h3 style="color:#00ffcc;">2. Обычные Боссы (РБ)</h3>
-            <p>• <span style="color:#ff4400;">●</span> <b>Красный маркер:</b> Босс жив.<br>
-               • <b>Запись смерти:</b> Сделайте <b>двойной клик</b> по маркеру босса, чтобы запустить таймер.<br>
-               • <b>Таймер:</b> На карте появится отсчет до 100% появления босса.<br>
-               • <b>Фокус:</b> Кликните на имя босса в списке слева, чтобы камера переместилась к нему.</p>
+            <p>• <span style="color:#ff4400;">●</span> <b>Красный:</b> Босс жив.<br>
+               • <span style="color:#00ff00;">●</span> <b>Зеленый:</b> Идет окно респауна (30 мин после таймера).<br>
+               • <b>Запись смерти:</b> Двойной клик по маркеру запускает таймер на 15 мин.<br>
+               • <b>Фокус:</b> Клик на имя в списке перемещает камеру.</p>
 
-            <h3 style="color:#00ffcc;">3. Эпические Боссы (Система Окон)</h3>
-            <p>• <b>Выбор времени:</b> Кликните на карточку эпика сверху — откроется календарь. Выберите время <b>начала респауна</b>.<br>
-               • <span style="color:#ffd700;">●</span> <b>Желтый таймер:</b> Время до начала респа.<br>
-               • <span style="color:#ff00ff;">●</span> <b>Розовый таймер (MIN/MAX RESP):</b> Идет 30-минутное окно респауна.</p>
-               
-            <h3 style="color:#00ffcc;">4. Редактор и Админ-панель</h3>
-            <p>• Кнопка <b>"Редактор"</b> позволяет перемещать маркеры боссов по карте (требуется пароль).<br>
-               • Все изменения позиций и времени синхронизируются между всеми игроками в реальном времени.</p>
+            <h3 style="color:#00ffcc;">3. Эпические Боссы</h3>
+            <p>• Выберите время начала респауна через карточку сверху.<br>
+               • Желтый — ожидание, Розовый — окно респауна.</p>
         </div>
         <button class="btn" style="background:#ffd700; color:#000; margin-top: 20px;" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
@@ -147,7 +144,6 @@
     let epicStates = {};
     let activeEpicId = null;
 
-    // Начальный список (будет дополняться из Firebase)
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
         { id: "Demon_Kurikups", name: "Demon Kurikups", note: "dd_sumtoi kirikups", pos: "top:3725px;left:3430px;" },
@@ -229,7 +225,6 @@
         wrapper = document.getElementById('map-wrapper');
         viewport = document.getElementById('viewport');
         init();
-
         viewport.addEventListener('wheel', e => {
             e.preventDefault(); 
             const delta = e.deltaY > 0 ? 0.8 : 1.2; 
@@ -239,40 +234,13 @@
             if (newScale > 4) newScale = 4;
             posX = e.clientX - (e.clientX - posX) * (newScale / scale); 
             posY = e.clientY - (e.clientY - posY) * (newScale / scale);
-            scale = newScale; 
-            update(); 
+            scale = newScale; update(); 
         }, { passive: false });
-
-        // СОЗДАНИЕ НОВОЙ МЕТКИ В РЕЖИМЕ РЕДАКТОРА
-        wrapper.onclick = (e) => {
-            if (!isEditorMode) return;
-            if (e.target !== wrapper) return; // Кликнули по карте, а не по другой кнопке
-
-            const rect = wrapper.getBoundingClientRect();
-            const x = Math.round((e.clientX - rect.left) / scale);
-            const y = Math.round((e.clientY - rect.top) / scale);
-
-            const name = prompt("Введите имя нового босса:");
-            if (!name) return;
-            const note = prompt("Введите заметку (телепорт/описание):") || "";
-            const id = "custom_" + Date.now();
-
-            rbRef.child(id).set({
-                id: id,
-                name: name,
-                note: note,
-                pos: `top:${y}px;left:${x}px;`,
-                isAlive: true,
-                deathTime: null
-            });
-        };
-
         document.getElementById('hidden-date-input').addEventListener('change', (e) => {
             if (activeEpicId && e.target.value) {
                 const startTime = new Date(e.target.value).getTime();
                 epicRef.child(activeEpicId).set({ startTime });
-                activeEpicId = null;
-                e.target.value = '';
+                activeEpicId = null; e.target.value = '';
             }
         });
     });
@@ -288,12 +256,9 @@
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
-        renderEpicSidebar();
-        addSpecialMarker();
-        listenFirebase();
-        listenEpics();
-        setInterval(tick, 1000);
-        setInterval(updateGameTime, 1000);
+        renderEpicSidebar(); addSpecialMarker();
+        listenFirebase(); listenEpics();
+        setInterval(tick, 1000); setInterval(updateGameTime, 1000);
         update();
     }
 
@@ -311,9 +276,10 @@
     function openCalendar(id) { activeEpicId = id; document.getElementById('hidden-date-input').showPicker(); }
     function listenEpics() { epicRef.on('value', snap => { epicStates = snap.val() || {}; }); }
 
+    // ГЛАВНОЕ ИЗМЕНЕНИЕ ТУТ
     function tick() {
         const now = Date.now();
-        
+        // Эпики
         epicsList.forEach(name => {
             const id = name.replace(/\s+/g, '_');
             const el = document.getElementById(`timer-${id}`);
@@ -334,69 +300,46 @@
             } else { el.innerText = "READY"; el.className = "epic-timer timer-ready"; }
         });
 
+        // Обычные РБ - Логика свечения меток
         bossData.forEach(boss => {
             const m = document.getElementById('rb-' + boss.id);
-            if (!m) return;
-            
-            const timeSinceDeath = boss.deathTime ? (now - boss.deathTime) : null;
-            const fifteenMin = 900000; 
-            const oneHour = 3600000;
+            if (!m || m.classList.contains('dragging')) return;
 
-            let isAlive = boss.isAlive;
-            if (timeSinceDeath !== null) {
-                if (timeSinceDeath < fifteenMin) isAlive = false;
-                else isAlive = true;
-            }
+            m.classList.remove('is-alive', 'is-window');
 
-            if (isAlive) {
-                m.classList.add('is-alive');
-                if (timeSinceDeath !== null && timeSinceDeath >= fifteenMin && timeSinceDeath < (fifteenMin + oneHour)) {
-                    m.classList.add('is-blinking');
-                } else {
-                    m.classList.remove('is-blinking');
-                }
-                const existingTimer = m.querySelector('.rb-timer-map');
-                if (existingTimer) existingTimer.remove();
-            } else {
-                m.classList.remove('is-alive', 'is-blinking');
-                if (timeSinceDeath !== null && timeSinceDeath < fifteenMin) {
-                    let timerDiv = m.querySelector('.rb-timer-map');
-                    if (!timerDiv) {
-                        timerDiv = document.createElement('div');
-                        timerDiv.className = 'rb-timer-map';
-                        m.appendChild(timerDiv);
-                    }
-                    const rem = fifteenMin - timeSinceDeath;
-                    timerDiv.innerText = `${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000).toString().padStart(2,'0')}`;
+            if (boss.isAlive) {
+                m.classList.add('is-alive'); // Красный
+            } else if (boss.deathTime) {
+                const elapsed = now - boss.deathTime;
+                const waitTime = 900000; // 15 минут таймер
+                const windowDuration = 1800000; // 30 минут окно
+
+                // Если таймер 15 мин прошел И не прошло еще 30 мин окна
+                if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
+                    m.classList.add('is-window'); // Зеленый
                 }
             }
         });
+
         renderMonitor();
     }
 
     function listenFirebase() {
         rbRef.on('value', (snapshot) => {
             const data = snapshot.val() || {};
-            // Синхронизируем локальный массив bossData с базой
             Object.keys(data).forEach(id => {
-                const firebaseBoss = data[id];
-                let localBoss = bossData.find(b => b.id === id);
-                if (!localBoss) {
-                    localBoss = { id: id };
-                    bossData.push(localBoss);
-                }
-                localBoss.name = firebaseBoss.name;
-                localBoss.note = firebaseBoss.note;
-                localBoss.pos = firebaseBoss.pos;
-                localBoss.isAlive = (firebaseBoss.isAlive !== undefined) ? firebaseBoss.isAlive : true;
-                localBoss.deathTime = firebaseBoss.deathTime || null;
-                
-                createMarker(localBoss);
-                
-                const m = document.getElementById('rb-' + id);
-                if (m && !m.classList.contains('dragging')) {
-                    const p = localBoss.pos.split(';');
-                    m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
+                const item = data[id];
+                let boss = bossData.find(b => b.id === id);
+                if (boss) { 
+                    boss.isAlive = item.isAlive || false;
+                    boss.deathTime = item.deathTime || null;
+                    boss.pos = item.pos || boss.pos;
+                    createMarker(boss);
+                    const m = document.getElementById('rb-' + id);
+                    if (m && !m.classList.contains('dragging')) {
+                        const p = boss.pos.split(';');
+                        m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
+                    }
                 }
             });
         });
@@ -408,21 +351,11 @@
         const p = boss.pos.split(';'); m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
         m.setAttribute('data-name', boss.name);
         let lastClick = 0;
-        m.addEventListener('pointerdown', (e) => { 
-            if (isEditorMode) { 
-                e.stopPropagation(); 
-                draggedBossId = boss.id; 
-                m.classList.add('dragging'); 
-                m.setPointerCapture(e.pointerId); 
-            } 
-        });
+        m.addEventListener('pointerdown', (e) => { if (isEditorMode) { e.stopPropagation(); draggedBossId = boss.id; m.classList.add('dragging'); m.setPointerCapture(e.pointerId); } });
         m.addEventListener('click', (e) => {
             e.stopPropagation(); if (isEditorMode) return;
             const now = Date.now();
-            if (now - lastClick < 400) { 
-                rbRef.child(boss.id).update({ isAlive: false, deathTime: now }); 
-                lastClick = 0;
-            } 
+            if (now - lastClick < 400) { rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() }); } 
             else { lastClick = now; setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400); }
         });
         wrapper.appendChild(m);
@@ -431,16 +364,14 @@
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
-        const active = bossData.filter(b => b.deathTime !== null || b.isAlive);
+        const active = bossData.filter(b => b.isAlive || (b.deathTime && (900 - Math.floor((now-b.deathTime)/1000)) > -1800));
         active.sort((a,b) => a.name.localeCompare(b.name));
         list.innerHTML = active.map(b => {
-            const timeSinceDeath = b.deathTime ? (now - b.deathTime) : null;
-            let timeStr = "READY"; 
-            let isTimer = false;
-            if (timeSinceDeath !== null && timeSinceDeath < 900000) {
-                const rem = 900000 - timeSinceDeath;
-                timeStr = `${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000).toString().padStart(2,'0')}`; 
-                isTimer = true;
+            let timeStr = "READY"; let isTimer = false;
+            if (b.deathTime && !b.isAlive) {
+                const rem = 900 - Math.floor((now-b.deathTime)/1000);
+                if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
+                else if (rem <= 0 && rem > -1800) { timeStr = "WINDOW"; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div><b>${b.name}</b><div class="monitor-note">${b.note || ''}</div></div>
@@ -459,10 +390,9 @@
     function toggleEditor() {
         if (!isEditorMode) { if (prompt("Пароль:") === "D36rk43mgm") isEditorMode = true; else return; } else isEditorMode = false;
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
-        document.getElementById('editor-btn').innerText = isEditorMode ? "РЕДАКТОР: ВКЛ (Кликни карту)" : "РЕДАКТОР: ВЫКЛ";
     }
 
-    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { rbRef.child(b.id).update({ isAlive: true, deathTime: null }); }); }
+    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); }
 
     function updateGameTime() {
         const now = new Date();
@@ -482,7 +412,7 @@
     function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
 
     let isDrag = false, lx, ly;
-    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
         if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
@@ -491,8 +421,7 @@
             if (m) { m.style.top = y + 'px'; m.style.left = x + 'px'; }
         } else if (isDrag) { 
             posX += e.clientX - lx; posY += e.clientY - ly; 
-            lx = e.clientX; ly = e.clientY; 
-            update(); 
+            lx = e.clientX; ly = e.clientY; update(); 
         }
     };
     window.onpointerup = () => {
