@@ -371,7 +371,7 @@
             if (b.deathTime && !b.isAlive) {
                 const rem = 900 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
-                else if (rem <= 0 && rem > -1800) { timeStr = "WINDOW"; }
+                else if (rem <= 0 && rem > -1800) { timeStr = ""; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div><b>${b.name}</b><div class="monitor-note">${b.note || ''}</div></div>
