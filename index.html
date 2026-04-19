@@ -25,12 +25,21 @@
             background: rgba(255, 255, 255, 0.4); border: 2px solid #333;
             border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer;
             box-shadow: 0 0 5px rgba(0,0,0,0.8); display: block !important;
+            transition: background 0.3s, box-shadow 0.3s;
         }
+        /* БОСС ЖИВ - КРАСНЫЙ */
         .rb-marker.is-alive { 
             background: radial-gradient(circle, #ff4400 0%, #880000 100%) !important; 
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
+        /* ОКНО РЕСПАУНА (30 МИН ПОСЛЕ ТАЙМЕРА) - ЗЕЛЕНЫЙ */
+        .rb-marker.is-window {
+            background: radial-gradient(circle, #00ff00 0%, #004400 100%) !important;
+            border-color: #fff !important; box-shadow: 0 0 20px rgba(0, 255, 0, 1) !important;
+            width: 22px; height: 22px; z-index: 16;
+        }
+        
         .rb-marker.dragging { opacity: 0.7; scale: 2.5; z-index: 1000; cursor: grabbing; border-color: #0f0 !important; box-shadow: 0 0 30px #0f0 !important; }
         .rb-marker::after {
             content: attr(data-name); position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
@@ -106,26 +115,20 @@
                • <b>Сайдбар:</b> Вы можете менять ширину левого меню, потянув за его правый край.</p>
 
             <h3 style="color:#00ffcc;">2. Обычные Боссы (РБ)</h3>
-            <p>• <span style="color:#ff4400;">●</span> <b>Красный маркер:</b> Босс жив.<br>
-               • <b>Запись смерти:</b> Сделайте <b>двойной клик</b> по маркеру босса, чтобы запустить таймер.<br>
-               • <b>Таймер:</b> На карте появится отсчет до 100% появления босса.<br>
-               • <b>Фокус:</b> Кликните на имя босса в списке слева, чтобы камера переместилась к нему.</p>
+            <p>• <span style="color:#ff4400;">●</span> <b>Красный:</b> Босс жив.<br>
+               • <span style="color:#00ff00;">●</span> <b>Зеленый:</b> Идет окно респауна (30 мин после таймера).<br>
+               • <b>Запись смерти:</b> Двойной клик по маркеру запускает таймер на 15 мин.<br>
+               • <b>Фокус:</b> Клик на имя в списке перемещает камеру.</p>
 
-            <h3 style="color:#00ffcc;">3. Эпические Боссы (Система Окон)</h3>
-            <p>• <b>Выбор времени:</b> Кликните на карточку эпика сверху — откроется календарь. Выберите время <b>начала респауна</b>.<br>
-               • <span style="color:#ffd700;">●</span> <b>Желтый таймер:</b> Время до начала респа.<br>
-               • <span style="color:#ff00ff;">●</span> <b>Розовый таймер (MIN/MAX RESP):</b> Идет 30-минутное окно респауна.</p>
-               
-            <h3 style="color:#00ffcc;">4. Редактор и Админ-панель</h3>
-            <p>• Кнопка <b>"Редактор"</b> позволяет перемещать маркеры боссов по карте (требуется пароль).<br>
-               • Все изменения позиций и времени синхронизируются между всеми игроками в реальном времени.</p>
+            <h3 style="color:#00ffcc;">3. Эпические Боссы</h3>
+            <p>• Выберите время начала респауна через карточку сверху.<br>
+               • Желтый — ожидание, Розовый — окно респауна.</p>
         </div>
         <button class="btn" style="background:#ffd700; color:#000; margin-top: 20px;" onclick="toggleFAQ(false)">ПОНЯТНО</button>
     </div>
 </div>
 
 <div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" style="width:90%; max-width:700px; border:3px solid #ffd700;"></div>
-
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
@@ -222,60 +225,40 @@
         wrapper = document.getElementById('map-wrapper');
         viewport = document.getElementById('viewport');
         init();
-
         viewport.addEventListener('wheel', e => {
             e.preventDefault(); 
             const delta = e.deltaY > 0 ? 0.8 : 1.2; 
-            
             let newScale = scale * delta;
-            // ФИКС: Ограничение зума, чтобы карта не стала меньше экрана
             const minScale = Math.max(window.innerWidth / 5062, window.innerHeight / 4210);
             if (newScale < minScale) newScale = minScale;
             if (newScale > 4) newScale = 4;
-
             posX = e.clientX - (e.clientX - posX) * (newScale / scale); 
             posY = e.clientY - (e.clientY - posY) * (newScale / scale);
-            
-            scale = newScale; 
-            update(); 
+            scale = newScale; update(); 
         }, { passive: false });
-
         document.getElementById('hidden-date-input').addEventListener('change', (e) => {
             if (activeEpicId && e.target.value) {
                 const startTime = new Date(e.target.value).getTime();
                 epicRef.child(activeEpicId).set({ startTime });
-                activeEpicId = null;
-                e.target.value = '';
+                activeEpicId = null; e.target.value = '';
             }
         });
     });
 
-    // ФИКС: Функция Update с блокировкой границ (чтобы не было черного фона)
     function update() { 
         if (!wrapper) return;
-        
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const mapW = 5062 * scale;
-        const mapH = 4210 * scale;
-
-        // Блокировка выхода за края
-        if (posX > 0) posX = 0;
-        if (posY > 0) posY = 0;
-        if (posX < vw - mapW) posX = vw - mapW;
-        if (posY < vh - mapH) posY = vh - mapH;
-
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const mapW = 5062 * scale, mapH = 4210 * scale;
+        if (posX > 0) posX = 0; if (posY > 0) posY = 0;
+        if (posX < vw - mapW) posX = vw - mapW; if (posY < vh - mapH) posY = vh - mapH;
         wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; 
     }
 
     function init() {
         wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
-        renderEpicSidebar();
-        addSpecialMarker();
-        listenFirebase();
-        listenEpics();
-        setInterval(tick, 1000);
-        setInterval(updateGameTime, 1000);
+        renderEpicSidebar(); addSpecialMarker();
+        listenFirebase(); listenEpics();
+        setInterval(tick, 1000); setInterval(updateGameTime, 1000);
         update();
     }
 
@@ -293,8 +276,10 @@
     function openCalendar(id) { activeEpicId = id; document.getElementById('hidden-date-input').showPicker(); }
     function listenEpics() { epicRef.on('value', snap => { epicStates = snap.val() || {}; }); }
 
+    // ГЛАВНОЕ ИЗМЕНЕНИЕ ТУТ
     function tick() {
         const now = Date.now();
+        // Эпики
         epicsList.forEach(name => {
             const id = name.replace(/\s+/g, '_');
             const el = document.getElementById(`timer-${id}`);
@@ -314,6 +299,28 @@
                 el.innerText = `WINDOW: ${m}:${s}`; el.className = "epic-timer timer-window";
             } else { el.innerText = "READY"; el.className = "epic-timer timer-ready"; }
         });
+
+        // Обычные РБ - Логика свечения меток
+        bossData.forEach(boss => {
+            const m = document.getElementById('rb-' + boss.id);
+            if (!m || m.classList.contains('dragging')) return;
+
+            m.classList.remove('is-alive', 'is-window');
+
+            if (boss.isAlive) {
+                m.classList.add('is-alive'); // Красный
+            } else if (boss.deathTime) {
+                const elapsed = now - boss.deathTime;
+                const waitTime = 900000; // 15 минут таймер
+                const windowDuration = 1800000; // 30 минут окно
+
+                // Если таймер 15 мин прошел И не прошло еще 30 мин окна
+                if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
+                    m.classList.add('is-window'); // Зеленый
+                }
+            }
+        });
+
         renderMonitor();
     }
 
@@ -332,7 +339,6 @@
                     if (m && !m.classList.contains('dragging')) {
                         const p = boss.pos.split(';');
                         m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
-                        boss.isAlive ? m.classList.add('is-alive') : m.classList.remove('is-alive');
                     }
                 }
             });
@@ -358,13 +364,14 @@
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
-        const active = bossData.filter(b => b.isAlive || (b.deathTime && (900 - Math.floor((now-b.deathTime)/1000)) > 0));
+        const active = bossData.filter(b => b.isAlive || (b.deathTime && (900 - Math.floor((now-b.deathTime)/1000)) > -1800));
         active.sort((a,b) => a.name.localeCompare(b.name));
         list.innerHTML = active.map(b => {
             let timeStr = "READY"; let isTimer = false;
             if (b.deathTime && !b.isAlive) {
                 const rem = 900 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
+                else if (rem <= 0 && rem > -1800) { timeStr = "WINDOW"; }
             }
             return `<div class="monitor-item" onclick="focusById('${b.id}')">
                 <div><b>${b.name}</b><div class="monitor-note">${b.note || ''}</div></div>
@@ -414,8 +421,7 @@
             if (m) { m.style.top = y + 'px'; m.style.left = x + 'px'; }
         } else if (isDrag) { 
             posX += e.clientX - lx; posY += e.clientY - ly; 
-            lx = e.clientX; ly = e.clientY; 
-            update(); 
+            lx = e.clientX; ly = e.clientY; update(); 
         }
     };
     window.onpointerup = () => {
