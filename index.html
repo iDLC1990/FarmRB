@@ -432,6 +432,18 @@
         }
         isDrag = false;
     };
+    function emergencyRestore() {
+    if (confirm("Вы уверены, что хотите перезаписать базу данных боссов из локального списка?")) {
+        bossData.forEach(boss => {
+            rbRef.child(boss.id).set({
+                isAlive: false,
+                deathTime: null,
+                pos: boss.pos
+            });
+        });
+        alert("База данных успешно восстановлена!");
+    }
+}
 </script>
 </body>
 </html>
