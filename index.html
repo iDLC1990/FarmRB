@@ -301,25 +301,33 @@
         });
 
         // Обычные РБ - Логика свечения меток
-        bossData.forEach(boss => {
-            const m = document.getElementById('rb-' + boss.id);
-            if (!m || m.classList.contains('dragging')) return;
+bossData.forEach(boss => {
+    const m = document.getElementById('rb-' + boss.id);
+    if (!m || m.classList.contains('dragging')) return;
 
-            m.classList.remove('is-alive', 'is-window');
+    // Сбрасываем стили перед проверкой
+    m.classList.remove('is-alive', 'is-window');
 
-            if (boss.isAlive) {
-                m.classList.add('is-alive'); // Красный
-            } else if (boss.deathTime) {
-                const elapsed = now - boss.deathTime;
-                const waitTime = 900000; // 15 минут таймер
-                const windowDuration = 1800000; // 30 минут окно
+    const now = Date.now();
+    const waitTime = 900000; // 15 минут (время таймера)
+    const windowDuration = 1800000; // 30 минут (окно появления)
 
-                // Если таймер 15 мин прошел И не прошло еще 30 мин окна
-                if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
-                    m.classList.add('is-window'); // Зеленый
-                }
-            }
-        });
+    // 1. ПРОВЕРКА: Босс жив (выставлено вручную в БД)
+    if (boss.isAlive) { 
+        m.classList.add('is-alive'); 
+    } 
+    // 2. ПРОВЕРКА: Таймер запущен (красный цвет, пока идут первые 15 минут)
+    else if (boss.deathTime && (now - boss.deathTime) < waitTime) {
+        m.classList.add('is-alive'); 
+    }
+    // 3. ПРОВЕРКА: Окно респауна (зеленый цвет, после 15 минут и до 45 минут)
+    else if (boss.deathTime) {
+        const elapsed = now - boss.deathTime;
+        if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
+            m.classList.add('is-window'); 
+        }
+    }
+});
 
         renderMonitor();
     }
