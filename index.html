@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         body { 
+            
             margin: 0; padding: 0; background: #000; color: #eee; 
             font-family: 'Segoe UI', sans-serif; overflow: hidden; 
             touch-action: none; user-select: none; -webkit-user-select: none;
@@ -92,6 +93,12 @@
 
 <input type="datetime-local" id="hidden-date-input">
 <div id="top-sidebar"></div>
+    <div id="coord-display" style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; border: 1px solid #0f0; border-radius: 8px; z-index: 10000; font-family: monospace; pointer-events: none; display: none;">
+    Top: <span id="coord-top">0</span>px | Left: <span id="coord-left">0</span>px
+</div>
+
+<div id="sidebar">
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
 
 <div id="sidebar">
     <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
@@ -451,7 +458,29 @@ bossData.forEach(boss => {
         });
         alert("База данных успешно восстановлена!");
     }
-}
+} // <--- Вот эта скобка закрывает функцию emergencyRestore
+
+// Теперь вешаем событие клика
+viewport.addEventListener('click', (e) => {
+    // Если кликнули по маркеру, не показываем координаты (чтобы не мешать)
+    if (e.target.classList.contains('rb-marker')) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    const clickX = Math.round((e.clientX - rect.left) / scale);
+    const clickY = Math.round((e.clientY - rect.top) / scale);
+
+    const display = document.getElementById('coord-display');
+    if (display) {
+        document.getElementById('coord-top').innerText = clickY;
+        document.getElementById('coord-left').innerText = clickX;
+        display.style.display = 'block';
+
+        console.log(`pos: "top:${clickY}px;left:${clickX}px;"`);
+
+        clearTimeout(window.coordTimeout);
+        window.coordTimeout = setTimeout(() => { display.style.display = 'none'; }, 5000);
+    }
+});
 </script>
 </body>
 </html>
