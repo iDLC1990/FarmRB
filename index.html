@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L2 Boss Map</title>
+    <title>L2 Boss Map - Editor Enhanced</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         body { 
-            
             margin: 0; padding: 0; background: #000; color: #eee; 
             font-family: 'Segoe UI', sans-serif; overflow: hidden; 
             touch-action: none; user-select: none; -webkit-user-select: none;
@@ -34,7 +33,7 @@
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
-        /* ОКНО РЕСПАУНА (30 МИН ПОСЛЕ ТАЙМЕРА) - ЗЕЛЕНЫЙ */
+        /* ОКНО РЕСПАУНА - ЗЕЛЕНЫЙ */
         .rb-marker.is-window {
             background: radial-gradient(circle, #00ff00 0%, #004400 100%) !important; animation: pulse 1.5s infinite ;
             border-color: #fff !important; box-shadow: 0 0 20px rgba(0, 255, 0, 1) !important;
@@ -85,6 +84,7 @@
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; }
         .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
+        .btn-export { background: #333; color: #ccc; margin-top: 5px; font-size: 10px; }
         #faq-overlay, #minimap-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
         #hidden-date-input { position: absolute; opacity: 0; pointer-events: none; }
     </style>
@@ -93,9 +93,6 @@
 
 <input type="datetime-local" id="hidden-date-input">
 <div id="top-sidebar"></div>
-    <div id="coord-display" style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; border: 1px solid #0f0; border-radius: 8px; z-index: 10000; font-family: monospace; pointer-events: none; display: none;">
-    Top: <span id="coord-top">0</span>px | Left: <span id="coord-left">0</span>px
-</div>
 
 <div id="sidebar">
     <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
@@ -104,6 +101,7 @@
     </div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ READY ТАЙМЕРЫ</button>
+    <button onclick="exportBossData()" class="btn btn-export">ЛОГ МАССИВА В КОНСОЛЬ (F12)</button>
     <div id="monitor-list"></div>
 </div>
 
@@ -122,7 +120,7 @@
             <p>• <span style="color:#ff4400;">●</span> <b>Красный:</b> Босс жив.<br>
                • <span style="color:#00ff00;">●</span> <b>Зеленый:</b> Идет окно респауна (30 мин после таймера).<br>
                • <b>Запись смерти:</b> Двойной клик по маркеру запускает таймер на 15 мин.<br>
-               • <b>Фокус:</b> Клик на имя в списке перемещает камеру.</p>
+               • <b>Редактор:</b> В режиме редактора (пароль) можно таскать метки и <b>создавать новые (двойной клик по карте)</b>.</p>
 
             <h3 style="color:#00ffcc;">3. Эпические Боссы</h3>
             <p>• Выберите время начала респауна через карточку сверху.<br>
@@ -133,6 +131,7 @@
 </div>
 
 <div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" style="width:90%; max-width:700px; border:3px solid #ffd700;"></div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
@@ -229,6 +228,7 @@
         wrapper = document.getElementById('map-wrapper');
         viewport = document.getElementById('viewport');
         init();
+        
         viewport.addEventListener('wheel', e => {
             e.preventDefault(); 
             const delta = e.deltaY > 0 ? 0.8 : 1.2; 
@@ -240,6 +240,7 @@
             posY = e.clientY - (e.clientY - posY) * (newScale / scale);
             scale = newScale; update(); 
         }, { passive: false });
+
         document.getElementById('hidden-date-input').addEventListener('change', (e) => {
             if (activeEpicId && e.target.value) {
                 const startTime = new Date(e.target.value).getTime();
@@ -263,6 +264,31 @@
         renderEpicSidebar(); addSpecialMarker();
         listenFirebase(); listenEpics();
         setInterval(tick, 1000); setInterval(updateGameTime, 1000);
+        
+        // НОВАЯ ЛОГИКА: Создание метки по двойному клику в режиме редактора
+        wrapper.addEventListener('dblclick', (e) => {
+            if (!isEditorMode || e.target.classList.contains('rb-marker')) return;
+            
+            const rect = wrapper.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / scale);
+            const y = Math.round((e.clientY - rect.top) / scale);
+
+            const name = prompt("Введите имя нового босса:");
+            if (!name) return;
+            const note = prompt("Заметка (например, локация):", "newly added");
+            const id = name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+            const posStr = `top:${y}px;left:${x}px;`;
+
+            rbRef.child(id).set({
+                name: name,
+                note: note,
+                pos: posStr,
+                isAlive: false,
+                deathTime: null
+            });
+            alert("Босс добавлен в базу!");
+        });
+
         update();
     }
 
@@ -280,10 +306,8 @@
     function openCalendar(id) { activeEpicId = id; document.getElementById('hidden-date-input').showPicker(); }
     function listenEpics() { epicRef.on('value', snap => { epicStates = snap.val() || {}; }); }
 
-    // ГЛАВНОЕ ИЗМЕНЕНИЕ ТУТ
     function tick() {
         const now = Date.now();
-        // Эпики
         epicsList.forEach(name => {
             const id = name.replace(/\s+/g, '_');
             const el = document.getElementById(`timer-${id}`);
@@ -304,35 +328,19 @@
             } else { el.innerText = "READY"; el.className = "epic-timer timer-ready"; }
         });
 
-        // Обычные РБ - Логика свечения меток
-bossData.forEach(boss => {
-    const m = document.getElementById('rb-' + boss.id);
-    if (!m || m.classList.contains('dragging')) return;
-
-    // Сбрасываем стили перед проверкой
-    m.classList.remove('is-alive', 'is-window');
-
-    const now = Date.now();
-    const waitTime = 900000; // 15 минут (время таймера)
-    const windowDuration = 1800000; // 30 минут (окно появления)
-
-    // 1. ПРОВЕРКА: Босс жив (выставлено вручную в БД)
-    if (boss.isAlive) { 
-        m.classList.add('is-alive'); 
-    } 
-    // 2. ПРОВЕРКА: Таймер запущен (красный цвет, пока идут первые 15 минут)
-    else if (boss.deathTime && (now - boss.deathTime) < waitTime) {
-        m.classList.add('is-alive'); 
-    }
-    // 3. ПРОВЕРКА: Окно респауна (зеленый цвет, после 15 минут и до 45 минут)
-    else if (boss.deathTime) {
-        const elapsed = now - boss.deathTime;
-        if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
-            m.classList.add('is-window'); 
-        }
-    }
-});
-
+        bossData.forEach(boss => {
+            const m = document.getElementById('rb-' + boss.id);
+            if (!m || m.classList.contains('dragging')) return;
+            m.classList.remove('is-alive', 'is-window');
+            const waitTime = 900000; 
+            const windowDuration = 1800000;
+            if (boss.isAlive) { m.classList.add('is-alive'); } 
+            else if (boss.deathTime && (now - boss.deathTime) < waitTime) { m.classList.add('is-alive'); }
+            else if (boss.deathTime) {
+                const elapsed = now - boss.deathTime;
+                if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) { m.classList.add('is-window'); }
+            }
+        });
         renderMonitor();
     }
 
@@ -342,16 +350,22 @@ bossData.forEach(boss => {
             Object.keys(data).forEach(id => {
                 const item = data[id];
                 let boss = bossData.find(b => b.id === id);
-                if (boss) { 
-                    boss.isAlive = item.isAlive || false;
-                    boss.deathTime = item.deathTime || null;
-                    boss.pos = item.pos || boss.pos;
-                    createMarker(boss);
-                    const m = document.getElementById('rb-' + id);
-                    if (m && !m.classList.contains('dragging')) {
-                        const p = boss.pos.split(';');
-                        m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
-                    }
+                
+                // Если босс новый (из базы), добавляем его в локальный массив
+                if (!boss) {
+                    boss = { id: id, name: item.name, note: item.note, pos: item.pos };
+                    bossData.push(boss);
+                }
+
+                boss.isAlive = item.isAlive || false;
+                boss.deathTime = item.deathTime || null;
+                boss.pos = item.pos || boss.pos;
+                
+                createMarker(boss);
+                const m = document.getElementById('rb-' + id);
+                if (m && !m.classList.contains('dragging')) {
+                    const p = boss.pos.split(';');
+                    m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
                 }
             });
         });
@@ -404,7 +418,19 @@ bossData.forEach(boss => {
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
     }
 
-    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); }
+    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { if (b.isAlive || b.deathTime) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); }
+
+    function exportBossData() {
+        let output = "let bossData = [\n";
+        bossData.forEach((b, index) => {
+            const m = document.getElementById('rb-' + b.id);
+            const pos = m ? `top:${m.style.top};left:${m.style.left};` : b.pos;
+            output += `    { id: "${b.id}", name: "${b.name}", note: "${b.note}", pos: "${pos}" }${index === bossData.length - 1 ? "" : ","}\n`;
+        });
+        output += "];";
+        console.log(output);
+        alert("Код массива выведен в консоль браузера (F12)!");
+    }
 
     function updateGameTime() {
         const now = new Date();
@@ -424,7 +450,7 @@ bossData.forEach(boss => {
     function toggleFAQ(show) { document.getElementById('faq-overlay').style.display = show ? 'flex' : 'none'; }
 
     let isDrag = false, lx, ly;
-    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
+    window.onpointerdown = e => { if(e.button === 0 && !draggedBossId && !e.target.closest('#sidebar') && !e.target.closest('#top-sidebar')) { isDrag = true; lx = e.clientX; ly = e.clientY; } };
     window.onpointermove = e => {
         if (draggedBossId) {
             const rect = wrapper.getBoundingClientRect();
@@ -444,40 +470,6 @@ bossData.forEach(boss => {
         }
         isDrag = false;
     };
-    function emergencyRestore() {
-    if (confirm("Вы уверены, что хотите перезаписать базу данных боссов из локального списка?")) {
-        bossData.forEach(boss => {
-            rbRef.child(boss.id).set({
-                isAlive: false,
-                deathTime: null,
-                pos: boss.pos
-            });
-        });
-        alert("База данных успешно восстановлена!");
-    }
-} // <--- Вот эта скобка закрывает функцию emergencyRestore
-
-// Теперь вешаем событие клика
-viewport.addEventListener('click', (e) => {
-    // Если кликнули по маркеру, не показываем координаты (чтобы не мешать)
-    if (e.target.classList.contains('rb-marker')) return;
-
-    const rect = wrapper.getBoundingClientRect();
-    const clickX = Math.round((e.clientX - rect.left) / scale);
-    const clickY = Math.round((e.clientY - rect.top) / scale);
-
-    const display = document.getElementById('coord-display');
-    if (display) {
-        document.getElementById('coord-top').innerText = clickY;
-        document.getElementById('coord-left').innerText = clickX;
-        display.style.display = 'block';
-
-        console.log(`pos: "top:${clickY}px;left:${clickX}px;"`);
-
-        clearTimeout(window.coordTimeout);
-        window.coordTimeout = setTimeout(() => { display.style.display = 'none'; }, 5000);
-    }
-});
 </script>
 </body>
 </html>
