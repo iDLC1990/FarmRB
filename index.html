@@ -33,7 +33,7 @@
             border-color: #fff !important; box-shadow: 0 0 20px rgba(255, 50, 0, 1) !important; 
             width: 22px; height: 22px; z-index: 15;
         }
-        /* ОКНО РЕСПАУНА (30   МИН ПОСЛЕ ТАЙМЕРА) - ЗЕЛЕНЫЙ */
+        /* ОКНО РЕСПАУНА (30 МИН ПОСЛЕ ТАЙМЕРА) - ЗЕЛЕНЫЙ */
         .rb-marker.is-window {
             background: radial-gradient(circle, #00ff00 0%, #004400 100%) !important; animation: pulse 1.5s infinite ;
             border-color: #fff !important; box-shadow: 0 0 20px rgba(0, 255, 0, 1) !important;
@@ -84,6 +84,15 @@
         .btn-editor { background:#222; color:#0f0; border: 1px solid #050; }
         .btn-editor.active { background:#050; color:#fff; }
         .btn-reset { background: #441111; color: #ff6666; margin-top: 5px; }
+
+        /* Стиль для поиска */
+        #search-input {
+            width: 100%; padding: 10px; background: #1a1a1a; border: 1px solid #333; 
+            color: #ffd700; border-radius: 8px; margin-top: 10px; outline: none;
+            box-sizing: border-box;
+        }
+        #search-input:focus { border-color: #00ffcc; }
+
         #faq-overlay, #minimap-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
         #hidden-date-input { position: absolute; opacity: 0; pointer-events: none; }
     </style>
@@ -100,6 +109,10 @@
     </div>
     <button onclick="toggleEditor()" id="editor-btn" class="btn btn-editor">РЕДАКТОР: ВЫКЛ</button>
     <button onclick="resetTimers()" class="btn btn-reset">СБРОСИТЬ READY ТАЙМЕРЫ</button>
+    
+    <!-- ПОЛЕ ПОИСКА -->
+    <input type="text" id="search-input" placeholder="Поиск РБ (введите для записи смерти)...">
+    
     <div id="monitor-list"></div>
 </div>
 
@@ -118,7 +131,7 @@
             <p>• <span style="color:#ff4400;">●</span> <b>Красный:</b> Босс жив.<br>
                • <span style="color:#00ff00;">●</span> <b>Зеленый:</b> Идет окно респауна (30 мин после таймера).<br>
                • <b>Запись смерти:</b> Двойной клик по маркеру запускает таймер на 15 мин.<br>
-               • <b>Фокус:</b> Клик на имя в списке перемещает камеру.</p>
+               • <b>Поиск:</b> Введите имя в поиске. Клик по боссу в поиске запустит таймер и сфокусирует камеру.</p>
 
             <h3 style="color:#00ffcc;">3. Эпические Боссы</h3>
             <p>• Выберите время начала респауна через карточку сверху.<br>
@@ -143,6 +156,7 @@
     const epicsList = ["queen ant", "core", "orfen", "zaken", "baium", "frintezza", "antharas", "valakas", "beleth"];
     let epicStates = {};
     let activeEpicId = null;
+    let searchQuery = ""; // Глобальная переменная для поиска
 
     let bossData = [
         { id: "Abyss_Brukunt", name: "Abyss Brukunt", note: "ll_woatab 2tab", pos: "top:2721px;left:4385px;" },
@@ -214,9 +228,9 @@
         { id: "Gordon", name: "gordon", note: "newly added", pos: "top:1577px;left:4400px;" },
         { id: "Typhoon", name: "Typhoon", note: "newly added", pos: "top:4008px;left:2830px;" },
         { id: "Dragon_Beast", name: "Dragon Beast", note: "undefined", pos: "top:2920px;left:4437px;" },
-    { id: "Behemoth_Leader", name: "Behemoth Leader", note: "LOA1", pos: "top:2902px;left:4279px;" },
-    { id: "Drake_Lord", name: "Drake Lord", note: "LOA2", pos: "top:2929px;left:4558px;" },
-    { id: "Last_Titan_Utenus", name: "Last Titan Utenus", note: "newly added", pos: "top:2561px;left:4707px;" }
+        { id: "Behemoth_Leader", name: "Behemoth Leader", note: "LOA1", pos: "top:2902px;left:4279px;" },
+        { id: "Drake_Lord", name: "Drake Lord", note: "LOA2", pos: "top:2929px;left:4558px;" },
+        { id: "Last_Titan_Utenus", name: "Last Titan Utenus", note: "newly added", pos: "top:2561px;left:4707px;" }
     ];
 
     let wrapper, viewport; 
@@ -240,12 +254,19 @@
             posY = e.clientY - (e.clientY - posY) * (newScale / scale);
             scale = newScale; update(); 
         }, { passive: false });
+
         document.getElementById('hidden-date-input').addEventListener('change', (e) => {
             if (activeEpicId && e.target.value) {
                 const startTime = new Date(e.target.value).getTime();
                 epicRef.child(activeEpicId).set({ startTime });
                 activeEpicId = null; e.target.value = '';
             }
+        });
+
+        // Слушатель для поиска
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase();
+            renderMonitor();
         });
     });
 
@@ -280,7 +301,6 @@
     function openCalendar(id) { activeEpicId = id; document.getElementById('hidden-date-input').showPicker(); }
     function listenEpics() { epicRef.on('value', snap => { epicStates = snap.val() || {}; }); }
 
-    // ГЛАВНОЕ ИЗМЕНЕНИЕ ТУТ
     function tick() {
         const now = Date.now();
         // Эпики
@@ -305,34 +325,25 @@
         });
 
         // Обычные РБ - Логика свечения меток
-bossData.forEach(boss => {
-    const m = document.getElementById('rb-' + boss.id);
-    if (!m || m.classList.contains('dragging')) return;
+        bossData.forEach(boss => {
+            const m = document.getElementById('rb-' + boss.id);
+            if (!m || m.classList.contains('dragging')) return;
+            m.classList.remove('is-alive', 'is-window');
+            const now = Date.now();
+            const waitTime = 900000; 
+            const windowDuration = 1800000; 
 
-    // Сбрасываем стили перед проверкой
-    m.classList.remove('is-alive', 'is-window');
-
-    const now = Date.now();
-    const waitTime = 900000; // 15 минут (время таймера)
-    const windowDuration = 1800000; // 30 минут (окно появления)
-
-    // 1. ПРОВЕРКА: Босс жив (выставлено вручную в БД)
-    if (boss.isAlive) { 
-        m.classList.add('is-alive'); 
-    } 
-    // 2. ПРОВЕРКА: Таймер запущен (красный цвет, пока идут первые 15 минут)
-    else if (boss.deathTime && (now - boss.deathTime) < waitTime) {
-        m.classList.add('is-alive'); 
-    }
-    // 3. ПРОВЕРКА: Окно респауна (зеленый цвет, после 15 минут и до 45 минут)
-    else if (boss.deathTime) {
-        const elapsed = now - boss.deathTime;
-        if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
-            m.classList.add('is-window'); 
-        }
-    }
-});
-
+            if (boss.isAlive) { 
+                m.classList.add('is-alive'); 
+            } else if (boss.deathTime && (now - boss.deathTime) < waitTime) {
+                m.classList.add('is-alive'); 
+            } else if (boss.deathTime) {
+                const elapsed = now - boss.deathTime;
+                if (elapsed >= waitTime && elapsed < (waitTime + windowDuration)) {
+                    m.classList.add('is-window'); 
+                }
+            }
+        });
         renderMonitor();
     }
 
@@ -373,20 +384,52 @@ bossData.forEach(boss => {
         wrapper.appendChild(m);
     }
 
+    // НОВАЯ ЛОГИКА КЛИКА В СПИСКЕ (Поиск + Фокус)
+    function handleBossListClick(id) {
+        const boss = bossData.find(b => b.id === id);
+        if (!boss) return;
+
+        // 1. Фокусируем камеру
+        focus(boss);
+
+        // 2. Если включен поиск, записываем смерть
+        if (searchQuery.length > 0) {
+            rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() });
+            // Очищаем поиск после действия
+            searchQuery = "";
+            document.getElementById('search-input').value = "";
+            renderMonitor();
+        }
+    }
+
     function renderMonitor() {
         const list = document.getElementById('monitor-list');
         const now = Date.now();
-        const active = bossData.filter(b => b.isAlive || (b.deathTime && (900 - Math.floor((now-b.deathTime)/1000)) > -1800));
-        active.sort((a,b) => a.name.localeCompare(b.name));
-        list.innerHTML = active.map(b => {
+        
+        let filtered;
+        if (searchQuery.length > 0) {
+            // Если есть поиск - ищем среди всех по имени
+            filtered = bossData.filter(b => b.name.toLowerCase().includes(searchQuery));
+        } else {
+            // Обычный монитор активных боссов
+            filtered = bossData.filter(b => b.isAlive || (b.deathTime && (900 - Math.floor((now-b.deathTime)/1000)) > -1800));
+            filtered.sort((a,b) => (a.deathTime || 0) - (b.deathTime || 0));
+        }
+
+        list.innerHTML = filtered.map((b, index) => {
             let timeStr = "READY"; let isTimer = false;
             if (b.deathTime && !b.isAlive) {
                 const rem = 900 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
-                else if (rem <= 0 && rem > -1800) { timeStr = ""; }
+                else if (rem <= 0 && rem > -1800) { timeStr = "WINDOW"; }
             }
-            return `<div class="monitor-item" onclick="focusById('${b.id}')">
-                <div><b>${b.name}</b><div class="monitor-note">${b.note || ''}</div></div>
+            if (b.isAlive) { timeStr = "ALIVE"; isTimer = true; }
+
+            return `<div class="monitor-item" onclick="handleBossListClick('${b.id}')">
+                <div style="display: flex; align-items: center;">
+                    <span style="color:#555; margin-right:10px; font-family:monospace;">${index + 1}.</span>
+                    <div><b>${b.name}</b><div class="monitor-note">${b.note || ''}</div></div>
+                </div>
                 <span class="${isTimer ? 'timer-active-text' : 'ready-text'}">${timeStr}</span>
             </div>`;
         }).join('');
@@ -404,7 +447,7 @@ bossData.forEach(boss => {
         document.getElementById('editor-btn').classList.toggle('active', isEditorMode);
     }
 
-    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { if (b.isAlive) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); }
+    function resetTimers() { if(confirm("Сбросить?")) bossData.forEach(b => { if (b.isAlive || b.deathTime) rbRef.child(b.id).update({ isAlive: false, deathTime: null }); }); }
 
     function updateGameTime() {
         const now = new Date();
@@ -445,17 +488,17 @@ bossData.forEach(boss => {
         isDrag = false;
     };
     function emergencyRestore() {
-    if (confirm("Вы уверены, что хотите перезаписать базу данных боссов из локального списка?")) {
-        bossData.forEach(boss => {
-            rbRef.child(boss.id).set({
-                isAlive: false,
-                deathTime: null,
-                pos: boss.pos
+        if (confirm("Вы уверены, что хотите перезаписать базу данных боссов из локального списка?")) {
+            bossData.forEach(boss => {
+                rbRef.child(boss.id).set({
+                    isAlive: false,
+                    deathTime: null,
+                    pos: boss.pos
+                });
             });
-        });
-        alert("База данных успешно восстановлена!");
+            alert("База данных успешно восстановлена!");
+        }
     }
-}
 </script>
 </body>
 </html>
