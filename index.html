@@ -445,7 +445,7 @@
             if (b.deathTime && !b.isAlive) {
                 const rem = 900 - Math.floor((now-b.deathTime)/1000);
                 if (rem > 0) { timeStr = `${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}`; isTimer = true; }
-                else if (rem <= 0 && rem > -1800) { timeStr = "WINDOW"; }
+                else if (rem <= 0 && rem > -1800) { timeStr = " "; }
             }
             if (b.isAlive) { timeStr = "ALIVE"; isTimer = true; }
 
