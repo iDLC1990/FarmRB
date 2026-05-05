@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>L2 Boss Map</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/8.10.1/firebase-app.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/8.10.1/firebase-database.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         body { 
             margin: 0; padding: 0; background: #000; color: #eee; 
@@ -371,41 +371,26 @@
         renderMonitor();
     }
 
-   // Замени свою функцию listenFirebase на эту:
-function listenFirebase() {
-    console.log("Подключение к базе...");
-    rbRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (!data) {
-            console.error("Данные не получены! Проверьте правила доступа в консоли Firebase.");
-            // Если данных нет в базе, создаем их из локального конфига один раз
-            return;
-        }
-        console.log("Данные успешно получены:", Object.keys(data).length, "боссов");
-        
-        Object.keys(data).forEach(id => {
-            const item = data[id];
-            let boss = bossData.find(b => b.id === id);
-            if (boss) {
-                boss.isAlive = item.isAlive || false;
-                boss.deathTime = item.deathTime || null;
-                boss.pos = item.pos || boss.pos;
-                createMarker(boss);
-                
-                const m = document.getElementById('rb-' + id);
-                if (m && !m.classList.contains('dragging')) {
-                    const p = boss.pos.split(';');
-                    m.style.top = p[0].split(':')[1]; 
-                    m.style.left = p[1].split(':')[1];
+    function listenFirebase() {
+        rbRef.on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            Object.keys(data).forEach(id => {
+                const item = data[id];
+                let boss = bossData.find(b => b.id === id);
+                if (boss) { 
+                    boss.isAlive = item.isAlive || false;
+                    boss.deathTime = item.deathTime || null;
+                    boss.pos = item.pos || boss.pos;
+                    createMarker(boss);
+                    const m = document.getElementById('rb-' + id);
+                    if (m && !m.classList.contains('dragging')) {
+                        const p = boss.pos.split(';');
+                        m.style.top = p[0].split(':')[1]; m.style.left = p[1].split(':')[1];
+                    }
                 }
-            }
+            });
         });
-        renderMonitor();
-    }, (error) => {
-        console.error("Ошибка Firebase:", error);
-        alert("Ошибка доступа к базе данных. Возможно, ваш провайдер блокирует соединение.");
-    });
-}
+    }
 
     function createMarker(boss) {
         if (document.getElementById('rb-' + boss.id)) return;
