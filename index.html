@@ -1,11 +1,12 @@
+html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>L2 Boss Map</title>
-    <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.0/firebase-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.0/firebase-database.js"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/firebase@8.10.0/firebase-app.js](https://cdn.jsdelivr.net/npm/firebase@8.10.0/firebase-app.js)"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/firebase@8.10.0/firebase-database.js](https://cdn.jsdelivr.net/npm/firebase@8.10.0/firebase-database.js)"></script>
     <style>
         body { 
             margin: 0; padding: 0; background: #000; color: #eee; 
@@ -165,12 +166,12 @@
     </div>
 </div>
 
-<div id="minimap-overlay" onclick="this.style.display='none'"><img src="https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true" style="width:90%; max-width:700px; border:3px solid #ffd700;"></div>
+<div id="minimap-overlay" onclick="this.style.display='none'"><img src="[https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true](https://github.com/iDLC1990/FarmRB/blob/main/34.jpg?raw=true)" style="width:90%; max-width:700px; border:3px solid #ffd700;"></div>
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyB0b73t1ztVYKqZ_Vl8LH8EF2SpaQsBMHc",
         projectId: "l2-rb-map",
-        databaseURL: "https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app",
+        databaseURL: "[https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app](https://l2-rb-map-default-rtdb.europe-west1.firebasedatabase.app)",
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -303,7 +304,7 @@
     }
 
     function init() {
-        wrapper.style.backgroundImage = `url('https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true')`;
+        wrapper.style.backgroundImage = `url('[https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true](https://github.com/iDLC1990/FarmRB/blob/main/map.gif?raw=true)')`;
         renderEpicSidebar(); addSpecialMarker();
         listenFirebase(); listenEpics();
         setInterval(tick, 1000); setInterval(updateGameTime, 1000);
@@ -401,13 +402,21 @@
         m.addEventListener('click', (e) => {
             e.stopPropagation(); if (isEditorMode) return;
             const now = Date.now();
-            if (now - lastClick < 400) { rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() }); } 
+            if (now - lastClick < 400) { 
+                // Защита на 45 минут (2700000 мс) от повторного клика
+                if (boss.deathTime && (now - boss.deathTime < 2700000)) {
+                    const minLeft = Math.ceil((2700000 - (now - boss.deathTime)) / 60000);
+                    alert(`[Защита] Таймер уже запущен! Перезапись заблокирована еще на ${minLeft} мин.`);
+                    return;
+                }
+                rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() }); 
+            } 
             else { lastClick = now; setTimeout(() => { if (lastClick !== 0) { focus(boss); lastClick = 0; } }, 400); }
         });
         wrapper.appendChild(m);
     }
 
-    // НОВАЯ ЛОГИКА КЛИКА В СПИСКЕ (Поиск + Фокус)
+    // НОВАЯ ЛОГИКА КЛИКА В СПИСКЕ (Поиск + Фокус) + Защита 45 мин
     function handleBossListClick(id) {
         const boss = bossData.find(b => b.id === id);
         if (!boss) return;
@@ -417,7 +426,18 @@
 
         // 2. Если включен поиск, записываем смерть
         if (searchQuery.length > 0) {
-            rbRef.child(boss.id).update({ isAlive: false, deathTime: Date.now() });
+            const now = Date.now();
+            // Защита на 45 минут (2700000 мс) при поиске
+            if (boss.deathTime && (now - boss.deathTime < 2700000)) {
+                const minLeft = Math.ceil((2700000 - (now - boss.deathTime)) / 60000);
+                alert(`[Защита] Этот босс уже мертв. Таймер заблокирован от перезаписи еще на ${minLeft} мин.`);
+                searchQuery = "";
+                document.getElementById('search-input').value = "";
+                renderMonitor();
+                return;
+            }
+
+            rbRef.child(boss.id).update({ isAlive: false, deathTime: now });
             // Очищаем поиск после действия
             searchQuery = "";
             document.getElementById('search-input').value = "";
